@@ -1,0 +1,155 @@
+export type WarningSeverity = "info" | "warning" | "error";
+
+export type WarningScope = "import" | "dataset" | "header" | "curve" | "cell" | "export";
+
+export type PcrWarningCode =
+  | "IGNORED_WORKSHEETS"
+  | "FIRST_SHEET_INVALID"
+  | "MISSING_SPECIMEN_LABEL"
+  | "MISSING_REAGENT_LABEL"
+  | "SIMILAR_SPECIMEN_LABEL"
+  | "SIMILAR_REAGENT_LABEL"
+  | "DUPLICATE_CURVE_LABEL"
+  | "NON_NUMERIC_FLUORESCENCE"
+  | "EMPTY_FLUORESCENCE_CELL"
+  | "FORMULA_WITHOUT_CACHED_VALUE"
+  | "MERGED_HEADER_CELL"
+  | "UNSUPPORTED_FILE_TYPE"
+  | "PROTECTED_OR_UNREADABLE_WORKBOOK";
+
+export type PcrWarning = {
+  code: PcrWarningCode;
+  severity: WarningSeverity;
+  scope: WarningScope;
+  message: string;
+  curveIds?: string[];
+  labels?: string[];
+  sourceCell?: string;
+  sourceRange?: string;
+  sheetName?: string;
+  columnLetter?: string;
+  rawValue?: unknown;
+};
+
+export type CurveSource = {
+  fileName: string;
+  sheetName: string;
+  sheetIndex: number;
+  columnIndex: number;
+  columnLetter: string;
+  specimenCell: string;
+  reagentCell: string;
+  dataStartCell: string;
+  dataEndCell: string;
+};
+
+export type CurveStats = {
+  pointCount: number;
+  missingCount: number;
+  minY: number | null;
+  maxY: number | null;
+};
+
+export type CurveStyleOverride = {
+  displayName?: string;
+  color?: string;
+  lineType?: LineType;
+  markerType?: MarkerType;
+  lineWidth?: number;
+  visible?: boolean;
+};
+
+export type LineType = "solid" | "dashed" | "dotted";
+export type MarkerType = "none" | "circle" | "triangle" | "rect";
+
+export type StyleGroupingTarget = "specimen" | "reagent";
+
+export type StyleRules = {
+  colorBy: StyleGroupingTarget;
+  lineTypeBy: StyleGroupingTarget;
+  specimenColors: Record<string, string>;
+  reagentColors: Record<string, string>;
+  specimenLineTypes: Record<string, LineType>;
+  reagentLineTypes: Record<string, LineType>;
+};
+
+export type Curve = {
+  curveId: string;
+  sourceId: string;
+  specimenId: string;
+  reagentId: string;
+  specimenLabel: string;
+  reagentLabel: string;
+  displayLabel: string;
+  x: number[];
+  y: Array<number | null>;
+  source: CurveSource;
+  stats: CurveStats;
+  warnings: PcrWarning[];
+};
+
+export type PcrEntity = {
+  id: string;
+  label: string;
+  curveIds: string[];
+  warnings: PcrWarning[];
+};
+
+export type PcrDataset = {
+  schemaVersion: 1;
+  datasetId: string;
+  sourceFileName: string;
+  sheetName: string;
+  sheetIndex: number;
+  importedAtIso: string;
+  cycleCount: number;
+  curves: Curve[];
+  orderedCurveIds: string[];
+  specimens: PcrEntity[];
+  reagents: PcrEntity[];
+  warnings: PcrWarning[];
+};
+
+export type GroupingMode = "reagent" | "specimen";
+
+export type CheckState = "checked" | "unchecked" | "mixed";
+
+export type TreeCurveNode = {
+  type: "curve";
+  curveId: string;
+  label: string;
+  specimenLabel: string;
+  reagentLabel: string;
+  selected: boolean;
+  warningCount: number;
+};
+
+export type TreeSubgroupNode = {
+  type: "subgroup";
+  groupId: string;
+  label: string;
+  curveIds: string[];
+  checkState: CheckState;
+  selectedCount: number;
+  totalCount: number;
+  curves: TreeCurveNode[];
+};
+
+export type TreeGroupNode = {
+  type: "group";
+  groupId: string;
+  label: string;
+  curveIds: string[];
+  checkState: CheckState;
+  selectedCount: number;
+  totalCount: number;
+  collapsed: boolean;
+  subgroups: TreeSubgroupNode[];
+};
+
+export type SelectionState = {
+  groupingMode: GroupingMode;
+  selectedCurveIds: Set<string>;
+  collapsedGroupIds: Set<string>;
+  orderedCurveIds: string[];
+};

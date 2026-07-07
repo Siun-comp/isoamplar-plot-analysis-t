@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PCR Graph GUI Consolidated Mockup</title>
+  <style>
+    :root {
+      --bg: #f4f7f7;
+      --surface: #ffffff;
+      --surface-2: #eef3f3;
+      --line: #d7e1e0;
+      --line-strong: #aabbb9;
+      --text: #17212b;
+      --muted: #5d6b76;
+      --teal: #0f827d;
+      --teal-soft: #dff4f1;
+      --green: #2d7d46;
+      --blue: #2867b2;
+      --amber: #b56a05;
+      --rose: #ba3d5d;
+      --violet: #7b4ac7;
+      --slate: #2b3842;
+      --shadow: 0 14px 38px rgba(21, 35, 42, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans KR", "Malgun Gothic", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .page {
+      padding: 22px;
+    }
+
+    .page-head {
+      max-width: 1560px;
+      margin: 0 auto 14px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      line-height: 1.24;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-note {
+      border: 1px solid #8ccac4;
+      background: var(--teal-soft);
+      color: #075e59;
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .app-shell {
+      max-width: 1560px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      min-height: 900px;
+      overflow: hidden;
+    }
+
+    .app-topbar {
+      min-height: 58px;
+      background: #26333c;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+    }
+
+    .brand {
+      font-size: 15px;
+      font-weight: 900;
+      white-space: nowrap;
+      margin-right: 4px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .btn {
+      min-height: 34px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: #fff;
+      color: #17212b;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      cursor: default;
+    }
+
+    .btn.dark {
+      background: #344653;
+      border-color: #4b5f6c;
+      color: #fff;
+    }
+
+    .btn.primary {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+    }
+
+    .btn.warning {
+      background: #fff7ed;
+      border-color: #d99b45;
+      color: #7c4200;
+    }
+
+    .input {
+      min-height: 34px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: #fff;
+      color: #17212b;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .data-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfd;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8fbfb;
+      color: #25313a;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .tag.teal {
+      background: var(--teal-soft);
+      border-color: #8ccac4;
+      color: #075e59;
+    }
+
+    .tag.amber {
+      background: #fff4e4;
+      border-color: #deb16b;
+      color: #7f4700;
+    }
+
+    .tag.rose {
+      background: #fff0f3;
+      border-color: #e5a7b6;
+      color: #84213b;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 330px minmax(560px, 1fr) 346px;
+      height: calc(100vh - 196px);
+      min-height: 760px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+
+    .panel {
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      padding: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .panel.right {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+      overflow: auto;
+    }
+
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    h2 {
+      font-size: 15px;
+    }
+
+    h3 {
+      font-size: 13px;
+    }
+
+    .search {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      background: #fbfdfd;
+      border-radius: 6px;
+      padding: 8px;
+      min-width: 0;
+    }
+
+    .metric b {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 2px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .toggle-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+
+    .toggle-row span {
+      border: 1px solid var(--line);
+      background: #f8fbfb;
+      border-radius: 5px;
+      text-align: center;
+      padding: 7px 4px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .toggle-row .active {
+      background: var(--teal-soft);
+      border-color: #8ccac4;
+      color: #075e59;
+    }
+
+    .mode-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .mode-option {
+      border: 1px solid var(--line);
+      background: #f8fbfb;
+      border-radius: 6px;
+      padding: 8px;
+      min-width: 0;
+    }
+
+    .mode-option.active {
+      background: var(--teal-soft);
+      border-color: #8ccac4;
+    }
+
+    .mode-option b,
+    .mode-option span {
+      display: block;
+    }
+
+    .mode-option b {
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    .mode-option span {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .list-tools {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .list-tools .btn {
+      padding: 7px 8px;
+      min-height: 31px;
+      font-size: 12px;
+    }
+
+    .series-list {
+      overflow: auto;
+      border: 1px solid var(--line);
+      background: #f8fbfb;
+      padding: 8px;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+
+    .group {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .group-head,
+    .reagent-head,
+    .series-row,
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .group-head {
+      padding: 9px;
+      background: #eef7f6;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .group-head-main {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .group-title {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .group-title small {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .collapse-btn {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #26333c;
+      flex: 0 0 auto;
+    }
+
+    .group.collapsed .reagent-head,
+    .group.collapsed .series-row,
+    .group.collapsed .more-note {
+      display: none;
+    }
+
+    .reagent-head {
+      padding: 8px 9px;
+      border-bottom: 1px solid #edf2f1;
+      background: #fbfdfd;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .series-row {
+      padding: 8px 9px 8px 22px;
+      border-bottom: 1px solid #eef2f1;
+      background: #fff;
+      font-size: 12px;
+    }
+
+    .series-row:last-child {
+      border-bottom: 0;
+    }
+
+    .series-row.excluded {
+      color: #7a858c;
+      background: #f4f6f6;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--teal);
+      flex: 0 0 auto;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      flex: 0 0 auto;
+    }
+
+    .swatch.teal { background: var(--teal); }
+    .swatch.green { background: var(--green); }
+    .swatch.blue { background: var(--blue); }
+    .swatch.amber { background: var(--amber); }
+    .swatch.rose { background: var(--rose); }
+    .swatch.violet { background: var(--violet); }
+
+    .style-chip {
+      min-width: 42px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 11px;
+      font-weight: 800;
+      text-align: center;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .chart-area {
+      padding: 14px;
+      overflow: auto;
+      min-width: 0;
+    }
+
+    .warning {
+      border-left: 4px solid var(--amber);
+      background: #fff7ed;
+      color: #784000;
+      padding: 8px 10px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .chart-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      padding: 14px;
+      min-height: 690px;
+    }
+
+    .chart-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .chart-title {
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    .chart-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chart-wrap {
+      display: grid;
+      grid-template-columns: minmax(480px, 1fr) 190px;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .chart-box {
+      border: 1px solid var(--line);
+      background: #fff;
+      min-height: 540px;
+      padding: 10px;
+    }
+
+    svg.chart-svg {
+      width: 100%;
+      height: 100%;
+      min-height: 510px;
+      display: block;
+    }
+
+    .axis {
+      stroke: #6b7780;
+      stroke-width: 1.2;
+    }
+
+    .grid-line {
+      stroke: #dfe7e6;
+      stroke-width: 1;
+    }
+
+    .curve {
+      fill: none;
+      stroke-width: 2.4;
+      opacity: .92;
+    }
+
+    .curve.faint {
+      stroke-width: 1.7;
+      opacity: .38;
+    }
+
+    .curve.teal { stroke: var(--teal); }
+    .curve.green { stroke: var(--green); }
+    .curve.blue { stroke: var(--blue); }
+    .curve.amber { stroke: var(--amber); }
+    .curve.rose { stroke: var(--rose); }
+    .curve.violet { stroke: var(--violet); }
+    .dash { stroke-dasharray: 9 6; }
+    .dot { stroke-dasharray: 2 7; stroke-linecap: round; }
+
+    .axis-label {
+      fill: #53606b;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .tick-label {
+      fill: #6a7580;
+      font-size: 11px;
+    }
+
+    .legend {
+      border: 1px solid var(--line);
+      background: #fbfdfd;
+      padding: 10px;
+      min-height: 540px;
+      overflow: auto;
+      font-size: 12px;
+    }
+
+    .legend-title {
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 7px;
+      align-items: center;
+      border-bottom: 1px solid #edf2f1;
+      padding: 6px 0;
+    }
+
+    .legend-line {
+      width: 18px;
+      height: 0;
+      border-top: 3px solid var(--teal);
+    }
+
+    .legend-line.green { border-color: var(--green); }
+    .legend-line.blue { border-color: var(--blue); }
+    .legend-line.amber { border-color: var(--amber); border-top-style: dashed; }
+    .legend-line.rose { border-color: var(--rose); border-top-style: dotted; }
+    .legend-line.violet { border-color: var(--violet); }
+
+    .control-group {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .control-group h3 {
+      margin-bottom: 9px;
+    }
+
+    .accordion {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .accordion-head {
+      width: 100%;
+      min-height: 44px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px;
+      text-align: left;
+      font: inherit;
+      cursor: default;
+    }
+
+    .accordion-head b {
+      font-size: 13px;
+    }
+
+    .accordion-head span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .accordion-body {
+      padding: 10px;
+    }
+
+    .accordion.collapsed .accordion-head {
+      border-bottom: 0;
+    }
+
+    .accordion.collapsed .accordion-body {
+      display: none;
+    }
+
+    .subsection {
+      border-top: 1px solid #edf2f1;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+
+    .subsection:first-child {
+      border-top: 0;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .subsection-title {
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .segmented span {
+      border: 1px solid var(--line);
+      background: #f8fbfb;
+      text-align: center;
+      border-radius: 5px;
+      padding: 7px 4px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .segmented .active {
+      background: var(--teal-soft);
+      border-color: #8ccac4;
+      color: #075e59;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .fake-input {
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fbfdfd;
+      padding: 8px;
+      font-size: 12px;
+      min-width: 0;
+    }
+
+    .setting-row {
+      border: 1px solid var(--line);
+      background: #fbfdfd;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 7px;
+      font-size: 12px;
+    }
+
+    .priority {
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: #fbfdfd;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 7px;
+      font-size: 12px;
+    }
+
+    .mini-actions {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .mini-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .priority b {
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--teal-soft);
+      color: #075e59;
+      font-size: 12px;
+    }
+
+    .style-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .style-table th,
+    .style-table td {
+      border: 1px solid var(--line);
+      padding: 7px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .style-table th {
+      background: #eef5f4;
+      font-weight: 900;
+    }
+
+    .more-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 10px 4px 2px;
+    }
+
+    @media (max-width: 1180px) {
+      .page {
+        padding: 12px;
+      }
+
+      .page-head,
+      .chart-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .main-grid,
+      .chart-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .panel.right {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .series-list,
+      .chart-box,
+      .legend {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-head">
+      <div>
+        <h1>PCR 증폭형광 그래프 통합 목업</h1>
+        <p class="sub">사용자 확인사항을 반영한 단일 화면입니다. 데이터 선택과 scale은 Option A 흐름을 따르고, 데이터 확인은 Option D 방식으로 흡수했습니다.</p>
+      </div>
+      <div class="status-note">통합안: A/D 기반, 선택 전용 목업</div>
+    </header>
+
+    <main class="app-shell">
+      <div class="app-topbar">
+        <div class="brand">PCR Graph Studio</div>
+        <div class="actions">
+          <button class="btn dark">Excel 업로드</button>
+          <button class="btn dark">추가 데이터</button>
+          <button class="btn warning">데이터 확인 1건</button>
+          <select class="input" aria-label="시트 선택">
+            <option>Sheet1</option>
+          </select>
+          <input class="input" value="PCR Amplification Plot" aria-label="그래프 제목">
+          <span class="spacer"></span>
+          <button class="btn dark">클립보드 복사</button>
+          <button class="btn primary">PNG 저장</button>
+        </div>
+      </div>
+
+      <section class="data-strip" aria-label="데이터 해석 상태">
+        <span class="tag teal">1행 검체</span>
+        <span class="tag teal">2행 시약</span>
+        <span class="tag">3~47행 -> Cycle 1~45</span>
+        <span class="tag amber">유사 검체명 확인 필요</span>
+        <span class="tag">선택 32</span>
+          <span class="tag">미선택 16</span>
+        <span class="tag amber">표시 21곡선 경고</span>
+        <span class="tag teal">Y Preset 1</span>
+        <span class="tag">범위 밖 0개</span>
+      </section>
+
+      <section class="main-grid">
+        <aside class="panel" aria-label="데이터 선택">
+          <div class="panel-title">
+            <h2>데이터 선택</h2>
+            <span class="tag">보기 기준 전환</span>
+          </div>
+          <div class="mode-row" role="radiogroup" aria-label="데이터 목록 정리 기준">
+            <div class="mode-option" role="radio" aria-checked="false">
+              <b>검체별</b>
+              <span>검체 안에서 시약/곡선 확인</span>
+            </div>
+            <div class="mode-option active" role="radio" aria-checked="true">
+              <b>시약별</b>
+              <span>시약 안에서 검체/곡선 확인</span>
+            </div>
+          </div>
+          <input class="search" value="검체, 시약, 개별 곡선 검색" aria-label="개별 곡선 검색">
+          <div class="summary-grid">
+            <div class="metric"><b>48</b><span>전체</span></div>
+            <div class="metric"><b>32</b><span>선택</span></div>
+            <div class="metric"><b>16</b><span>미선택</span></div>
+            <div class="metric"><b>1</b><span>경고</span></div>
+          </div>
+          <div class="toggle-row" aria-label="곡선 보기 필터">
+            <span class="active">전체</span>
+            <span>선택</span>
+            <span>미선택</span>
+            <span>경고</span>
+          </div>
+          <div class="list-tools">
+            <button class="btn">검색결과 전체 선택</button>
+            <button class="btn">검색결과 전체 해제</button>
+            <button class="btn">선택 반전</button>
+            <button class="btn">대분류 접기</button>
+            <button class="btn">대분류 펼치기</button>
+          </div>
+
+          <div class="series-list" aria-label="대량 곡선 목록">
+            <div class="group">
+              <div class="group-head">
+                <div class="group-head-main">
+                  <button class="collapse-btn" aria-label="A1 접기" aria-expanded="true">v</button>
+                  <label><input type="checkbox" checked> A1</label>
+                </div>
+                <span class="tag teal">18/24</span>
+              </div>
+              <div class="reagent-head">
+                <label><input type="checkbox" checked> 검체 1</label>
+                <span class="style-chip">색: teal</span>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch teal"></span> 검체 1 / A1 / 곡선 1</label>
+                <div class="mini-actions"><span class="style-chip">실선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch teal"></span> 검체 1 / A1 / 곡선 2</label>
+                <div class="mini-actions"><span class="style-chip">실선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch blue"></span> 검체 1 / A1 / 곡선 3</label>
+                <div class="mini-actions"><span class="style-chip">개별</span><span class="mini-btn">편집</span></div>
+              </div>
+              <div class="reagent-head">
+                <label><input type="checkbox" checked> 검체2</label>
+                <span class="style-chip">파선</span>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch amber"></span> 검체2 / A1 / 곡선 1</label>
+                <div class="mini-actions"><span class="style-chip">파선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+              <div class="series-row excluded">
+                <label><input type="checkbox"><span class="swatch amber"></span> 검체2 / A1 / 곡선 2</label>
+                <span class="style-chip">미선택</span>
+              </div>
+              <div class="reagent-head">
+                <label><input type="checkbox" checked> 검체 2</label>
+                <span class="style-chip">유사명</span>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch violet"></span> 검체 2 / A1 / 곡선 1</label>
+                <div class="mini-actions"><span class="style-chip">실선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="group-head">
+                <div class="group-head-main">
+                  <button class="collapse-btn" aria-label="A2 접기" aria-expanded="true">v</button>
+                  <label><input type="checkbox" checked> A2</label>
+                </div>
+                <span class="tag teal">14/16</span>
+              </div>
+              <div class="reagent-head">
+                <label><input type="checkbox" checked> 검체 1</label>
+                <span class="style-chip">색: green</span>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch green"></span> 검체 1 / A2 / 곡선 1</label>
+                <div class="mini-actions"><span class="style-chip">점선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch green"></span> 검체 1 / A2 / 곡선 2</label>
+                <div class="mini-actions"><span class="style-chip">점선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+              <div class="reagent-head">
+                <label><input type="checkbox" checked> 검체2</label>
+                <span class="style-chip">색: rose</span>
+              </div>
+              <div class="series-row">
+                <label><input type="checkbox" checked><span class="swatch rose"></span> 검체2 / A2 / 곡선 1</label>
+                <div class="mini-actions"><span class="style-chip">점선</span><span class="mini-btn">단독 보기</span></div>
+              </div>
+            </div>
+
+            <div class="group collapsed">
+              <div class="group-head">
+                <div class="group-head-main">
+                  <button class="collapse-btn" aria-label="A3~A8 펼치기" aria-expanded="false">&gt;</button>
+                  <div class="group-title">
+                    <label><input type="checkbox"> A3~A8</label>
+                    <small>데이터셋마다 있는 시약만 표시</small>
+                  </div>
+                </div>
+                <span class="tag">0/1440</span>
+              </div>
+              <div class="more-note">시약은 최대 8종까지 같은 구조로 표시</div>
+            </div>
+            <div class="group collapsed">
+              <div class="group-head">
+                <div class="group-head-main">
+                  <button class="collapse-btn" aria-label="추가 검체 펼치기" aria-expanded="false">&gt;</button>
+                  <div class="group-title">
+                    <label><input type="checkbox"> 추가 검체 184개</label>
+                    <small>대량 데이터는 접힌 상태에서 검색/선택 가능</small>
+                  </div>
+                </div>
+                <span class="tag">0/1472</span>
+              </div>
+              <div class="more-note">검체 수백 개까지 같은 구조로 표시하며 실제 구현에서는 가상 목록을 사용</div>
+            </div>
+            <div class="more-note">검체별 보기를 선택하면 검체가 대분류가 됩니다. 검색 중 전체 선택/해제는 검색 조건 전체에 적용됩니다.</div>
+          </div>
+        </aside>
+
+        <section class="chart-area" aria-label="그래프 미리보기">
+          <div class="warning">검체명 `검체2`와 `검체 2`는 자동 병합하지 않았습니다. 필요하면 데이터 확인에서 묶음 규칙을 선택하세요.</div>
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h2 class="chart-title">PCR Amplification Plot</h2>
+                <div class="chart-tags">
+                  <span class="tag teal">X: Cycle 1~45</span>
+                  <span class="tag teal">Y: Preset 1</span>
+                  <span class="tag">표시 21 / 선택 32</span>
+                  <span class="tag amber">20개 초과: 필터 권장</span>
+                  <span class="tag">범위 밖 0개</span>
+                  <span class="tag">영향 곡선 0개</span>
+                  <span class="tag">범례 그룹 표시</span>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn">범례 접기</button>
+                  <button class="btn">선택만 강조</button>
+                  <button class="btn warning">표시 줄이기</button>
+                  <button class="btn">선택 항목만 보기</button>
+                </div>
+              </div>
+
+            <div class="chart-wrap">
+              <div class="chart-box">
+                <svg class="chart-svg" viewBox="0 0 760 520" role="img" aria-label="PCR amplification chart">
+                  <line class="grid-line" x1="76" y1="76" x2="700" y2="76"></line>
+                  <line class="grid-line" x1="76" y1="170" x2="700" y2="170"></line>
+                  <line class="grid-line" x1="76" y1="264" x2="700" y2="264"></line>
+                  <line class="grid-line" x1="76" y1="358" x2="700" y2="358"></line>
+                  <line class="axis" x1="76" y1="412" x2="700" y2="412"></line>
+                  <line class="axis" x1="76" y1="54" x2="76" y2="412"></line>
+
+                  <path class="curve teal" d="M76 390 C145 401 215 397 273 385 C330 360 371 315 415 238 C456 162 520 92 610 68 C655 58 680 55 700 54"></path>
+                  <path class="curve green dash" d="M76 382 C145 392 220 390 278 374 C338 346 380 292 424 216 C466 144 524 88 610 64 C655 60 680 58 700 56"></path>
+                  <path class="curve amber dash" d="M76 360 C145 374 218 370 282 352 C342 320 382 268 425 210 C472 154 532 126 610 110 C655 102 680 99 700 96"></path>
+                  <path class="curve rose dot" d="M76 392 C145 400 215 398 273 386 C330 362 370 318 415 240 C456 164 520 94 610 70 C655 60 680 58 700 56"></path>
+                  <path class="curve blue faint" d="M76 384 C145 394 216 390 274 379 C329 350 370 300 416 226 C458 155 522 96 610 72 C655 65 680 61 700 59"></path>
+                  <path class="curve violet faint dot" d="M76 374 C150 382 225 379 284 360 C340 330 387 278 430 220 C480 160 540 120 610 98 C655 88 680 83 700 80"></path>
+                  <path class="curve green faint" d="M76 388 C150 396 218 392 278 380 C335 352 378 306 418 232 C460 168 525 100 610 75 C655 66 680 62 700 60"></path>
+                  <path class="curve amber faint dash" d="M76 364 C150 376 220 372 282 354 C342 324 384 272 425 214 C472 158 532 130 610 114 C655 106 680 102 700 99"></path>
+
+                  <text class="axis-label" x="346" y="486">Cycle</text>
+                  <text class="axis-label" transform="translate(25 292) rotate(-90)">Fluorescence</text>
+                  <text class="tick-label" x="70" y="432">0</text>
+                  <text class="tick-label" x="278" y="432">15</text>
+                  <text class="tick-label" x="488" y="432">30</text>
+                  <text class="tick-label" x="683" y="432">45</text>
+                  <text class="tick-label" x="38" y="82">4000</text>
+                  <text class="tick-label" x="42" y="270">1500</text>
+                  <text class="tick-label" x="56" y="416">0</text>
+                </svg>
+              </div>
+
+              <aside class="legend" aria-label="범례">
+                <div class="legend-title">
+                  <span>범례</span>
+                  <span class="tag">그룹 / 전체 / 접기</span>
+                </div>
+                <div class="legend-item"><span class="legend-line"></span><span>검체 1 / A1 / 곡선 1</span></div>
+                <div class="legend-item"><span class="legend-line green"></span><span>검체 1 / A2 / 곡선 1</span></div>
+                <div class="legend-item"><span class="legend-line amber"></span><span>검체2 / A1 / 곡선 1</span></div>
+                <div class="legend-item"><span class="legend-line rose"></span><span>검체 2 / A2 / 곡선 1</span></div>
+                <div class="legend-item"><span class="legend-line blue"></span><span>검체 1 / A1 / 곡선 3</span></div>
+                <div class="legend-item"><span class="legend-line violet"></span><span>검체 2 / A1 / 곡선 1</span></div>
+                <div class="more-note">전체 곡선 범례를 PNG에 포함하면 그래프가 작아질 수 있음</div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel right" aria-label="그래프 설정">
+          <div class="panel-title">
+            <h2>설정</h2>
+            <span class="tag teal">Option A scale</span>
+          </div>
+
+          <div class="control-group accordion open">
+            <button class="accordion-head" aria-expanded="true" aria-controls="scale-settings">
+              <b>Scale 설정</b>
+              <span><span class="tag teal">X P1</span><span class="tag teal">Y P1</span><span class="tag">범위 밖 0</span></span>
+            </button>
+            <div class="accordion-body" id="scale-settings">
+              <div class="subsection">
+                <div class="subsection-title">X scale</div>
+                <div class="segmented"><span>자동</span><span>고정</span><span class="active">P1</span><span>P2</span></div>
+                <div class="field-grid">
+                  <div class="fake-input">Min 1</div>
+                  <div class="fake-input">Max 45</div>
+                </div>
+              </div>
+              <div class="subsection">
+                <div class="subsection-title">Y scale</div>
+                <div class="segmented"><span>자동</span><span>고정</span><span class="active">P1</span><span>P2</span></div>
+                <div class="field-grid">
+                  <div class="fake-input">Min -50</div>
+                  <div class="fake-input">Max 4200</div>
+                </div>
+                <div class="setting-row"><span>범위 밖 데이터</span><span class="tag">0개 점 / 0개 곡선</span></div>
+              </div>
+              <div class="list-tools">
+                <button class="btn">자동 재설정</button>
+                <button class="btn">현재 범위 가져오기</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group accordion collapsed">
+            <button class="accordion-head" aria-expanded="false" aria-controls="style-settings">
+              <b>스타일 설정</b>
+              <span><span class="tag teal">검체=색</span><span class="tag teal">시약=선</span><span class="tag amber">프리셋 덮어쓰기</span></span>
+            </button>
+            <div class="accordion-body" id="style-settings">
+              <div class="subsection">
+                <div class="subsection-title">적용 단계</div>
+                <div class="priority"><b>1</b><span>기본 팔레트 자동 적용</span><span class="tag">fallback</span></div>
+                <div class="priority"><b>2</b><span>그룹 규칙 적용</span><span class="tag teal">검체=색 / 시약=선</span></div>
+                <div class="priority"><b>3</b><span>개별 곡선 설정</span><span class="tag teal">최우선</span></div>
+              </div>
+              <div class="subsection">
+                <div class="subsection-title">범례/스타일 프리셋</div>
+                <div class="setting-row"><span>프리셋</span><span class="tag teal">시약 기준</span><span class="tag">A1~A8 대응</span></div>
+                <div class="setting-row"><span>적용 방식</span><span class="tag amber">기존 개별 설정 덮어쓰기</span></div>
+                <div class="setting-row"><span>동일 시약 매칭</span><span class="tag teal">검체 간 동일 적용</span></div>
+                <div class="setting-row"><span>적용 대상</span><span class="tag">검색 조건 전체</span></div>
+                <div class="list-tools">
+                  <button class="btn">프리셋 적용</button>
+                  <button class="btn">현재 스타일 저장</button>
+                </div>
+              </div>
+              <div class="subsection">
+                <div class="subsection-title">그룹 스타일 규칙</div>
+                <div class="setting-row"><span>색상 기준</span><span class="tag teal">검체별</span><span class="tag">시약별 전환</span></div>
+                <div class="setting-row"><span>선 종류 기준</span><span class="tag teal">시약별</span><span class="tag">검체별 전환</span></div>
+                <table class="style-table" aria-label="그룹 스타일 예시">
+                  <thead>
+                    <tr><th>그룹</th><th>색</th><th>선</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>검체 1</td><td><span class="swatch teal"></span></td><td>자동</td></tr>
+                    <tr><td>검체2</td><td><span class="swatch amber"></span></td><td>자동</td></tr>
+                    <tr><td>A1</td><td>자동</td><td>실선</td></tr>
+                    <tr><td>A2</td><td>자동</td><td>점선</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="subsection">
+                <div class="subsection-title">개별 곡선 설정</div>
+                <div class="setting-row"><span>검체 1 / A1 / 곡선 3</span><span class="tag teal">색 변경</span></div>
+                <div class="setting-row"><span>검체2 / A1 / 곡선 2</span><span class="tag rose">미선택</span></div>
+                <div class="setting-row"><span>설정 항목</span><span class="tag">표시명</span><span class="tag">색/선/굵기</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group accordion collapsed">
+            <button class="accordion-head" aria-expanded="false" aria-controls="legend-order-settings">
+              <b>범례 순서 설정</b>
+              <span><span class="tag teal">시약순</span><span class="tag">수동 가능</span><span class="tag">출력 동일</span></span>
+            </button>
+            <div class="accordion-body" id="legend-order-settings">
+              <div class="segmented"><span>선택순</span><span>검체순</span><span class="active">시약순</span><span>수동</span></div>
+              <div class="setting-row"><span>A1 그룹</span><span class="mini-btn">위</span><span class="mini-btn">아래</span></div>
+              <div class="setting-row"><span>A2 그룹</span><span class="mini-btn">위</span><span class="mini-btn">아래</span></div>
+              <div class="setting-row"><span>A3~A8</span><span class="tag">데이터 있을 때 표시</span></div>
+              <div class="setting-row"><span>출력 순서</span><span class="tag teal">현재 범례 순서 따름</span></div>
+            </div>
+          </div>
+
+          <div class="control-group accordion collapsed">
+            <button class="accordion-head" aria-expanded="false" aria-controls="export-settings">
+              <b>Export 설정</b>
+              <span><span class="tag">PNG 2x</span><span class="tag">클립보드</span></span>
+            </button>
+            <div class="accordion-body" id="export-settings">
+              <div class="setting-row"><span>PNG 배율</span><span class="tag">2x</span></div>
+              <div class="setting-row"><span>배경</span><span class="tag">흰색</span></div>
+              <div class="setting-row"><span>범례</span><span class="tag">그룹 범례</span></div>
+              <div class="setting-row"><span>클립보드 실패</span><span class="tag amber">PNG 안내</span></div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

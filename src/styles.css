@@ -922,7 +922,7 @@ button:disabled {
 }
 
 .style-row {
-  grid-template-columns: minmax(0, 1fr) 92px 86px 52px;
+  grid-template-columns: minmax(0, 1fr) 30px 58px 28px;
   min-width: 0;
 }
 
@@ -933,6 +933,14 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.style-row .style-group-label {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .curve-label,
@@ -996,8 +1004,17 @@ button:disabled {
 .preset-status button,
 .legend-order-row button,
 .compact-button {
-  padding: 7px 6px;
+  padding: 6px;
   font-size: 12px;
+}
+
+.style-reset-icon {
+  inline-size: 28px;
+  min-inline-size: 28px;
+  min-block-size: 28px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .preset-status {
@@ -1146,10 +1163,10 @@ button:disabled {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  min-height: 32px;
+  min-height: 28px;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
-  padding: 5px 6px;
+  padding: 4px;
   background: #ffffff;
   color: #263448;
   cursor: pointer;
@@ -1161,13 +1178,11 @@ button:disabled {
 }
 
 .color-trigger {
-  justify-content: flex-start;
-  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 11px;
+  justify-content: center;
 }
 
 .color-swatch {
-  inline-size: 22px;
+  inline-size: 18px;
   block-size: 18px;
   flex: 0 0 auto;
   border: 1px solid #7c8797;
@@ -1208,12 +1223,12 @@ button:disabled {
 }
 
 .line-marker-trigger {
-  padding: 4px 5px;
+  padding: 3px;
 }
 
 .line-marker-preview {
-  width: 76px;
-  height: 22px;
+  width: 52px;
+  height: 20px;
   display: block;
 }
 

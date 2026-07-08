@@ -180,6 +180,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Updated export filename rules so future downloads include the sanitized current analysis name before `plotN` or `analysisN`.
 - Updated image export layout selection to live in the Export section instead of Legend Order.
 - Updated chart Y-axis layout spacing to keep `Fluorescence` readable beside large tick labels.
+- Updated chart grid spacing to reduce excessive left-side empty space while preserving large Y-axis label readability.
+- Updated compact group style rows so group names remain visible, color controls show only a compact swatch, line/marker controls use a smaller preview button, and reset uses a compact icon button.
 
 ### Fixed
 - Fixed chart preview height stretching with expanded left/right panel content.
@@ -194,6 +196,7 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Fixed marker settings disappearing or changing during hover highlight.
 - Fixed group style row horizontal-scroll pressure by replacing separate color/HEX/line/marker columns with compact popover controls.
 - Fixed group style popovers being visually covered by following style sections.
+- Fixed compact style popovers staying open after outside clicks, Escape, or opening another style popover.
 
 ### Removed
 - Nothing yet.

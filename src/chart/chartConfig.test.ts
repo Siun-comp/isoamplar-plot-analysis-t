@@ -19,9 +19,10 @@ describe("PCR chart configuration", () => {
     expect(option.animation).toBe(false);
     expect(option.xAxis.minorSplitLine.show).toBe(false);
     expect(option.yAxis.minorSplitLine.show).toBe(false);
-    expect(option.grid.left).toBeGreaterThanOrEqual(96);
-    expect(option.yAxis.nameGap).toBeGreaterThanOrEqual(76);
-    expect(option.yAxis.axisLabel.margin).toBeGreaterThanOrEqual(14);
+    expect(option.grid.left).toBe(88);
+    expect(option.grid.containLabel).toBe(false);
+    expect(option.yAxis.nameGap).toBeGreaterThanOrEqual(72);
+    expect(option.yAxis.axisLabel.margin).toBeLessThanOrEqual(8);
     expect(option.tooltip.show).toBe(false);
     expect(option.legend.show).toBe(false);
     expect(option.series).toHaveLength(2);

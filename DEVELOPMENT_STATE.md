@@ -23,16 +23,16 @@ Active
 - GitHub Pages asset base is configured as `./` by default. The public GitHub Pages deployment is active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Browser tab/bookmark/PWA icon assets use the selected Option A amplification-curve icon.
 - The current implementation plan is `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`. Phases R0 through R13 are complete.
-- The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, large-Y-axis spacing, dedicated legend-only clipboard PNG copy, and compact group style popovers.
+- The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, balanced Y-axis spacing, dedicated legend-only clipboard PNG copy, compact group style controls, and controlled popover closing.
 
 ## Current Goal
-Direct post-release usability fixes after Phase R13: large-value Y-axis label spacing, legend-only clipboard copy, compact group style controls, and updated regression coverage/docs.
+Direct post-release usability fixes after Phase R13: balanced chart Y-axis spacing, legend-only clipboard copy, compact group style controls with visible group names, controlled popover closing, and updated regression coverage/docs.
 
 ## Current Milestone
 M8 - MVP release preparation complete locally, with post-MVP UI refinement applied.
 
 ## Last Completed Step
-Completed the implementation, local verification, GitHub push, GitHub Pages deployment, and public URL smoke for large Y-axis spacing, dedicated legend-only clipboard PNG, Export-section image layout selection, and compact group style color/line/marker popovers.
+Completed the user-reviewed local implementation for reduced chart left whitespace, visible group-style labels, compact color/line/reset controls, and style popovers that close on outside click, Escape, or opening another popover. Commit/deploy is now requested.
 
 ## Latest Changed Files
 - `src/chart/chartConfig.ts`
@@ -40,12 +40,7 @@ Completed the implementation, local verification, GitHub push, GitHub Pages depl
 - `src/ui/SettingsPanel.tsx`
 - `src/styles.css`
 - `src/app/App.test.tsx`
-- `tests/e2e/app.spec.ts`
-- `DECISIONS.md`
 - `CHANGELOG.md`
-- `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`
-- `docs/03_INPUT_OUTPUT_SPEC_EN.md`
-- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
 - `DEVELOPMENT_STATE.md`
 
 ## Implemented
@@ -342,6 +337,12 @@ Completed the implementation, local verification, GitHub push, GitHub Pages depl
 - Current UX/export fix visual screenshot review: passed for large Y-axis label spacing and group line/marker popover stacking in `test-results\app-uploads-an-xlsx-workbo-26c3e-t-first-collapsed-selection-chromium\phase-r8-style-legend-panel.png`.
 - Current UX/export fix GitHub Actions Pages deploy: passed for pushed `main` run `28961446984`; the workflow gate ran `npm run test` and `npm run build`.
 - Current UX/export fix public URL smoke: passed at `https://siun-comp.github.io/isoamplar-plot-analysis/` for HTTP/browser load, latest asset hash `index-BBdXD71o.js`, generated `.xlsx` Excel upload, chart canvas render, and visible `범례 클립보드 PNG` control.
+- Final pre-use style pass focused `npm run test -- --run src/chart/chartConfig.test.ts src/app/App.test.tsx`: passed, 2 files / 31 Vitest tests.
+- Final pre-use style pass full `npm run test`: passed, 14 files / 100 Vitest tests.
+- Final pre-use style pass `npm run build`: passed.
+- Final pre-use style pass `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Final pre-use style pass `git diff --check`: passed with CRLF replacement warnings only.
+- Final pre-use style pass local screenshot review: passed for reduced chart left whitespace, visible group labels, compact swatch/line/reset controls, and outside-click popover closing in `test-results\manual-check\style-panel-compact.png` and `test-results\manual-check\style-panel-popup-closed.png`.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.

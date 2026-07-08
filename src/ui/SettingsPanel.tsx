@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { ReactNode, SyntheticEvent } from "react";
 import type { AxisId, AxisScaleState, ScaleMode, ScalePresetId } from "../chart/chartScale";
 import { getAxisAutoDomain, isScalePresetConfigured } from "../chart/chartScale";
 import { builtInStylePresets, defaultChartColors } from "../chart/chartStyle";
@@ -537,7 +537,7 @@ function GroupStyleEditor({
 
             return (
               <div className="style-row" key={entity.id}>
-                <span title={entity.label}>{entityLabel}</span>
+                <span className="style-group-label" title={entity.label}>{entityLabel}</span>
                 <ColorPopoverButton label={entityLabel} value={color} onCommit={(nextColor) => onColorChange(target, entity.id, nextColor)} />
                 <LineMarkerPopoverButton
                   label={entityLabel}
@@ -547,8 +547,14 @@ function GroupStyleEditor({
                   onLineTypeChange={(nextLineType) => onLineTypeChange(target, entity.id, nextLineType)}
                   onMarkerTypeChange={(nextMarkerType) => onMarkerTypeChange(target, entity.id, nextMarkerType)}
                 />
-                <button type="button" className="compact-button" onClick={() => onResetGroup(target, entity.id)}>
-                  Reset
+                <button
+                  type="button"
+                  className="compact-button style-reset-icon"
+                  aria-label={`${entityLabel} reset group style`}
+                  title="Reset"
+                  onClick={() => onResetGroup(target, entity.id)}
+                >
+                  ↺
                 </button>
               </div>
             );
@@ -558,6 +564,57 @@ function GroupStyleEditor({
       {entities.length > 0 && visibleEntities.length !== entities.length && <p>{visibleEntities.length} / {entities.length}개 그룹 표시</p>}
     </section>
   );
+}
+
+const stylePopoverOpenEvent = "isoamplar-style-popover-open";
+
+function useStylePopoverState() {
+  const id = useId();
+  const ref = useRef<HTMLDetailsElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    function closeWhenAnotherPopoverOpens(event: Event) {
+      const nextId = (event as CustomEvent<string>).detail;
+      if (nextId !== id) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    window.addEventListener(stylePopoverOpenEvent, closeWhenAnotherPopoverOpens);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener(stylePopoverOpenEvent, closeWhenAnotherPopoverOpens);
+    };
+  }, [id, isOpen]);
+
+  function onToggle(event: SyntheticEvent<HTMLDetailsElement>) {
+    const nextOpen = event.currentTarget.open;
+    setIsOpen(nextOpen);
+    if (nextOpen) {
+      window.dispatchEvent(new CustomEvent(stylePopoverOpenEvent, { detail: id }));
+    }
+  }
+
+  return { ref, isOpen, onToggle };
 }
 
 function ColorPopoverButton({
@@ -570,12 +627,12 @@ function ColorPopoverButton({
   onCommit: (color: string) => void;
 }) {
   const color = normalizeHexColor(value) ?? defaultChartColors[0];
+  const popover = useStylePopoverState();
 
   return (
-    <details className="style-popover color-popover">
+    <details className="style-popover color-popover" ref={popover.ref} open={popover.isOpen} onToggle={popover.onToggle}>
       <summary className="style-popover-trigger color-trigger" aria-label={`${label} color editor`}>
         <span className="color-swatch" style={{ backgroundColor: color }} />
-        <span>{color}</span>
       </summary>
       <div className="style-popover-panel color-popover-panel">
         <label>
@@ -607,9 +664,10 @@ function LineMarkerPopoverButton({
   onMarkerTypeChange: (markerType: MarkerType) => void;
 }) {
   const safeColor = normalizeHexColor(color) ?? defaultChartColors[0];
+  const popover = useStylePopoverState();
 
   return (
-    <details className="style-popover line-marker-popover">
+    <details className="style-popover line-marker-popover" ref={popover.ref} open={popover.isOpen} onToggle={popover.onToggle}>
       <summary className="style-popover-trigger line-marker-trigger" aria-label={`${label} line and marker editor`}>
         <LineMarkerPreview color={safeColor} lineType={lineType} markerType={markerType} />
       </summary>

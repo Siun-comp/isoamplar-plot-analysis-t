@@ -237,6 +237,12 @@ describe("App PCR workspace", () => {
 
     await user.selectOptions(screen.getByLabelText("마커 기준"), "reagent");
     await user.click(screen.getByLabelText("A1 line and marker editor"));
+    expect(document.querySelectorAll("details.style-popover[open]")).toHaveLength(1);
+    await user.click(screen.getByLabelText("A2 line and marker editor"));
+    expect(document.querySelectorAll("details.style-popover[open]")).toHaveLength(1);
+    await user.keyboard("{Escape}");
+    expect(document.querySelectorAll("details.style-popover[open]")).toHaveLength(0);
+    await user.click(screen.getByLabelText("A1 line and marker editor"));
     await user.click(screen.getByRole("button", { name: "A1 marker circle" }));
     expect(useAppStore.getState().styleRules.reagentMarkerTypes[dataset.curves[0].reagentId]).toBe("circle");
     await user.click(screen.getByRole("button", { name: "A1 line dashed" }));

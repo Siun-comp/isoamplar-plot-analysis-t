@@ -58,15 +58,16 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await page.locator(".settings-accordion summary", { hasText: "Style" }).click();
   await expect(page.getByLabel("현재 스타일 기준")).toContainText("마커 시약별");
   await expect(page.getByLabel("마커 기준")).toBeVisible();
-  await page.getByLabel("A2 marker type").selectOption("circle");
+  await page.getByLabel("A2 line and marker editor").click();
+  await page.getByRole("button", { name: "A2 marker circle" }).click();
   await expect(page.getByLabel("A2 / 검체 1 marker type", { exact: true })).toHaveValue("circle");
   await expect(page.locator('.custom-legend [data-marker-type="circle"]')).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath("phase-r8-style-legend-panel.png"), fullPage: false });
-  await page.locator(".settings-accordion summary", { hasText: "Legend Order" }).click();
-  await page.getByLabel("Image export layout").selectOption("legendOnly");
   await page.locator(".settings-accordion summary", { hasText: "Export" }).click();
+  await page.getByLabel("Image export layout").selectOption("legendOnly");
+  await expect(page.getByRole("button", { name: "Copy legend PNG to clipboard" })).toBeVisible();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "PNG 저장" }).click();
+  await page.getByRole("button", { name: "Save PNG" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^\d{6}_.+_plot1\.png$/u);
   const after = await chartWrap.boundingBox();
@@ -118,7 +119,7 @@ function writeWorkbookFixture(filePath: string, specimenLabel: string) {
   ];
 
   for (let cycle = 1; cycle <= 45; cycle += 1) {
-    rows.push([createAmplificationValue(cycle, 20, 34), createAmplificationValue(cycle, 24, 38)]);
+    rows.push([createAmplificationValue(cycle, 20, 820_000), createAmplificationValue(cycle, 24, 1_050_000)]);
   }
 
   const worksheet = XLSX.utils.aoa_to_sheet(rows);

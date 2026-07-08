@@ -32,7 +32,7 @@ export function buildPcrChartOption(args: {
       animation: false,
       color: defaultChartColors,
       grid: {
-        left: 58,
+        left: 96,
         right: 24,
         top: 30,
         bottom: 54,
@@ -86,14 +86,15 @@ export function buildPcrChartOption(args: {
         type: "value",
         name: "Fluorescence",
         nameLocation: "middle",
-        nameGap: 46,
+        nameGap: 76,
         min: projection.yScale.min,
         max: projection.yScale.max,
         axisLine: {
           lineStyle: { color: "#1f2937" }
         },
         axisLabel: {
-          color: "#263448"
+          color: "#263448",
+          margin: 14
         },
         splitLine: {
           show: true,

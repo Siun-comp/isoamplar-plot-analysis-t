@@ -23,16 +23,30 @@ Active
 - GitHub Pages asset base is configured as `./` by default. The public GitHub Pages deployment is active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Browser tab/bookmark/PWA icon assets use the selected Option A amplification-curve icon.
 - The current implementation plan is `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`. Phases R0 through R13 are complete.
-- The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
+- The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, large-Y-axis spacing, dedicated legend-only clipboard PNG copy, and compact group style popovers.
 
 ## Current Goal
-Direct post-release usability fixes after Phase R13 are complete and deployed: hover highlight clearing, legend hover highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
+Direct post-release usability fixes after Phase R13: large-value Y-axis label spacing, legend-only clipboard copy, compact group style controls, and updated regression coverage/docs.
 
 ## Current Milestone
 M8 - MVP release preparation complete locally, with post-MVP UI refinement applied.
 
 ## Last Completed Step
-Completed the direct post-release refinement pass, pushed it to `main`, confirmed GitHub Actions Pages deployment, and smoke-tested the public URL with generated Excel upload, chart render, custom legend hover, and analysis-name PNG filename export.
+Completed the local implementation and verification pass for large Y-axis spacing, dedicated legend-only clipboard PNG, Export-section image layout selection, and compact group style color/line/marker popovers.
+
+## Latest Changed Files
+- `src/chart/chartConfig.ts`
+- `src/chart/chartConfig.test.ts`
+- `src/ui/SettingsPanel.tsx`
+- `src/styles.css`
+- `src/app/App.test.tsx`
+- `tests/e2e/app.spec.ts`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+- `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`
+- `docs/03_INPUT_OUTPUT_SPEC_EN.md`
+- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
+- `DEVELOPMENT_STATE.md`
 
 ## Implemented
 - Documentation baseline: `AGENTS.md`, `DEVELOPMENT_STATE.md`, `DECISIONS.md`, `CHANGELOG.md`, and docs `01` through `08`.
@@ -75,6 +89,7 @@ Completed the direct post-release refinement pass, pushed it to `main`, confirme
   - >20 visible-curve warning
   - stable default colors based on original specimen/reagent order rather than visible selection index
   - group style rules and individual curve overrides
+  - compact group style popovers with HEX-first color editing and combined line/marker preview selection
   - color picker plus HEX color input for group and individual curve styles
   - default solid lines with no markers; optional individual markers: circle, triangle, rect
   - built-in presets with overwrite semantics and one-step undo
@@ -82,7 +97,8 @@ Completed the direct post-release refinement pass, pushed it to `main`, confirme
   - curve labels in selection, chart, legend order, and CSV follow the active grouping mode
 - Export:
   - PNG/JPEG image download with white background and analysis-name-based filenames such as `YYMMDD_<analysisName>_plotN.ext`
-  - PNG clipboard copy with fallback message
+  - selected-layout PNG clipboard copy with fallback message
+  - dedicated legend-only PNG clipboard copy that does not mutate the selected image export layout
   - plotted-data CSV with `YYMMDD_<analysisName>_plotN_data.csv` when common-X rectangular output is safe
   - failed export attempts do not consume `plotN`
 - Browser-local processing only; no backend or remote upload.
@@ -319,6 +335,11 @@ Completed the direct post-release refinement pass, pushed it to `main`, confirme
 - Direct post-release refinement `git diff --check`: passed with CRLF replacement warnings only.
 - Direct post-release refinement GitHub Actions Pages deploy: passed for pushed `main` run `28958239135`; the workflow gate ran `npm run test` and `npm run build`.
 - Direct post-release refinement public URL smoke: passed at `https://siun-comp.github.io/isoamplar-plot-analysis/` for HTTP 200, latest asset hash `index-uj2oA7cH.js`, generated `.xlsx` Excel upload, chart canvas nonblank render, custom legend hover/leave highlight, and PNG download filename `260709_Public_Smoke_plot1.png`.
+- Current UX/export fix focused `npm run test -- --run src/app/App.test.tsx src/chart/exportChart.test.ts src/ui/CustomLegend.test.tsx src/chart/chartConfig.test.ts`: passed, 4 files / 36 Vitest tests.
+- Current UX/export fix full `npm run test`: passed, 14 files / 100 Vitest tests.
+- Current UX/export fix `npm run build`: passed.
+- Current UX/export fix `npm run test:e2e`: passed, 3 Chromium Playwright tests; generated workbook fixture now uses large Y-axis values around 1,200,000.
+- Current UX/export fix visual screenshot review: passed for large Y-axis label spacing and group line/marker popover stacking in `test-results\app-uploads-an-xlsx-workbo-26c3e-t-first-collapsed-selection-chromium\phase-r8-style-legend-panel.png`.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.
@@ -337,7 +358,7 @@ Completed the direct post-release refinement pass, pushed it to `main`, confirme
 - Performance budgets for max file size, row count, specimen count, imported curve count, and rendered curve count remain undecided.
 - P1/P2 scale presets are user-editable per analysis session and represented in AnalysisState; they can be preserved through explicit Analysis XLSX export/import but not automatic browser-session persistence.
 - Analysis XLSX currently stores restore JSON and visible review sheets, but it does not include a native editable Excel chart or a static chart image workbook.
-- The Style panel remains functional but dense for many curves; a more compact overview/editor pattern is a follow-up UX improvement rather than part of the direct bug-fix pass.
+- Group style controls are now compact, but individual curve style rows can still become dense when many curves are selected; a broader style overview/editor pattern remains a future UX candidate.
 - Dirty tab close/replace confirmation behavior and tab-count warning/hard-cap policy remain undecided.
 
 ## Important Links
@@ -352,5 +373,5 @@ Completed the direct post-release refinement pass, pushed it to `main`, confirme
 
 ## Next 3 Tasks
 1. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
-2. Design the next Style-panel density improvement as a separate UX pass.
+2. After push/deploy, smoke-test the public GitHub Pages URL for the updated legend clipboard/export controls.
 3. Decide dirty tab close/replace confirmation UX and internal tab-count warning policy before making destructive tab actions more permissive.

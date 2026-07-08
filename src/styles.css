@@ -867,6 +867,16 @@ button:disabled {
   overflow-x: auto;
 }
 
+.group-style-editor {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+
+.group-style-editor:has(.style-popover[open]) {
+  z-index: 40;
+}
+
 .style-target-grid select,
 .style-row select,
 .individual-row select,
@@ -912,8 +922,8 @@ button:disabled {
 }
 
 .style-row {
-  grid-template-columns: minmax(120px, 1fr) 34px 88px 74px 74px 56px;
-  min-width: 520px;
+  grid-template-columns: minmax(0, 1fr) 92px 86px 52px;
+  min-width: 0;
 }
 
 .style-row span,
@@ -952,7 +962,12 @@ button:disabled {
 }
 
 .group-style-scroll {
-  max-height: 300px;
+  max-height: none;
+  overflow: visible;
+}
+
+.group-style-scroll .style-row-header {
+  display: none;
 }
 
 .individual-style-scroll {
@@ -1108,6 +1123,139 @@ button:disabled {
   text-transform: lowercase;
 }
 
+.style-popover {
+  position: relative;
+  min-width: 0;
+}
+
+.style-popover[open] {
+  z-index: 30;
+}
+
+.style-popover summary {
+  list-style: none;
+}
+
+.style-popover summary::-webkit-details-marker {
+  display: none;
+}
+
+.style-popover-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 5px 6px;
+  background: #ffffff;
+  color: #263448;
+  cursor: pointer;
+}
+
+.style-popover-trigger:focus-visible {
+  outline: 2px solid #8bb8ff;
+  outline-offset: 2px;
+}
+
+.color-trigger {
+  justify-content: flex-start;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+}
+
+.color-swatch {
+  inline-size: 22px;
+  block-size: 18px;
+  flex: 0 0 auto;
+  border: 1px solid #7c8797;
+  border-radius: 4px;
+}
+
+.style-popover-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  display: grid;
+  gap: 10px;
+  min-width: 220px;
+  margin-top: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 16%);
+}
+
+.style-popover-panel label {
+  display: grid;
+  gap: 5px;
+  color: #536174;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.style-popover-panel input[type="color"] {
+  width: 100%;
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 3px;
+  background: #ffffff;
+}
+
+.line-marker-trigger {
+  padding: 4px 5px;
+}
+
+.line-marker-preview {
+  width: 76px;
+  height: 22px;
+  display: block;
+}
+
+.line-marker-panel {
+  min-width: 240px;
+}
+
+.line-marker-panel fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.line-marker-panel legend {
+  padding: 0;
+  color: #536174;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.line-marker-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.line-marker-options button {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-height: 48px;
+  padding: 5px;
+  font-size: 11px;
+}
+
+.line-marker-options button.is-active {
+  border-color: #172033;
+  background: #eef6ff;
+}
+
 .legend-order-list {
   display: grid;
   gap: 6px;
@@ -1158,6 +1306,23 @@ button:disabled {
   display: grid;
   gap: 8px;
   padding: 0 12px 14px;
+}
+
+.export-layout-control {
+  display: grid;
+  gap: 5px;
+  color: #536174;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.export-layout-control select {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 7px;
+  background: #ffffff;
+  font-size: 12px;
 }
 
 .export-controls button {

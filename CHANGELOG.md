@@ -121,6 +121,9 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Added R13 release verification notes for full local regression, dependency audit, GitHub Pages deploy, and public URL smoke.
 - Added custom legend hover and keyboard focus highlighting for the matching chart curve.
 - Added analysis-name-based filenames for PNG/JPEG, plotted-data CSV, and Analysis XLSX exports.
+- Added a dedicated `범례 클립보드 PNG` action for copying only the current custom legend without changing the selected export layout.
+- Added compact group style controls: HEX-first color popover and combined line/marker preview popover for specimen and reagent group rows.
+- Added Playwright coverage using large Y-axis fluorescence values around 1,200,000 for chart spacing regression checks.
 
 ### Changed
 - Replaced default replicate/series/exclude/restore-style wording in the active GUI baseline with individual curve and selected/unselected terminology.
@@ -175,6 +178,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Clarified release evidence boundaries: generated `.xlsx` public URL smoke is complete, real `graph_TEST.xlsx` remains manual domain validation, and e2e/audit are local release checks outside the current Pages workflow gate.
 - Updated chart hover behavior to use app-controlled `curveId` highlighting instead of ECharts built-in series emphasis.
 - Updated export filename rules so future downloads include the sanitized current analysis name before `plotN` or `analysisN`.
+- Updated image export layout selection to live in the Export section instead of Legend Order.
+- Updated chart Y-axis layout spacing to keep `Fluorescence` readable beside large tick labels.
 
 ### Fixed
 - Fixed chart preview height stretching with expanded left/right panel content.
@@ -187,6 +192,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Fixed stale fixed-readout values after same-count selection swaps, grouping label changes, or style preset changes.
 - Fixed stale single-curve highlighting after moving the pointer away from the chart.
 - Fixed marker settings disappearing or changing during hover highlight.
+- Fixed group style row horizontal-scroll pressure by replacing separate color/HEX/line/marker columns with compact popover controls.
+- Fixed group style popovers being visually covered by following style sections.
 
 ### Removed
 - Nothing yet.

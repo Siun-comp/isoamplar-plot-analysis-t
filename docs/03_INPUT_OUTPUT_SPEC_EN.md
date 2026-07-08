@@ -253,7 +253,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 | --- | --- | --- | --- | --- |
 | IO-101 | Chart preview | Reflect current dataset, filters, mappings, layout, legend, and fixed scales. | FR-006 to FR-010 | AC-004 to AC-008 |
 | IO-102 | Image download | Export the current chart preview as PNG or JPEG with white background. | FR-011 | AC-009, AC-PCR-010 |
-| IO-103 | Clipboard image | Copy current chart image where supported, with fallback on failure. | FR-012 | AC-010 |
+| IO-103 | Clipboard image | Copy the selected chart image layout where supported, provide a dedicated legend-only clipboard action, and show fallback on failure. | FR-012, FR-019 | AC-010, AC-PCR-031, AC-PCR-041 |
 | IO-104 | Static build | Produce static assets that work on GitHub Pages. | FR-013 | AC-011 |
 | IO-105 | Plotted data export | Export only currently plotted data when the current chart projection is simple and rectangular; otherwise disable with a clear reason. | FR-016 | AC-PCR-021, AC-PCR-022 |
 | IO-106 | Analysis XLSX export | Export a full analysis restore workbook containing the complete imported dataset and settings. | FR-017 | AC-PCR-033, AC-PCR-034, AC-PCR-037 |
@@ -269,7 +269,7 @@ This structure may be refined during implementation but must preserve curveId-ba
   - `plotOnly`: exports only the chart canvas with the built-in ECharts legend hidden.
   - `plotWithLegend`: exports the chart plus a custom legend area below the plot so the legend does not obscure plotted data.
   - `legendOnly`: exports only the custom legend image for the current selected/order/style projection.
-- PNG/JPEG download and clipboard PNG use the selected image export layout. Plotted CSV and Analysis XLSX are unaffected by image layout selection.
+- PNG/JPEG download and the standard clipboard PNG action use the selected image export layout. The dedicated legend-only clipboard action always uses `legendOnly` without changing the selected layout. Plotted CSV and Analysis XLSX are unaffected by image layout selection.
 - Export uses the same chart option projection as preview. Preview layout height is fixed in the UI, while image export keeps its chart-only export dimensions.
 - More than 20 visible curves warns but does not block export by default.
 - Supported image export layouts:
@@ -295,7 +295,8 @@ This structure may be refined during implementation but must preserve curveId-ba
 ## Clipboard Rules
 - Supported clipboard MIME type for MVP: `image/png`.
 - Clipboard copy must be triggered by an explicit user action.
-- Clipboard copy uses the same chart option projection as PNG export and a white background.
+- Standard clipboard copy uses the selected image export layout, the same chart option projection as PNG export, and a white background.
+- Dedicated legend clipboard copy exports only the custom legend image for the current selected/order/style projection, with white background, and does not mutate the selected image export layout.
 - If `navigator.clipboard.write` or `ClipboardItem` is unavailable, or if permission is denied, show a fallback message telling the user to download PNG instead.
 - Clipboard copy does not consume the `plotN` filename counter unless a fallback download is explicitly performed.
 

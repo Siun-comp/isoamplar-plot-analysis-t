@@ -1,16 +1,28 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { copyPngBlobToClipboard, exportChartLayoutImageBlob } from "../chart/exportChart";
 import { formatCurveLabel } from "../data/curveLabels";
 import { appendPcrDataset } from "../data/mergeDatasets";
 import { createOneSpecimenEightReagentDataset, createSyntheticPcrDataset, createTwentyOnePlusCurveDataset } from "../data/sampleData";
 import { App } from "./App";
 import { useAppStore } from "./appStore";
 
+vi.mock("../chart/exportChart", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../chart/exportChart")>();
+  return {
+    ...actual,
+    exportChartLayoutImageBlob: vi.fn(async () => new Blob(["png"], { type: "image/png" })),
+    copyPngBlobToClipboard: vi.fn(async () => undefined)
+  };
+});
+
 describe("App PCR workspace", () => {
   beforeEach(() => {
     useAppStore.getState().reset();
+    vi.mocked(exportChartLayoutImageBlob).mockClear();
+    vi.mocked(copyPngBlobToClipboard).mockClear();
   });
 
   it("renders the upload-first PCR workspace shell", () => {
@@ -224,8 +236,11 @@ describe("App PCR workspace", () => {
     expect(useAppStore.getState().styleRules.markerBy).toBe("specimen");
 
     await user.selectOptions(screen.getByLabelText("마커 기준"), "reagent");
-    await user.selectOptions(screen.getByLabelText("A1 marker type"), "circle");
+    await user.click(screen.getByLabelText("A1 line and marker editor"));
+    await user.click(screen.getByRole("button", { name: "A1 marker circle" }));
     expect(useAppStore.getState().styleRules.reagentMarkerTypes[dataset.curves[0].reagentId]).toBe("circle");
+    await user.click(screen.getByRole("button", { name: "A1 line dashed" }));
+    expect(useAppStore.getState().styleRules.reagentLineTypes[dataset.curves[0].reagentId]).toBe("dashed");
     expect(screen.getByLabelText("A1 / 검체 1 marker type")).toHaveValue("circle");
   });
 
@@ -381,7 +396,19 @@ describe("App PCR workspace", () => {
     expect(useAppStore.getState().legendSettings.previewVisible).toBe(false);
     expect(useAppStore.getState().exportSettings.imageLayout).toBe("plotWithLegend");
 
-    await user.selectOptions(screen.getByLabelText("Image export layout"), "legendOnly");
+    await user.click(screen.getByText("Export"));
+    const imageLayoutSelect = screen.getByLabelText("Image export layout");
+    await user.selectOptions(imageLayoutSelect, "plotOnly");
+    const legendClipboardButton = screen.getByRole("button", { name: "Copy legend PNG to clipboard" });
+    expect(legendClipboardButton).toHaveTextContent("범례 클립보드 PNG");
+    await user.click(legendClipboardButton);
+    await waitFor(() =>
+      expect(exportChartLayoutImageBlob).toHaveBeenCalledWith(expect.objectContaining({ layout: "legendOnly", type: "png" }))
+    );
+    expect(copyPngBlobToClipboard).toHaveBeenCalledTimes(1);
+    expect(useAppStore.getState().exportSettings.imageLayout).toBe("plotOnly");
+
+    await user.selectOptions(imageLayoutSelect, "legendOnly");
     expect(useAppStore.getState().exportSettings.imageLayout).toBe("legendOnly");
     expect(useAppStore.getState().legendSettings.previewVisible).toBe(false);
   });

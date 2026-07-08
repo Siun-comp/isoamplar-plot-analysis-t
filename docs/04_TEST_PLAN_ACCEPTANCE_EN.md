@@ -92,7 +92,7 @@ Deferred beyond MVP:
 | AC-007 | FR-009 | Fixed X scale is applied consistently across redraws and relevant filter, selection, grouping, and style changes until changed by the user. | Automated + manual |
 | AC-008 | FR-010 | Fixed Y scale is applied consistently across redraws and relevant filter, selection, grouping, and style changes until changed by the user. | Automated + manual |
 | AC-009 | FR-011 | Image download produces a valid PNG or JPEG of the current chart output, without surrounding UI controls, with white background and an analysis-name-based safe filename such as `YYMMDD_<sanitizedAnalysisName>_plotN.ext`. | Automated smoke + manual |
-| AC-010 | FR-012 | Clipboard copy places the current chart image on the clipboard where supported; otherwise the UI shows a clear download fallback. | Manual + fallback test |
+| AC-010 | FR-012 | Clipboard copy places the selected image layout on the clipboard where supported; the dedicated legend clipboard action copies a legend-only PNG without changing the selected export layout; otherwise the UI shows a clear download fallback. | Component + manual + fallback test |
 | AC-011 | FR-013 | The app works from a GitHub Pages style URL without backend services. | Build + manual |
 | AC-012 | FR-014 | Invalid file type, invalid first sheet, invalid axis bounds, export failure, and clipboard failure show actionable errors. | Automated + manual |
 
@@ -124,15 +124,15 @@ These criteria bind implementation to decisions `D010` through `D016`.
 | AC-PCR-020 | FR-008, D014 | Built-in presets apply to the chosen scope, overwrite affected individual style fields deterministically, report affected count, and provide one-step undo. No saved custom presets are required in MVP. | Unit + component |
 | AC-PCR-021 | FR-016, D014 | Plotted-data CSV export, when available, contains only currently plotted curves in current legend/export order. It excludes hidden/unselected curves and raw workbook-only data. | Unit + E2E |
 | AC-PCR-022 | FR-016, D014 | Plotted-data CSV export is disabled with a clear reason unless the current chart is simple: one chart, shared X values across visible curves, and rectangular CSV output possible. | Unit + component |
-| AC-PCR-023 | FR-006, FR-011, D015 | The default chart theme is clean and analysis-readable: white background, sparse major grid lines only, no dense minor grid by default, readable title/axis/legend spacing, balanced line widths, distinguishable but controlled colors, and PNG/JPEG export matches the preview style. Reference images are not hardcoded: example-specific title, axis labels, axis ranges, threshold/reference line, marker shapes, colors, legend labels, curve count, and data values must not be fixed from the reference. | Playwright screenshot + visual/manual + export smoke |
+| AC-PCR-023 | FR-006, FR-011, D015, D032 | The default chart theme is clean and analysis-readable: white background, sparse major grid lines only, no dense minor grid by default, readable title/axis/legend spacing including large Y-axis tick labels, balanced line widths, distinguishable but controlled colors, and PNG/JPEG export matches the preview style. Reference images are not hardcoded: example-specific title, axis labels, axis ranges, threshold/reference line, marker shapes, colors, legend labels, curve count, and data values must not be fixed from the reference. | Playwright screenshot + visual/manual + export smoke |
 | AC-PCR-024 | FR-006, FR-008, FR-009, FR-010, D021, D023, D024 | The app identity is `IsoAmplar Plot Analysis` with developer credit `Jang Si Un`; preview plot height remains stable when side settings expand; default curve colors remain stable as earlier/later curves are selected; default lines have no markers; individual curve marker overrides support none, circle, triangle, and rect; P1/P2 X/Y presets are user-editable and selectable only with valid min/max; Fixed mode displays current Auto bounds for editing support. | Unit + component + E2E |
 | AC-PCR-025 | FR-001, FR-005, FR-006, FR-008, D025 | The app can append another `.xls`/`.xlsx` first worksheet to the current analysis without replacing existing data; appended curves receive unique IDs, are added unselected at the end of user order, and preserve existing selected curves, scale, style, overrides, and chart output. Reagent mode uses reagent-first labels across selection, legend, legend order, and plotted CSV; specimen mode uses specimen-first labels. The center chart panel stays visible on desktop scroll, tree group/subgroup rows are visually distinguishable, compact scale/export controls do not clip labels, and group/individual style colors can be entered by HEX code as well as picker. | Unit + component + E2E + visual/manual |
 | AC-PCR-026 | FR-005 | A subgroup containing a single curve is displayed as one selectable row without duplicate checkboxes. | Unit + component + E2E |
 | AC-PCR-027 | FR-008, D029 | Color, line, and marker bases and individual override origins are clearly shown in the UI as baseline, Custom, or Preset. | Unit + component + manual |
-| AC-PCR-028 | FR-008, D029 | Specimen and reagent group styles can set marker none/circle/triangle/rect, and the result is reflected in chart and legend rendering. | Unit + component + visual |
+| AC-PCR-028 | FR-008, D029, D032 | Specimen and reagent group styles can set line type and marker none/circle/triangle/rect through a compact combined line/marker selector, and the result is reflected in chart and legend rendering. | Unit + component + visual |
 | AC-PCR-029 | FR-008, D029 | Field-level, curve-level, selected-curves, and all-overrides reset actions restore baseline style behavior without changing unrelated data. | Unit + component |
 | AC-PCR-030 | FR-008, FR-019, D028 | Custom legend does not obscure the plot, represents actual resolved line type and marker type including no-marker curves, and hover/focus on a legend item transiently highlights the matching curve. | Component + Playwright visual |
-| AC-PCR-031 | FR-011, FR-019, D028 | Preview legend visibility, export legend inclusion, and Plot only / Plot + Legend / Legend only image export layouts work independently and produce visually valid image outputs. | Unit + component + E2E + export pixel smoke + Playwright visual |
+| AC-PCR-031 | FR-011, FR-012, FR-019, D028, D032 | Preview legend visibility, export legend inclusion, Plot only / Plot + Legend / Legend only image export layouts, standard selected-layout clipboard PNG, and dedicated legend-only clipboard PNG work independently and produce visually valid image outputs. | Unit + component + E2E + export pixel smoke + Playwright visual |
 | AC-PCR-032 | FR-008, FR-019, D029 | Legend order changes preserve style overrides on the same curve IDs, move by the currently selected curve order even when unselected curves sit between them, and preview/export/data/style-row order remain consistent. | Unit + component + E2E |
 | AC-PCR-033 | FR-017, D026 | Analysis XLSX export stores the complete imported dataset, source metadata, warnings, selection, order, scale, style, legend/export settings, analysis name, and export counter, regardless of whether curves are currently selected or plotted. Analysis XLSX filenames are safe and sanitized, and transient UI state, runtime tab IDs, and dirty state are excluded. | Unit + workbook readback |
 | AC-PCR-034 | FR-017, D026 | Analysis XLSX import restores the hidden JSON state, including unselected curves, while assigning a tab-local analysis ID and clean dirty state; missing, corrupt, chunk-damaged, or unsupported restore sheets show clear errors. | Unit + component + E2E |
@@ -141,7 +141,7 @@ These criteria bind implementation to decisions `D010` through `D016`.
 | AC-PCR-037 | FR-006, FR-017, D026 | Analysis XLSX contains no native editable Excel chart, and export/import performs no smoothing, normalization, baseline correction, Ct/Cq, threshold, or positive/negative interpretation. | Unit + package/workbook inspection |
 | AC-PCR-038 | FR-020 | With X values around 1-100, 100 visible curves x 100 points passes browser smoke testing, and hundreds to 1000 imported curves remain selectable through virtualization/search. | Performance smoke + manual |
 | AC-PCR-039 | FR-020 | Hover information is available through a fixed readout or equivalent UI that does not block plot inspection; chart and legend hover highlight clears on pointer exit and does not alter marker/style/export state. | Component + Playwright |
-| AC-PCR-040 | FR-020 | Large style and legend lists remain operable through search, scrolling, or virtualization. | Component + Playwright |
+| AC-PCR-040 | FR-020, D032 | Large style and legend lists remain operable through search, scrolling, virtualization, and compact group controls that avoid unnecessary horizontal scrolling. | Component + Playwright |
 | AC-PCR-041 | FR-008, FR-011, FR-017, FR-019, D028 | Selected, chart-visible, legend-visible, export-layout, and Analysis XLSX persisted settings are separate states; changing one does not implicitly mutate the others. | Unit + component + E2E + Analysis XLSX roundtrip/readback |
 | AC-PCR-042 | FR-008, D029 | Individual style rows show curve identity, clear column labels, source disambiguation for duplicate labels, and reset/status controls that target the intended curve ID. | Component + E2E |
 | AC-PCR-043 | FR-020 | Main tab, tree, accordion, style, legend, and export controls are keyboard reachable and expose accessible names/states where feasible. | Component + Playwright accessibility smoke + manual |
@@ -158,7 +158,7 @@ These criteria bind implementation to decisions `D010` through `D016`.
 8. Analysis state and tabs: test serializable AnalysisState, multi-tab independence, dirty unsafe-action blocking, and analysis name/source name separation.
 9. Analysis XLSX: test full-dataset export, hidden restore JSON, visible review sheets, roundtrip restore, invalid schema/chunk errors, and no native editable chart.
 10. Legend and export order: test manual order, custom legend, selected order, reagent/specimen order, preview/export parity, and state separation.
-11. PNG, JPEG, clipboard, plotted-data CSV, and export layout: test valid chart-only/plot+legend/legend-only images, white background, fake-date filename generation, clipboard success/fallback, simple plotted-data CSV, and disabled non-simple data export.
+11. PNG, JPEG, clipboard, plotted-data CSV, and export layout: test valid chart-only/plot+legend/legend-only images, white background, fake-date filename generation, selected-layout clipboard success/fallback, dedicated legend-only clipboard success/fallback, simple plotted-data CSV, and disabled non-simple data export.
 12. Performance, accessibility, and release: test large datasets, virtualized tree/style/legend behavior, hover readout, keyboard navigation, browser compatibility, and GitHub Pages base path.
 
 ## Manual Test Cases
@@ -178,7 +178,7 @@ Before a user-visible MVP release:
 12. Apply a built-in style preset, confirm affected-count feedback, and use one-step undo.
 13. Change legend order and confirm preview/export order matches it.
 14. Download PNG and JPEG and confirm valid output, white background, and `YYMMDD_<analysisName>_plotN.ext` filenames with sanitized analysis names.
-15. Copy the chart image to clipboard where supported; confirm fallback where unsupported or blocked.
+15. Copy the selected chart image layout to clipboard where supported; copy the legend-only PNG through the dedicated action; confirm fallback where unsupported or blocked.
 16. Export plotted-data CSV for a simple current chart; confirm only plotted curves in current order are included.
 17. Confirm plotted-data CSV is disabled with a clear reason for a non-simple chart state.
 18. Test the production build through the same base path used by GitHub Pages.
@@ -191,6 +191,8 @@ Before a user-visible MVP release:
 25. Toggle preview legend visibility and export layout modes and confirm the plot remains unobscured.
 26. Confirm custom legend samples match solid/dashed/dotted lines and none/circle/triangle/rect marker settings.
 27. Hover chart curves and custom legend items, then move the pointer away; confirm highlight clears and configured markers do not disappear or change.
+28. With large Y-axis values around 1,200,000, confirm the `Fluorescence` axis label does not overlap tick labels.
+29. In group style rows, confirm the color popover opens with HEX entry first and the combined line/marker popover shows all line and marker choices without horizontal scrolling.
 
 ## Browser Matrix
 Minimum manual verification candidates:

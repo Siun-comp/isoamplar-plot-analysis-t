@@ -18,6 +18,7 @@ import type {
   CurveStyleField,
   CurveStyleOverride,
   GroupingMode,
+  ImageExportLayout,
   LineType,
   MarkerType,
   ResolvedCurveStyle,
@@ -215,9 +216,7 @@ export function SettingsPanel() {
           curves={selectedCurves}
           labelMode={labelMode}
           legendSettings={legendSettings}
-          exportSettings={exportSettings}
           onPreviewLegendChange={setLegendPreviewVisible}
-          onExportLayoutChange={setExportImageLayout}
           onMove={moveCurveOrder}
         />
       </details>
@@ -239,6 +238,7 @@ export function SettingsPanel() {
           curveOverrides={curveOverrides}
           legendSettings={legendSettings}
           exportSettings={exportSettings}
+          onExportLayoutChange={setExportImageLayout}
           exportCounter={exportCounter}
           exportMessage={exportMessage}
           importFileName={importFileName}
@@ -269,6 +269,7 @@ function ExportControls({
   curveOverrides,
   legendSettings,
   exportSettings,
+  onExportLayoutChange,
   exportCounter,
   exportMessage,
   importFileName,
@@ -293,6 +294,7 @@ function ExportControls({
   curveOverrides: ReturnType<typeof useAppStore.getState>["curveOverrides"];
   legendSettings: ReturnType<typeof useAppStore.getState>["legendSettings"];
   exportSettings: ReturnType<typeof useAppStore.getState>["exportSettings"];
+  onExportLayoutChange: ReturnType<typeof useAppStore.getState>["setExportImageLayout"];
   exportCounter: number;
   exportMessage: string | null;
   importFileName: string | null;
@@ -337,7 +339,7 @@ function ExportControls({
     }
   }
 
-  async function copyPng() {
+  async function copyPng(layout: ImageExportLayout = exportSettings.imageLayout, successMessage = "Copied PNG image to clipboard.") {
     if (!dataset) return;
     setBusy(true);
     setExportMessage(null);
@@ -354,11 +356,11 @@ function ExportControls({
       const blob = await exportChartLayoutImageBlob({
         option: chart.option,
         type: "png",
-        layout: exportSettings.imageLayout,
+        layout,
         legendItems: chart.legendItems
       });
       await copyPngBlobToClipboard(blob);
-      setExportMessage("Copied PNG image to clipboard.");
+      setExportMessage(successMessage);
     } catch (error) {
       setExportMessage(`${error instanceof Error ? error.message : "Clipboard copy failed."} Download PNG instead.`);
     } finally {
@@ -415,14 +417,34 @@ function ExportControls({
   return (
     <section className="export-controls">
       <p>다음 파일 번호: plot{exportCounter}</p>
-      <button type="button" disabled={disabled} onClick={() => void exportImage("png")}>
+      <label className="export-layout-control">
+        Image export layout
+        <select
+          aria-label="Image export layout"
+          value={exportSettings.imageLayout}
+          onChange={(event) => onExportLayoutChange(event.currentTarget.value as ImageExportLayout)}
+        >
+          <option value="plotOnly">Plot only</option>
+          <option value="plotWithLegend">Plot + Legend</option>
+          <option value="legendOnly">Legend only</option>
+        </select>
+      </label>
+      <button type="button" aria-label="Save PNG" disabled={disabled} onClick={() => void exportImage("png")}>
         PNG 저장
       </button>
-      <button type="button" disabled={disabled} onClick={() => void exportImage("jpeg")}>
+      <button type="button" aria-label="Save JPEG" disabled={disabled} onClick={() => void exportImage("jpeg")}>
         JPEG 저장
       </button>
-      <button type="button" disabled={disabled} onClick={() => void copyPng()}>
+      <button type="button" aria-label="Copy selected layout PNG to clipboard" disabled={disabled} onClick={() => void copyPng()}>
         클립보드 PNG
+      </button>
+      <button
+        type="button"
+        aria-label="Copy legend PNG to clipboard"
+        disabled={disabled}
+        onClick={() => void copyPng("legendOnly", "Copied legend PNG to clipboard.")}
+      >
+        범례 클립보드 PNG
       </button>
       <button type="button" disabled={busy || !csvResult.ok} onClick={exportCsv}>
         Plotted CSV
@@ -507,52 +529,161 @@ function GroupStyleEditor({
         </div>
         <div className="style-row-list">
           {visibleEntities.length === 0 && <p>표시할 그룹이 없습니다.</p>}
-          {visibleEntities.map((entity) => (
-            <div className="style-row" key={entity.id}>
-              <span title={entity.label}>{entity.label || "Empty label"}</span>
-              <input
-                type="color"
-                aria-label={`${entity.label} color`}
-                value={colorRules[entity.id] ?? defaultColors[entity.id] ?? defaultChartColors[0]}
-                onChange={(event) => onColorChange(target, entity.id, event.currentTarget.value)}
-              />
-              <HexColorInput
-                label={`${entity.label} hex color`}
-                value={colorRules[entity.id] ?? defaultColors[entity.id] ?? defaultChartColors[0]}
-                onCommit={(color) => onColorChange(target, entity.id, color)}
-              />
-              <select
-                aria-label={`${entity.label} line type`}
-                value={lineRules[entity.id] ?? "solid"}
-                onChange={(event) => onLineTypeChange(target, entity.id, event.currentTarget.value as LineType)}
-              >
-                {lineTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label={`${entity.label} marker type`}
-                value={markerRules[entity.id] ?? "none"}
-                onChange={(event) => onMarkerTypeChange(target, entity.id, event.currentTarget.value as MarkerType)}
-              >
-                {markerTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="compact-button" onClick={() => onResetGroup(target, entity.id)}>
-                Reset
-              </button>
-            </div>
-          ))}
+          {visibleEntities.map((entity) => {
+            const color = colorRules[entity.id] ?? defaultColors[entity.id] ?? defaultChartColors[0];
+            const lineType = lineRules[entity.id] ?? "solid";
+            const markerType = markerRules[entity.id] ?? "none";
+            const entityLabel = entity.label || "Empty label";
+
+            return (
+              <div className="style-row" key={entity.id}>
+                <span title={entity.label}>{entityLabel}</span>
+                <ColorPopoverButton label={entityLabel} value={color} onCommit={(nextColor) => onColorChange(target, entity.id, nextColor)} />
+                <LineMarkerPopoverButton
+                  label={entityLabel}
+                  color={color}
+                  lineType={lineType}
+                  markerType={markerType}
+                  onLineTypeChange={(nextLineType) => onLineTypeChange(target, entity.id, nextLineType)}
+                  onMarkerTypeChange={(nextMarkerType) => onMarkerTypeChange(target, entity.id, nextMarkerType)}
+                />
+                <button type="button" className="compact-button" onClick={() => onResetGroup(target, entity.id)}>
+                  Reset
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
       {entities.length > 0 && visibleEntities.length !== entities.length && <p>{visibleEntities.length} / {entities.length}개 그룹 표시</p>}
     </section>
   );
+}
+
+function ColorPopoverButton({
+  label,
+  value,
+  onCommit
+}: {
+  label: string;
+  value: string;
+  onCommit: (color: string) => void;
+}) {
+  const color = normalizeHexColor(value) ?? defaultChartColors[0];
+
+  return (
+    <details className="style-popover color-popover">
+      <summary className="style-popover-trigger color-trigger" aria-label={`${label} color editor`}>
+        <span className="color-swatch" style={{ backgroundColor: color }} />
+        <span>{color}</span>
+      </summary>
+      <div className="style-popover-panel color-popover-panel">
+        <label>
+          HEX
+          <HexColorInput label={`${label} hex color`} value={color} onCommit={onCommit} />
+        </label>
+        <label>
+          Picker
+          <input type="color" aria-label={`${label} color`} value={color} onChange={(event) => onCommit(event.currentTarget.value)} />
+        </label>
+      </div>
+    </details>
+  );
+}
+
+function LineMarkerPopoverButton({
+  label,
+  color,
+  lineType,
+  markerType,
+  onLineTypeChange,
+  onMarkerTypeChange
+}: {
+  label: string;
+  color: string;
+  lineType: LineType;
+  markerType: MarkerType;
+  onLineTypeChange: (lineType: LineType) => void;
+  onMarkerTypeChange: (markerType: MarkerType) => void;
+}) {
+  const safeColor = normalizeHexColor(color) ?? defaultChartColors[0];
+
+  return (
+    <details className="style-popover line-marker-popover">
+      <summary className="style-popover-trigger line-marker-trigger" aria-label={`${label} line and marker editor`}>
+        <LineMarkerPreview color={safeColor} lineType={lineType} markerType={markerType} />
+      </summary>
+      <div className="style-popover-panel line-marker-panel">
+        <fieldset>
+          <legend>Line</legend>
+          <div className="line-marker-options">
+            {lineTypeOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={lineType === option.value ? "is-active" : ""}
+                aria-label={`${label} line ${option.value}`}
+                aria-pressed={lineType === option.value}
+                onClick={() => onLineTypeChange(option.value)}
+              >
+                <LineMarkerPreview color={safeColor} lineType={option.value} markerType="none" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Marker</legend>
+          <div className="line-marker-options">
+            {markerTypeOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={markerType === option.value ? "is-active" : ""}
+                aria-label={`${label} marker ${option.value}`}
+                aria-pressed={markerType === option.value}
+                onClick={() => onMarkerTypeChange(option.value)}
+              >
+                <LineMarkerPreview color={safeColor} lineType="solid" markerType={option.value} />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      </div>
+    </details>
+  );
+}
+
+function LineMarkerPreview({ color, lineType, markerType }: { color: string; lineType: LineType; markerType: MarkerType }) {
+  return (
+    <svg className="line-marker-preview" viewBox="0 0 76 22" aria-hidden="true" focusable="false">
+      <line
+        x1="8"
+        y1="11"
+        x2="68"
+        y2="11"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap={lineType === "dotted" ? "round" : "butt"}
+        strokeDasharray={getLineStrokeDashArray(lineType)}
+      />
+      {renderMarkerPreview(markerType, color)}
+    </svg>
+  );
+}
+
+function renderMarkerPreview(markerType: MarkerType, color: string) {
+  if (markerType === "none") return null;
+  if (markerType === "circle") return <circle cx="38" cy="11" r="4.5" fill={color} />;
+  if (markerType === "triangle") return <polygon points="38,5.5 44,16 32,16" fill={color} />;
+  return <rect x="33.5" y="6.5" width="9" height="9" fill={color} />;
+}
+
+function getLineStrokeDashArray(lineType: LineType) {
+  if (lineType === "dashed") return "8 5";
+  if (lineType === "dotted") return "1 5";
+  return "";
 }
 
 function IndividualCurveEditor({
@@ -822,17 +953,13 @@ function LegendOrderEditor({
   curves,
   labelMode,
   legendSettings,
-  exportSettings,
   onPreviewLegendChange,
-  onExportLayoutChange,
   onMove
 }: {
   curves: Curve[];
   labelMode: GroupingMode;
   legendSettings: ReturnType<typeof useAppStore.getState>["legendSettings"];
-  exportSettings: ReturnType<typeof useAppStore.getState>["exportSettings"];
   onPreviewLegendChange: (visible: boolean) => void;
-  onExportLayoutChange: ReturnType<typeof useAppStore.getState>["setExportImageLayout"];
   onMove: (curveId: string, direction: "up" | "down") => void;
 }) {
   const labelCounts = createCurveLabelCounts(curves, labelMode);
@@ -848,18 +975,6 @@ function LegendOrderEditor({
             onChange={(event) => onPreviewLegendChange(event.currentTarget.checked)}
           />
           Preview 범례 표시
-        </label>
-        <label>
-          이미지 Export 구성
-          <select
-            aria-label="Image export layout"
-            value={exportSettings.imageLayout}
-            onChange={(event) => onExportLayoutChange(event.currentTarget.value as ReturnType<typeof useAppStore.getState>["exportSettings"]["imageLayout"])}
-          >
-            <option value="plotOnly">Plot only</option>
-            <option value="plotWithLegend">Plot + Legend</option>
-            <option value="legendOnly">Legend only</option>
-          </select>
         </label>
       </div>
       {curves.length === 0 && <p>선택된 curve가 없습니다.</p>}

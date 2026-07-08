@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { ReactNode, SyntheticEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, SyntheticEvent } from "react";
 import type { AxisId, AxisScaleState, ScaleMode, ScalePresetId } from "../chart/chartScale";
 import { getAxisAutoDomain, isScalePresetConfigured } from "../chart/chartScale";
 import { builtInStylePresets, defaultChartColors } from "../chart/chartStyle";
@@ -614,7 +614,14 @@ function useStylePopoverState() {
     }
   }
 
-  return { ref, isOpen, onToggle };
+  function onKeyDown(event: ReactKeyboardEvent<HTMLDetailsElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setIsOpen(false);
+    }
+  }
+
+  return { ref, isOpen, onToggle, onKeyDown };
 }
 
 function ColorPopoverButton({
@@ -630,7 +637,13 @@ function ColorPopoverButton({
   const popover = useStylePopoverState();
 
   return (
-    <details className="style-popover color-popover" ref={popover.ref} open={popover.isOpen} onToggle={popover.onToggle}>
+    <details
+      className="style-popover color-popover"
+      ref={popover.ref}
+      open={popover.isOpen}
+      onToggle={popover.onToggle}
+      onKeyDown={popover.onKeyDown}
+    >
       <summary className="style-popover-trigger color-trigger" aria-label={`${label} color editor`}>
         <span className="color-swatch" style={{ backgroundColor: color }} />
       </summary>
@@ -667,7 +680,13 @@ function LineMarkerPopoverButton({
   const popover = useStylePopoverState();
 
   return (
-    <details className="style-popover line-marker-popover" ref={popover.ref} open={popover.isOpen} onToggle={popover.onToggle}>
+    <details
+      className="style-popover line-marker-popover"
+      ref={popover.ref}
+      open={popover.isOpen}
+      onToggle={popover.onToggle}
+      onKeyDown={popover.onKeyDown}
+    >
       <summary className="style-popover-trigger line-marker-trigger" aria-label={`${label} line and marker editor`}>
         <LineMarkerPreview color={safeColor} lineType={lineType} markerType={markerType} />
       </summary>

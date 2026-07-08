@@ -343,6 +343,9 @@ Completed the user-reviewed local implementation for reduced chart left whitespa
 - Final pre-use style pass `npm run test:e2e`: passed, 3 Chromium Playwright tests.
 - Final pre-use style pass `git diff --check`: passed with CRLF replacement warnings only.
 - Final pre-use style pass local screenshot review: passed for reduced chart left whitespace, visible group labels, compact swatch/line/reset controls, and outside-click popover closing in `test-results\manual-check\style-panel-compact.png` and `test-results\manual-check\style-panel-popup-closed.png`.
+- Final pre-use Escape follow-up `npm run test -- --run src/app/App.test.tsx src/chart/chartConfig.test.ts`: passed, 2 files / 31 Vitest tests.
+- Final pre-use Escape follow-up `npm run build`: passed.
+- Final pre-use Escape follow-up `npm run test:e2e`: passed, 3 Chromium Playwright tests.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.

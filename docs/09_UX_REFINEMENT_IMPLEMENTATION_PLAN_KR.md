@@ -261,7 +261,7 @@ _IsoAmplarChecksum
 CSV는 단일 텍스트 표이므로 그래프를 다른 시트에 넣을 수 없다. 다만 사용자가 “현재 그림과 현재 plotted data를 한 파일에 담는 보고서”를 다시 요청하면 다음 후순위 기능으로 해석한다.
 
 ```text
-YYMMDD_plotN.xlsx
+YYMMDD_<sanitizedAnalysisName>_plotN.xlsx
   Data worksheet: currently plotted rectangular data
   Chart worksheet: static PNG image of current plot
 ```
@@ -452,7 +452,7 @@ Phase R3을 구현하라.
 - hidden JSON은 chunking을 지원해 큰 분석 상태도 안전하게 저장한다.
 - Analysis XLSX import 시 hidden restore sheet를 우선 탐지한다.
 - 일반 원본 Excel과 Analysis XLSX를 구분해 file action routing을 적용한다.
-- Analysis XLSX export filename은 analysisName 기반 또는 `YYMMDD_analysisN.xlsx` 같은 안전한 규칙을 쓰되, 충돌/불법문자는 sanitize한다.
+- Analysis XLSX export filename은 `YYMMDD_<sanitizedAnalysisName>_analysisN.xlsx` 규칙을 쓰고, 빈 이름은 `analysis`로 대체하며, 충돌/불법문자는 sanitize한다.
 - visible `ImportedData` sheet는 검토용이며, Excel에서 수정한 visible sheet를 자동 복원 근거로 삼지 않는다.
 
 검증:
@@ -687,7 +687,7 @@ Phase R8을 구현하라.
 - Plot only는 chart만 포함한다.
 - Plot + Legend는 plot을 가리지 않는 범례를 포함한다.
 - Legend only는 legend만 포함한다.
-- export filename은 기존 `YYMMDD_plotN.ext` 정책을 유지한다.
+- export filename은 현재 analysisName 기반 규칙인 `YYMMDD_<sanitizedAnalysisName>_plotN.ext`를 사용한다.
 - 실패한 export는 `plotN`을 소비하지 않는다.
 
 구현 프롬프트:
@@ -699,7 +699,7 @@ Phase R9를 구현하라.
 - custom legend export renderer를 추가하라. 가능하면 외부 dependency 없이 canvas/SVG 기반으로 구현하라.
 - ExportControls에 export layout 옵션을 연결하라.
 - PNG/JPEG download와 clipboard PNG가 같은 export layout을 쓰게 하라.
-- 흰색 배경과 기존 filename 규칙을 유지하라.
+- 흰색 배경과 analysisName 기반 filename 규칙을 유지하라.
 - export layout은 data inclusion을 바꾸지 않는다. plotted CSV는 현재 plotted curve projection을 따르고, Analysis XLSX는 별도 기능으로 전체 imported dataset과 설정을 저장한다.
 
 테스트:

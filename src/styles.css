@@ -676,8 +676,17 @@ button:disabled {
   align-items: center;
   gap: 7px;
   min-width: 0;
+  border-radius: 6px;
+  padding: 2px 4px;
+  outline: none;
   color: #263448;
   font-size: 12px;
+}
+
+.custom-legend-item:hover,
+.custom-legend-item:focus-visible,
+.custom-legend-item-active {
+  background: #eaf2ff;
 }
 
 .custom-legend-item span {

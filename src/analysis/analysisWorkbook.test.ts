@@ -226,6 +226,7 @@ describe("Analysis XLSX workbook", () => {
       expect(result.message).toBe("Unsupported Analysis XLSX schema version.");
     }
     expect(createAnalysisWorkbookFileName(2, new Date("2026-07-08T00:00:00"))).toBe("260708_analysis2.xlsx");
+    expect(createAnalysisWorkbookFileName(1, new Date("2026-07-09T00:00:00"), "Run A")).toBe("260709_Run_A_analysis1.xlsx");
     expect(sanitizeAnalysisFileNamePart(" a/b:c* run ")).toBe("a_b_c_run");
   });
 

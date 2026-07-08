@@ -22,6 +22,7 @@ export function ChartPanel() {
   const undoLastPreset = useAppStore((state) => state.undoLastPreset);
   const canUndoPreset = useAppStore((state) => Boolean(state.lastPresetUndo));
   const [hoverReadout, setHoverReadout] = useState<ChartHoverReadout | null>(null);
+  const [hoveredCurveId, setHoveredCurveId] = useState<string | null>(null);
   const buildResult = buildPcrChartOption({
     dataset,
     selectedCurveIds: selection?.selectedCurveIds ?? new Set<string>(),
@@ -29,7 +30,8 @@ export function ChartPanel() {
     scale: chartScale,
     labelMode: selection?.groupingMode,
     styleRules,
-    curveOverrides
+    curveOverrides,
+    highlightedCurveId: hoveredCurveId
   });
   const selectedCount = buildResult.visibleCurves.length;
   const selectedCurveIds = buildResult.visibleCurves.map((curve) => curve.curveId);
@@ -45,6 +47,10 @@ export function ChartPanel() {
     .join("|");
   const handleHoverReadout = useCallback((readout: ChartHoverReadout | null) => {
     setHoverReadout(readout);
+    setHoveredCurveId(readout?.curveId ?? null);
+  }, []);
+  const handleLegendHover = useCallback((curveId: string | null) => {
+    setHoveredCurveId(curveId);
   }, []);
   const handleKeepSearchResults = useCallback(() => {
     if (!selection) return;
@@ -55,6 +61,7 @@ export function ChartPanel() {
 
   useEffect(() => {
     setHoverReadout(null);
+    setHoveredCurveId(null);
   }, [dataset?.datasetId, readoutFingerprint]);
 
   return (
@@ -100,7 +107,9 @@ export function ChartPanel() {
           )}
         </div>
       )}
-      {legendSettings.previewVisible && selectedCount > 0 && <CustomLegend items={buildResult.legendItems} />}
+      {legendSettings.previewVisible && selectedCount > 0 && (
+        <CustomLegend items={buildResult.legendItems} highlightedCurveId={hoveredCurveId} onHoverCurve={handleLegendHover} />
+      )}
       {buildResult.scaleIssues.length > 0 && (
         <div className="chart-warning" role="status">
           {buildResult.scaleIssues.map((issue) => issue.message).join(" ")}

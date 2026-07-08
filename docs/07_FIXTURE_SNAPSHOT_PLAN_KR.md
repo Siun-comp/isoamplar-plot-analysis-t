@@ -7,7 +7,7 @@ PCR graph web appÏùò Excel parser, normalized model, selection, chart, export ÌÖ
 Active draft
 
 ## Last Updated
-2026-07-07
+2026-07-09
 
 ## Owner
 QA / Engineering / Agent
@@ -394,7 +394,7 @@ Image export expectations:
 
 - PNG/JPEG only.
 - White background.
-- Filename `YYMMDD_plotN.ext`.
+- Filename `YYMMDD_<sanitizedAnalysisName>_plotN.ext` when an analysis name is available, with legacy/no-name helper coverage for `YYMMDD_plotN.ext`.
 - Preview and export style parity.
 - No hardcoded reference-image title, threshold/reference line, marker shape, color, legend label, curve count, axis range, or data values.
 

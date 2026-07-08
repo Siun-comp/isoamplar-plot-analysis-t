@@ -360,6 +360,12 @@ describe("App PCR workspace", () => {
       "A1 / 검체 1",
       "A2 / 검체 1"
     ]);
+    const firstLegendItem = within(customLegend).getAllByRole("listitem")[0];
+    await user.hover(firstLegendItem);
+    expect(firstLegendItem).toHaveClass("custom-legend-item-active");
+    await user.unhover(firstLegendItem);
+    expect(firstLegendItem).not.toHaveClass("custom-legend-item-active");
+
     await user.click(screen.getByText("Legend Order"));
     await user.click(screen.getByRole("button", { name: "A2 / 검체 1 move up" }));
     customLegend = screen.getByRole("region", { name: "Custom legend" });

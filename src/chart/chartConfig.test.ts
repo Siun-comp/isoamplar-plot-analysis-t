@@ -26,6 +26,41 @@ describe("PCR chart configuration", () => {
     expect(option.series.every((series: any) => series.connectNulls === false)).toBe(true);
     expect(option.series.every((series: any) => series.showSymbol === false)).toBe(true);
     expect(option.series.every((series: any) => series.symbol === "none")).toBe(true);
+    expect(option.series.every((series: any) => series.emphasis.disabled === true)).toBe(true);
+  });
+
+  it("uses app-controlled curve highlight without changing marker settings", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const [firstCurve, secondCurve] = dataset.curves;
+    const result = buildPcrChartOption({
+      dataset,
+      selectedCurveIds: new Set([firstCurve.curveId, secondCurve.curveId]),
+      scale: createDefaultChartScale(),
+      highlightedCurveId: secondCurve.curveId,
+      curveOverrides: {
+        [firstCurve.curveId]: { markerType: "circle" },
+        [secondCurve.curveId]: { markerType: "triangle" }
+      }
+    });
+    const option = result.option as Record<string, any>;
+
+    expect(option.series[0]).toMatchObject({
+      id: firstCurve.curveId,
+      showSymbol: true,
+      symbol: "circle",
+      symbolSize: 6
+    });
+    expect(option.series[1]).toMatchObject({
+      id: secondCurve.curveId,
+      showSymbol: true,
+      symbol: "triangle",
+      symbolSize: 6
+    });
+    expect(option.series[0].lineStyle.opacity).toBeLessThan(1);
+    expect(option.series[0].itemStyle.opacity).toBeLessThan(1);
+    expect(option.series[1].lineStyle.opacity).toBe(1);
+    expect(option.series[1].itemStyle.opacity).toBe(1);
+    expect(option.series[1].lineStyle.width).toBeGreaterThan(option.series[0].lineStyle.width);
   });
 
   it("keeps default colors stable when earlier curves are added later", () => {

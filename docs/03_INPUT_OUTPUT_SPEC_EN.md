@@ -7,7 +7,7 @@ Define how data enters the application, how it is normalized internally, and wha
 Active draft
 
 ## Last Updated
-2026-07-08
+2026-07-09
 
 ## Owner
 Engineering / Agent
@@ -18,8 +18,8 @@ Engineering / Agent
 - Imported PCR data should normalize into stable specimen/reagent/curve records keyed by `curveId`; appended files must rekey curves to avoid ID collisions.
 - Parsing should preserve original values and surface warnings.
 - Output image and clipboard content should match the current rendered chart.
-- PNG and JPEG export use white background and filename `YYMMDD_plotN.ext`.
-- Plotted-data CSV, when enabled, uses filename `YYMMDD_plotN_data.csv` and includes only the current plotted chart projection.
+- PNG and JPEG export use white background and analysis-name-based filenames such as `YYMMDD_<sanitizedAnalysisName>_plotN.ext`.
+- Plotted-data CSV, when enabled, uses the matching analysis-name-based filename stem such as `YYMMDD_<sanitizedAnalysisName>_plotN_data.csv` and includes only the current plotted chart projection.
 - Chart styling uses stable default colors by original data/group order, solid no-marker lines by default, and optional individual marker overrides.
 - Analysis XLSX is a web-app restore file containing the full imported dataset and settings; it is separate from plotted-data CSV and report-style chart workbooks.
 - Internal analysis tabs keep separate in-browser analysis states; user data remains browser-local unless explicitly exported.
@@ -68,10 +68,9 @@ CSV import is not part of the MVP. If added later, it must map into the same PCR
 ## Analysis XLSX Rules
 Analysis XLSX is a project/session restore file for IsoAmplar Plot Analysis. It is not a report workbook and does not contain a native editable Excel chart.
 
-Filename rule:
-
-- Default filename convention is `YYMMDD_analysisN.xlsx`, using browser-local date and a per-session analysis export counter.
-- If the analysis name is included in a filename, it must be sanitized so characters invalid on Windows/macOS/Linux filesystems are removed or replaced.
+- Filename convention is `YYMMDD_<sanitizedAnalysisName>_analysisN.xlsx`, using browser-local date, the current analysis name, and the per-analysis export counter.
+- If no usable analysis name is available, the safe name segment falls back to `analysis`.
+- The analysis name segment must be sanitized so characters invalid on Windows/macOS/Linux filesystems are removed or replaced.
 - Failed Analysis XLSX exports do not consume the analysis export counter.
 
 Workbook shape:
@@ -262,7 +261,8 @@ This structure may be refined during implementation but must preserve curveId-ba
 ## Image Download Rules
 - Formats: PNG, JPEG.
 - Background: white only.
-- Filename convention: `YYMMDD_plotN.ext`, using browser-local date. Example: `260707_plot1.png`.
+- Filename convention: `YYMMDD_<sanitizedAnalysisName>_plotN.ext`, using browser-local date and the current analysis name. Example: `260709_Run_A_plot1.png`.
+- The analysis name segment is sanitized by trimming whitespace, replacing invalid filename characters and whitespace with `_`, collapsing repeated `_`, trimming surrounding `_`, and limiting the segment length. Blank or fully invalid names fall back to `analysis`.
 - Export excludes UI controls and includes only the chart output.
 - Export reflects current selected curves, scale, style, legend/order state, and selected export layout.
 - Image export layouts:
@@ -280,7 +280,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 
 ## Plotted Data Export Rules
 - Format: CSV.
-- Filename convention: `YYMMDD_plotN_data.csv`.
+- Filename convention: `YYMMDD_<sanitizedAnalysisName>_plotN_data.csv`, using the same sanitized analysis name and `plotN` counter as image export.
 - Counter rule: if data CSV is exported together with an image, both artifacts share the same `plotN`; if data CSV is exported alone, it receives the next browser-local `plotN`.
 - Failed export attempts do not consume `plotN`.
 - Data scope: current plotted curves only, in current legend/export order.
@@ -304,6 +304,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 - Successful PNG/JPEG download increments `plotN`.
 - Successful plotted-data CSV download increments `plotN`.
 - Failed image, clipboard, or CSV attempts do not increment `plotN`.
+- Changing the analysis name changes future filenames only; it does not reset the `plotN` or `analysisN` counter.
 - Current MVP implements image and data CSV as separate actions; combined image+CSV export remains a future candidate.
 
 ## Future Output Candidates

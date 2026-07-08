@@ -68,7 +68,7 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "PNG 저장" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^\d{6}_plot1\.png$/u);
+  expect(download.suggestedFilename()).toMatch(/^\d{6}_.+_plot1\.png$/u);
   const after = await chartWrap.boundingBox();
 
   expect(before).not.toBeNull();

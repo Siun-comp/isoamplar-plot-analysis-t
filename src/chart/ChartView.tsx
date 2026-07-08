@@ -8,6 +8,7 @@ import type { EChartsCoreOption } from "echarts/core";
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 export type ChartHoverReadout = {
+  curveId?: string;
   seriesName: string;
   x: number | string;
   y: number | string | null;
@@ -37,6 +38,7 @@ export function ChartView({ option, onHoverReadout }: ChartViewProps) {
       onHoverReadout?.(createHoverReadout(params));
     };
     const handleGlobalOut = () => {
+      chart.dispatchAction({ type: "downplay" });
       onHoverReadout?.(null);
     };
     const handleCanvasMouseMove = (event: unknown) => {
@@ -48,6 +50,7 @@ export function ChartView({ option, onHoverReadout }: ChartViewProps) {
     chart.on("globalout", handleGlobalOut);
     chart.getZr().on("mousemove", handleCanvasMouseMove);
     chart.getZr().on("globalout", handleGlobalOut);
+    elementRef.current.addEventListener("mouseleave", handleGlobalOut);
 
     const resizeObserver = new ResizeObserver(() => chart.resize());
     resizeObserver.observe(elementRef.current);
@@ -58,6 +61,7 @@ export function ChartView({ option, onHoverReadout }: ChartViewProps) {
       chart.off("globalout", handleGlobalOut);
       chart.getZr().off("mousemove", handleCanvasMouseMove);
       chart.getZr().off("globalout", handleGlobalOut);
+      elementRef.current?.removeEventListener("mouseleave", handleGlobalOut);
       chart.dispose();
       chartRef.current = null;
     };
@@ -79,6 +83,7 @@ export function createHoverReadout(params: unknown): ChartHoverReadout | null {
   if (x === null) return null;
 
   return {
+    curveId: typeof params.seriesId === "string" ? params.seriesId : undefined,
     seriesName: String(params.seriesName ?? ""),
     x,
     y,
@@ -117,6 +122,7 @@ function createNearestReadout(
   if (!nearest || nearest.distance > 32) return null;
 
   return {
+    curveId: nearest.series.id,
     seriesName: nearest.series.name,
     x: nearest.point.x,
     y: nearest.point.y,
@@ -127,6 +133,7 @@ function createNearestReadout(
 function getReadoutSeries(option: EChartsCoreOption) {
   return normalizeSeriesOption((option as { series?: unknown }).series)
     .map((series) => ({
+      id: typeof series.id === "string" ? series.id : undefined,
       name: typeof series.name === "string" ? series.name : "",
       color: getSeriesColor(series),
       data: normalizeSeriesData(series.data)

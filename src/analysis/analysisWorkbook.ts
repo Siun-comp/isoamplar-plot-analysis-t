@@ -7,7 +7,7 @@ import {
   type SerializedAnalysisState
 } from "./analysisState";
 import type { Curve, PcrWarning } from "../data/types";
-import { createDateStamp } from "../chart/exportFilenames";
+import { createFileNameStem, sanitizeFileNamePart } from "../chart/exportFilenames";
 
 type XlsxModule = typeof import("xlsx");
 
@@ -98,19 +98,11 @@ export function readAnalysisWorkbook(workbook: XLSX.WorkBook, xlsx: XlsxModule):
   }
 }
 
-export function createAnalysisWorkbookFileName(analysisNumber: number, date = new Date()) {
-  return `${createDateStamp(date)}_analysis${analysisNumber}.xlsx`;
+export function createAnalysisWorkbookFileName(analysisNumber: number, date = new Date(), analysisName?: string) {
+  return `${createFileNameStem("analysis", analysisNumber, date, analysisName)}.xlsx`;
 }
 
-export function sanitizeAnalysisFileNamePart(value: string) {
-  return value
-    .trim()
-    .replace(/[<>:"/\\|?*\u0000-\u001f]+/gu, "_")
-    .replace(/\s+/gu, "_")
-    .replace(/_+/gu, "_")
-    .replace(/^_+|_+$/gu, "")
-    .slice(0, 80);
-}
+export const sanitizeAnalysisFileNamePart = sanitizeFileNamePart;
 
 function appendSheet(xlsx: XlsxModule, workbook: XLSX.WorkBook, sheetName: string, rows: unknown[][]) {
   xlsx.utils.book_append_sheet(workbook, xlsx.utils.aoa_to_sheet(rows), sheetName);

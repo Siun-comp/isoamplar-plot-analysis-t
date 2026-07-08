@@ -7,7 +7,7 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-07-08
+2026-07-09
 
 ## Compression-Safe Summary
 - IsoAmplar Plot Analysis MVP implementation has progressed through Phase 8 plus the 2026-07-08 UI/analysis refinement, GitHub Pages deployment, app icon, and staged UX refinement planning passes.
@@ -23,15 +23,16 @@ Active
 - GitHub Pages asset base is configured as `./` by default. The public GitHub Pages deployment is active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Browser tab/bookmark/PWA icon assets use the selected Option A amplification-curve icon.
 - The current implementation plan is `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`. Phases R0 through R13 are complete.
+- The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
 
 ## Current Goal
-Phase R13 of `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md` is complete: final regression, release audit, GitHub Pages deployment, and public URL smoke have been performed for the R0-R12 refinement set.
+Complete the immediately safe post-release usability fixes requested after Phase R13: hover highlight clearing, legend hover highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
 
 ## Current Milestone
 M8 - MVP release preparation complete locally, with post-MVP UI refinement applied.
 
 ## Last Completed Step
-Completed Phase R13 final regression/release audit. The R0-R13 refinement set is committed, pushed to `main`, deployed through GitHub Actions Pages, and smoke-tested at the public GitHub Pages URL for HTTP 200, app icon assets, Excel upload, chart rendering, custom legend, and Export controls.
+Implemented and locally verified the direct post-release refinement code path. Release commit, push, and GitHub Pages deployment smoke are the remaining steps for this pass.
 
 ## Implemented
 - Documentation baseline: `AGENTS.md`, `DEVELOPMENT_STATE.md`, `DECISIONS.md`, `CHANGELOG.md`, and docs `01` through `08`.
@@ -70,6 +71,7 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
   - sticky center chart panel on desktop while side panels/page scroll
   - Auto/Fixed X/Y scale with validation and current auto-bound display
   - user-editable P1/P2 scale presets per analysis session, selectable only after valid min/max values
+  - app-controlled transient curve highlighting by `curveId`
   - >20 visible-curve warning
   - stable default colors based on original specimen/reagent order rather than visible selection index
   - group style rules and individual curve overrides
@@ -79,9 +81,9 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
   - user legend/export order
   - curve labels in selection, chart, legend order, and CSV follow the active grouping mode
 - Export:
-  - PNG/JPEG image download with white background and `YYMMDD_plotN.ext`
+  - PNG/JPEG image download with white background and analysis-name-based filenames such as `YYMMDD_<analysisName>_plotN.ext`
   - PNG clipboard copy with fallback message
-  - plotted-data CSV with `YYMMDD_plotN_data.csv` when common-X rectangular output is safe
+  - plotted-data CSV with `YYMMDD_<analysisName>_plotN_data.csv` when common-X rectangular output is safe
   - failed export attempts do not consume `plotN`
 - Browser-local processing only; no backend or remote upload.
 - Public app icon assets:
@@ -234,6 +236,8 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
   - Chart tooltip rendering is disabled; hover information is shown in a fixed chart-panel readout below the canvas.
   - The readout supports direct ECharts series hover and a canvas nearest-point fallback so no-marker line charts remain inspectable.
   - Readout state is transient and clears when the visible chart projection, labels, or resolved style fingerprint changes.
+  - Direct refinement now disables ECharts built-in series emphasis and uses app-controlled `curveId` highlighting so marker settings remain stable during hover.
+  - Chart hover clears on globalout and native mouseleave; custom legend hover/focus highlights the matching curve and clears on leave/blur.
   - The >20 visible-curve warning keeps preview/export enabled and adds actions for current-search-only selection reduction, full selection clearing, and visual style preset assistance.
   - The warning preset action uses existing one-step preset undo and exposes a local `프리셋 Undo` button after application.
   - Search matching/filtering is shared between the selection panel and chart warning helper actions.
@@ -257,6 +261,8 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
 - `D027`: internal analysis tabs are accepted for multiple simultaneous analyses, with independent per-tab AnalysisState.
 - `D028`: use app-controlled custom legends and separate legend/chart/export states.
 - `D029`: style origin and reset semantics are explicit; group marker styles are supported.
+- `D030`: hover readout is fixed outside the plot; >20 curve assistance remains non-blocking.
+- `D031`: chart/legend hover highlighting is app-controlled by `curveId`, marker-preserving, transient, and export filenames include sanitized analysis names.
 
 ## Verification Status
 - Phase R1 `git diff --check`: passed, with CRLF replacement warnings only.
@@ -306,6 +312,11 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
 - Phase R13 GitHub Actions Pages deploy: passed for pushed `main`; the workflow gate runs `npm run test` and `npm run build`.
 - Phase R13 public URL technical smoke: passed at `https://siun-comp.github.io/isoamplar-plot-analysis/` for HTTP 200, `favicon.svg`, `manifest.webmanifest`, generated `.xlsx` Excel upload, chart canvas render, custom legend, and Export controls.
 - Phase R13 local-only release checks: `npm run test:e2e`, `npm audit --omit=dev`, and public URL smoke were run locally rather than as required Pages workflow gates.
+- Direct post-release refinement focused tests: passed, 6 Vitest files / 42 tests covering marker-preserving highlight, hover payload `curveId`, custom legend hover/focus, analysis-name filenames, Analysis XLSX filename, and app legend hover.
+- Direct post-release refinement full `npm run test`: passed, 14 files / 100 tests.
+- Direct post-release refinement `npm run build`: passed.
+- Direct post-release refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests including analysis-name PNG filename smoke.
+- Direct post-release refinement `git diff --check`: passed with CRLF replacement warnings only.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.
@@ -324,6 +335,7 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
 - Performance budgets for max file size, row count, specimen count, imported curve count, and rendered curve count remain undecided.
 - P1/P2 scale presets are user-editable per analysis session and represented in AnalysisState; they can be preserved through explicit Analysis XLSX export/import but not automatic browser-session persistence.
 - Analysis XLSX currently stores restore JSON and visible review sheets, but it does not include a native editable Excel chart or a static chart image workbook.
+- The Style panel remains functional but dense for many curves; a more compact overview/editor pattern is a follow-up UX improvement rather than part of the direct bug-fix pass.
 - Dirty tab close/replace confirmation behavior and tab-count warning/hard-cap policy remain undecided.
 
 ## Important Links
@@ -337,6 +349,6 @@ Completed Phase R13 final regression/release audit. The R0-R13 refinement set is
 - Local dev server: `http://127.0.0.1:5173/`
 
 ## Next 3 Tasks
-1. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
-2. Manually verify clipboard image copy in Chrome/Edge on the final deployment origin.
-3. Decide dirty tab close/replace confirmation UX and internal tab-count warning policy before making destructive tab actions more permissive.
+1. Commit and push the direct refinement pass, then confirm the GitHub Pages deployment.
+2. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
+3. Design the next Style-panel density improvement as a separate UX pass, then decide dirty tab close/replace confirmation UX and internal tab-count warning policy.

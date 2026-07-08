@@ -7,7 +7,7 @@ User visible and release relevant change history.
 Active draft
 
 ## Last Updated
-2026-07-08
+2026-07-09
 
 ## Owner
 Agent / Engineering
@@ -119,6 +119,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Added R12 coverage for hover payload extraction, browser hover readout smoke, and >20 helper actions.
 - Added R12 desktop/mobile screenshots at `docs/gui_mockups/screenshots/phase-r12_hover_warning_desktop.png` and `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`.
 - Added R13 release verification notes for full local regression, dependency audit, GitHub Pages deploy, and public URL smoke.
+- Added custom legend hover and keyboard focus highlighting for the matching chart curve.
+- Added analysis-name-based filenames for PNG/JPEG, plotted-data CSV, and Analysis XLSX exports.
 
 ### Changed
 - Replaced default replicate/series/exclude/restore-style wording in the active GUI baseline with individual curve and selected/unselected terminology.
@@ -171,6 +173,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Updated Playwright generated workbook fixtures from two-point curves to realistic 45-cycle amplification curves for hover/readout verification.
 - Updated release checklist and test plan to mark GitHub Pages deployment behavior verified.
 - Clarified release evidence boundaries: generated `.xlsx` public URL smoke is complete, real `graph_TEST.xlsx` remains manual domain validation, and e2e/audit are local release checks outside the current Pages workflow gate.
+- Updated chart hover behavior to use app-controlled `curveId` highlighting instead of ECharts built-in series emphasis.
+- Updated export filename rules so future downloads include the sanitized current analysis name before `plotN` or `analysisN`.
 
 ### Fixed
 - Fixed chart preview height stretching with expanded left/right panel content.
@@ -181,6 +185,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Fixed a data-loss risk where a pending replace/restore result could overwrite a tab that became dirty while the file was still being read.
 - Fixed the >20 helper action that previously only changed the selection-panel filter instead of actually keeping the current search result selected.
 - Fixed stale fixed-readout values after same-count selection swaps, grouping label changes, or style preset changes.
+- Fixed stale single-curve highlighting after moving the pointer away from the chart.
+- Fixed marker settings disappearing or changing during hover highlight.
 
 ### Removed
 - Nothing yet.

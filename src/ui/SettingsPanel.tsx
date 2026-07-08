@@ -327,7 +327,7 @@ function ExportControls({
         layout: exportSettings.imageLayout,
         legendItems: chart.legendItems
       });
-      const fileName = createImageExportFileName(exportCounter, type);
+      const fileName = createImageExportFileName(exportCounter, type, new Date(), analysisName);
       downloadBlob(blob, fileName);
       markExportSuccess(`Saved ${fileName}.`);
     } catch (error) {
@@ -372,7 +372,7 @@ function ExportControls({
       return;
     }
 
-    const fileName = createPlottedDataFileName(exportCounter);
+    const fileName = createPlottedDataFileName(exportCounter, new Date(), analysisName);
     const blob = new Blob(["\ufeff", csvResult.csv], { type: "text/csv;charset=utf-8" });
     downloadBlob(blob, fileName);
     markExportSuccess(`Saved ${fileName}.`);
@@ -402,7 +402,7 @@ function ExportControls({
         dirty
       });
       const blob = await exportAnalysisWorkbookBlob(analysisState);
-      const fileName = createAnalysisWorkbookFileName(exportCounter);
+      const fileName = createAnalysisWorkbookFileName(exportCounter, new Date(), analysisName);
       downloadBlob(blob, fileName);
       markAnalysisSaveSuccess(`Saved ${fileName}.`);
     } catch (error) {

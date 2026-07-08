@@ -7,11 +7,30 @@ export function createDateStamp(date = new Date()) {
   return `${year}${month}${day}`;
 }
 
-export function createImageExportFileName(plotNumber: number, type: ImageExportType, date = new Date()) {
-  return `${createDateStamp(date)}_plot${plotNumber}.${type === "jpeg" ? "jpg" : "png"}`;
+export function createImageExportFileName(
+  plotNumber: number,
+  type: ImageExportType,
+  date = new Date(),
+  analysisName?: string
+) {
+  return `${createFileNameStem("plot", plotNumber, date, analysisName)}.${type === "jpeg" ? "jpg" : "png"}`;
 }
 
-export function createPlottedDataFileName(plotNumber: number, date = new Date()) {
-  return `${createDateStamp(date)}_plot${plotNumber}_data.csv`;
+export function createPlottedDataFileName(plotNumber: number, date = new Date(), analysisName?: string) {
+  return `${createFileNameStem("plot", plotNumber, date, analysisName)}_data.csv`;
 }
 
+export function createFileNameStem(kind: "plot" | "analysis", number: number, date = new Date(), analysisName?: string) {
+  const nameSegment = analysisName === undefined ? "" : `${sanitizeFileNamePart(analysisName) || "analysis"}_`;
+  return `${createDateStamp(date)}_${nameSegment}${kind}${number}`;
+}
+
+export function sanitizeFileNamePart(value: string) {
+  return value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/gu, "_")
+    .replace(/\s+/gu, "_")
+    .replace(/_+/gu, "_")
+    .replace(/^_+|_+$/gu, "")
+    .slice(0, 80);
+}

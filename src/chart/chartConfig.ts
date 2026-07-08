@@ -19,6 +19,7 @@ export function buildPcrChartOption(args: {
   labelMode?: GroupingMode;
   styleRules?: StyleRules;
   curveOverrides?: Record<string, CurveStyleOverride>;
+  highlightedCurveId?: string | null;
 }): ChartBuildResult {
   const projection = buildChartProjection(args);
 
@@ -105,6 +106,10 @@ export function buildPcrChartOption(args: {
       series: projection.visibleCurves.map((curve, index) => {
         const resolvedStyle = projection.resolvedStyles.get(curve.curveId);
         const markerType = resolvedStyle?.markerType ?? "none";
+        const baseLineWidth = resolvedStyle?.lineWidth ?? 2.25;
+        const isHighlighted = args.highlightedCurveId === curve.curveId;
+        const isMuted = Boolean(args.highlightedCurveId) && !isHighlighted;
+        const opacity = isMuted ? 0.16 : 1;
 
         return {
           id: curve.curveId,
@@ -115,16 +120,19 @@ export function buildPcrChartOption(args: {
           symbol: markerType,
           symbolSize: markerType === "none" ? 0 : 6,
           connectNulls: false,
+          z: isHighlighted ? 3 : 1,
           lineStyle: {
-            width: resolvedStyle?.lineWidth ?? 2.25,
+            width: isHighlighted ? baseLineWidth + 0.9 : baseLineWidth,
             type: resolvedStyle?.lineType ?? "solid",
-            color: resolvedStyle?.color
+            color: resolvedStyle?.color,
+            opacity
           },
           itemStyle: {
-            color: resolvedStyle?.color ?? defaultChartColors[index % defaultChartColors.length]
+            color: resolvedStyle?.color ?? defaultChartColors[index % defaultChartColors.length],
+            opacity
           },
           emphasis: {
-            focus: "series"
+            disabled: true
           }
         };
       })

@@ -2,7 +2,15 @@ import { useState } from "react";
 import type { LegendItem } from "../chart/chartProjection";
 import type { LineType, MarkerType } from "../data/types";
 
-export function CustomLegend({ items }: { items: LegendItem[] }) {
+export function CustomLegend({
+  items,
+  highlightedCurveId,
+  onHoverCurve
+}: {
+  items: LegendItem[];
+  highlightedCurveId?: string | null;
+  onHoverCurve?: (curveId: string | null) => void;
+}) {
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const visibleItems = normalizedQuery
@@ -27,7 +35,15 @@ export function CustomLegend({ items }: { items: LegendItem[] }) {
       )}
       <ul className="custom-legend-list">
         {visibleItems.map((item) => (
-          <li className="custom-legend-item" key={item.curveId}>
+          <li
+            className={`custom-legend-item${highlightedCurveId === item.curveId ? " custom-legend-item-active" : ""}`}
+            key={item.curveId}
+            tabIndex={0}
+            onMouseEnter={() => onHoverCurve?.(item.curveId)}
+            onMouseLeave={() => onHoverCurve?.(null)}
+            onFocus={() => onHoverCurve?.(item.curveId)}
+            onBlur={() => onHoverCurve?.(null)}
+          >
             <LegendSample item={item} />
             <span title={item.label}>{item.label}</span>
           </li>

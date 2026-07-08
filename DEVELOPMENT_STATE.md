@@ -26,13 +26,13 @@ Active
 - The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
 
 ## Current Goal
-Complete the immediately safe post-release usability fixes requested after Phase R13: hover highlight clearing, legend hover highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
+Direct post-release usability fixes after Phase R13 are complete and deployed: hover highlight clearing, legend hover highlighting, marker-preserving hover behavior, and analysis-name-based export filenames.
 
 ## Current Milestone
 M8 - MVP release preparation complete locally, with post-MVP UI refinement applied.
 
 ## Last Completed Step
-Implemented and locally verified the direct post-release refinement code path. Release commit, push, and GitHub Pages deployment smoke are the remaining steps for this pass.
+Completed the direct post-release refinement pass, pushed it to `main`, confirmed GitHub Actions Pages deployment, and smoke-tested the public URL with generated Excel upload, chart render, custom legend hover, and analysis-name PNG filename export.
 
 ## Implemented
 - Documentation baseline: `AGENTS.md`, `DEVELOPMENT_STATE.md`, `DECISIONS.md`, `CHANGELOG.md`, and docs `01` through `08`.
@@ -317,6 +317,8 @@ Implemented and locally verified the direct post-release refinement code path. R
 - Direct post-release refinement `npm run build`: passed.
 - Direct post-release refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests including analysis-name PNG filename smoke.
 - Direct post-release refinement `git diff --check`: passed with CRLF replacement warnings only.
+- Direct post-release refinement GitHub Actions Pages deploy: passed for pushed `main` run `28958239135`; the workflow gate ran `npm run test` and `npm run build`.
+- Direct post-release refinement public URL smoke: passed at `https://siun-comp.github.io/isoamplar-plot-analysis/` for HTTP 200, latest asset hash `index-uj2oA7cH.js`, generated `.xlsx` Excel upload, chart canvas nonblank render, custom legend hover/leave highlight, and PNG download filename `260709_Public_Smoke_plot1.png`.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.
@@ -349,6 +351,6 @@ Implemented and locally verified the direct post-release refinement code path. R
 - Local dev server: `http://127.0.0.1:5173/`
 
 ## Next 3 Tasks
-1. Commit and push the direct refinement pass, then confirm the GitHub Pages deployment.
-2. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
-3. Design the next Style-panel density improvement as a separate UX pass, then decide dirty tab close/replace confirmation UX and internal tab-count warning policy.
+1. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
+2. Design the next Style-panel density improvement as a separate UX pass.
+3. Decide dirty tab close/replace confirmation UX and internal tab-count warning policy before making destructive tab actions more permissive.

@@ -22,6 +22,7 @@ QA / Engineering / Agent
 - Analysis XLSX export/import must preserve the full imported dataset and settings, including unselected curves.
 - Internal analysis tabs must preserve independent per-tab analysis state.
 - Custom legend and export layout behavior must be tested separately from curve selection state.
+- Analysis label editing and rich Excel clipboard behavior must be tested across chart legend names, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state.
 - Fixture manifest and expected snapshot schema live in `docs/07_FIXTURE_SNAPSHOT_PLAN_KR.md`.
 - Known gaps must be recorded instead of assumed away.
 
@@ -51,6 +52,7 @@ Implemented MVP plus R0-R13 refinement scope:
 - Analysis XLSX export/import for full analysis restore
 - Custom legend rendering outside the plot
 - Plot only / Plot + Legend / Legend only image export layouts
+- Analysis label editing and rich Excel-cell clipboard output
 - Style origin display and group marker rules
 - Hover/readout and large-list usability
 - Static GitHub Pages deployment behavior
@@ -92,7 +94,7 @@ Deferred beyond MVP:
 | AC-007 | FR-009 | Fixed X scale is applied consistently across redraws and relevant filter, selection, grouping, and style changes until changed by the user. | Automated + manual |
 | AC-008 | FR-010 | Fixed Y scale is applied consistently across redraws and relevant filter, selection, grouping, and style changes until changed by the user. | Automated + manual |
 | AC-009 | FR-011 | Image download produces a valid PNG or JPEG of the current chart output, without surrounding UI controls, with white background and an analysis-name-based safe filename such as `YYMMDD_<sanitizedAnalysisName>_plotN.ext`. | Automated smoke + manual |
-| AC-010 | FR-012 | Clipboard copy places the selected image layout on the clipboard where supported; the dedicated legend clipboard action copies a legend-only PNG without changing the selected export layout; otherwise the UI shows a clear download fallback. | Component + manual + fallback test |
+| AC-010 | FR-012 | Clipboard copy places the selected image layout on the clipboard where supported; report-legend PNG clipboard copy and rich Excel-cell legend clipboard copy work from the current order/style/Analysis-label projection without changing the selected export layout; otherwise the UI shows a clear download fallback. | Component + manual + fallback test |
 | AC-011 | FR-013 | The app works from a GitHub Pages style URL without backend services. | Build + manual |
 | AC-012 | FR-014 | Invalid file type, invalid first sheet, invalid axis bounds, export failure, and clipboard failure show actionable errors. | Automated + manual |
 
@@ -132,12 +134,12 @@ These criteria bind implementation to decisions `D010` through `D016`.
 | AC-PCR-028 | FR-008, D029, D032 | Specimen and reagent group styles can set line type and marker none/circle/triangle/rect through a compact combined line/marker selector, and the result is reflected in chart and legend rendering. | Unit + component + visual |
 | AC-PCR-029 | FR-008, D029 | Field-level, curve-level, selected-curves, and all-overrides reset actions restore baseline style behavior without changing unrelated data. | Unit + component |
 | AC-PCR-030 | FR-008, FR-019, D028 | Custom legend does not obscure the plot, represents actual resolved line type and marker type including no-marker curves, and hover/focus on a legend item transiently highlights the matching curve. | Component + Playwright visual |
-| AC-PCR-031 | FR-011, FR-012, FR-019, D028, D032 | Preview legend visibility, export legend inclusion, Plot only / Plot + Legend / Legend only image export layouts, standard selected-layout clipboard PNG, and dedicated legend-only clipboard PNG work independently and produce visually valid image outputs. | Unit + component + E2E + export pixel smoke + Playwright visual |
+| AC-PCR-031 | FR-011, FR-012, FR-019, D028, D032, D034, D035 | Preview legend visibility, export legend inclusion, Plot only / Plot + Legend / Legend only image export layouts, selected-layout clipboard PNG, report legend-only PNG export/copy, Analysis label editing, and rich Excel-cell legend clipboard copy work independently. Analysis labels apply consistently to chart/custom legend labels, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state while original specimen/reagent/source labels remain traceable and resettable. | Unit + component + E2E + export pixel smoke + Playwright visual + manual Excel paste |
 | AC-PCR-032 | FR-008, FR-019, D029 | Legend order changes preserve style overrides on the same curve IDs, move by the currently selected curve order even when unselected curves sit between them, and preview/export/data/style-row order remain consistent. | Unit + component + E2E |
-| AC-PCR-033 | FR-017, D026 | Analysis XLSX export stores the complete imported dataset, source metadata, warnings, selection, order, scale, style, legend/export settings, analysis name, and export counter, regardless of whether curves are currently selected or plotted. Analysis XLSX filenames are safe and sanitized, and transient UI state, runtime tab IDs, and dirty state are excluded. | Unit + workbook readback |
+| AC-PCR-033 | FR-017, D026, D035 | Analysis XLSX export stores the complete imported dataset, source metadata, warnings, selection, order, scale, style, Analysis labels, legend/export settings, analysis name, and export counter, regardless of whether curves are currently selected or plotted. Analysis XLSX filenames are safe and sanitized, visible `ImportedData` keeps original labels separate from Analysis labels, and transient UI state, runtime tab IDs, and dirty state are excluded. | Unit + workbook readback |
 | AC-PCR-034 | FR-017, D026 | Analysis XLSX import restores the hidden JSON state, including unselected curves, while assigning a tab-local analysis ID and clean dirty state; missing, corrupt, chunk-damaged, or unsupported restore sheets show clear errors. | Unit + component + E2E |
 | AC-PCR-035 | FR-018, D027 | Multiple analysis tabs keep dataset, selection, search, display filter, collapse state, scale, style, legend/export order, export counter, source files, and analysis name independent. Tab overflow remains usable without breaking the main layout. | Unit + component + E2E + visual |
-| AC-PCR-036 | FR-001, FR-017, FR-018, D027 | File actions distinguish original Excel and Analysis XLSX: replace, append, restore, and new-tab open do not conflict. Dirty unsafe close, replace, or restore actions are blocked until a close/replace UX is finalized. | Unit + component + E2E |
+| AC-PCR-036 | FR-001, FR-017, FR-018, D027 | File actions distinguish original Excel and Analysis XLSX: replace, append, restore, and new-tab open do not conflict. Dirty close and dirty replace/restore actions require explicit confirmation and never discard or overwrite analysis state silently. | Unit + component + E2E |
 | AC-PCR-037 | FR-006, FR-017, D026 | Analysis XLSX contains no native editable Excel chart, and export/import performs no smoothing, normalization, baseline correction, Ct/Cq, threshold, or positive/negative interpretation. | Unit + package/workbook inspection |
 | AC-PCR-038 | FR-020 | With X values around 1-100, 100 visible curves x 100 points passes browser smoke testing, and hundreds to 1000 imported curves remain selectable through virtualization/search. | Performance smoke + manual |
 | AC-PCR-039 | FR-020 | Hover information is available through a fixed readout or equivalent UI that does not block plot inspection; chart and legend hover highlight clears on pointer exit and does not alter marker/style/export state. | Component + Playwright |
@@ -155,10 +157,10 @@ These criteria bind implementation to decisions `D010` through `D016`.
 5. Chart rendering: test selected-curve rendering, no implicit PCR transformations, null/missing values, clean visual theme, and over-20 readability warning without blocking preview/export.
 6. Scale preset and fixed axis: test Auto, Fixed, P1, P2, min/max validation, current Auto bound display, and persistence across redraw triggers.
 7. Style preset and override: test style precedence, stable default colors, default no markers, individual marker overrides, built-in preset overwrite, affected-count feedback, and one-step undo.
-8. Analysis state and tabs: test serializable AnalysisState, multi-tab independence, dirty unsafe-action blocking, and analysis name/source name separation.
+8. Analysis state and tabs: test serializable AnalysisState, multi-tab independence, dirty close/replace confirmation, and analysis name/source name separation.
 9. Analysis XLSX: test full-dataset export, hidden restore JSON, visible review sheets, roundtrip restore, invalid schema/chunk errors, and no native editable chart.
 10. Legend and export order: test manual order, custom legend, selected order, reagent/specimen order, preview/export parity, and state separation.
-11. PNG, JPEG, clipboard, plotted-data CSV, and export layout: test valid chart-only/plot+legend/legend-only images, white background, fake-date filename generation, selected-layout clipboard success/fallback, dedicated legend-only clipboard success/fallback, simple plotted-data CSV, and disabled non-simple data export.
+11. PNG, JPEG, clipboard, plotted-data CSV, and export layout: test valid chart-only/plot+legend/legend-only images, report-readable legend-only images, white background, fake-date filename generation, selected-layout clipboard success/fallback, report legend PNG clipboard success/fallback, rich Excel report legend clipboard payload/fallback, simple plotted-data CSV, and disabled non-simple data export.
 12. Performance, accessibility, and release: test large datasets, virtualized tree/style/legend behavior, hover readout, keyboard navigation, browser compatibility, and GitHub Pages base path.
 
 ## Manual Test Cases
@@ -178,7 +180,7 @@ Before a user-visible MVP release:
 12. Apply a built-in style preset, confirm affected-count feedback, and use one-step undo.
 13. Change legend order and confirm preview/export order matches it.
 14. Download PNG and JPEG and confirm valid output, white background, and `YYMMDD_<analysisName>_plotN.ext` filenames with sanitized analysis names.
-15. Copy the selected chart image layout to clipboard where supported; copy the legend-only PNG through the dedicated action; confirm fallback where unsupported or blocked.
+15. Copy the selected chart image layout to clipboard where supported; copy the report legend-only PNG and rich Excel-cell legend through dedicated actions; confirm fallback where unsupported or blocked.
 16. Export plotted-data CSV for a simple current chart; confirm only plotted curves in current order are included.
 17. Confirm plotted-data CSV is disabled with a clear reason for a non-simple chart state.
 18. Test the production build through the same base path used by GitHub Pages.
@@ -187,12 +189,14 @@ Before a user-visible MVP release:
 21. Create two analysis tabs, import different workbooks, and confirm selection, scale, style, legend order, and export counter do not leak between tabs.
 22. Rename an analysis tab and confirm source file labels and chart labels are not unintentionally changed.
 23. Export Analysis XLSX, reload it, and confirm all imported curves, including unselected curves, warnings, scale, style, order, and export settings are restored.
-24. Attempt an unsafe dirty-tab replace/restore and confirm the app blocks data loss or requires explicit confirmation according to the finalized policy.
+24. Attempt dirty-tab close and dirty-tab replace/restore; confirm the app offers explicit cancel/save/discard or replace/new-analysis choices and never loses data silently.
 25. Toggle preview legend visibility and export layout modes and confirm the plot remains unobscured.
 26. Confirm custom legend samples match solid/dashed/dotted lines and none/circle/triangle/rect marker settings.
 27. Hover chart curves and custom legend items, then move the pointer away; confirm highlight clears and configured markers do not disappear or change.
 28. With large Y-axis values around 1,200,000, confirm the `Fluorescence` axis label does not overlap tick labels.
-29. In group style rows, confirm the color popover opens with HEX entry first and the combined line/marker popover shows all line and marker choices without horizontal scrolling.
+29. In group style rows, confirm the color popover opens with HEX entry first and the combined line/marker popover shows all line and marker choices without horizontal scrolling, then closes after a line or marker choice.
+30. Edit an Analysis label and switch Auto compact / Full labels; confirm chart/custom legend labels, report legend PNG, Excel-cell legend copy, plotted-data CSV headers, and Analysis XLSX restore use the Analysis label while original specimen/reagent/source labels remain available for reset and traceability.
+31. Paste `Copy for Excel` output into Windows Excel from Chrome/Edge and confirm the colored style glyph sample and legend name land in separate cells with readable Malgun Gothic 9 pt formatting.
 
 ## Browser Matrix
 Minimum manual verification candidates:
@@ -264,6 +268,8 @@ Create or collect fixture datasets for:
 - Analysis XLSX invalid schema, missing hidden sheet, chunk corruption, and ordinary workbook fallback tests.
 - Custom legend rendering tests for line and marker samples.
 - Export layout tests for Plot only, Plot + Legend, and Legend only.
+- Report legend projection tests for auto-compact common specimen/reagent labels, Analysis labels, duplicate disambiguation, and original-label traceability.
+- Rich Excel clipboard payload tests for HTML table structure, separate style/name columns, HTML escaping, and formula-safe label handling.
 - State separation tests for selected/chart-visible/legend-visible/export-layout/restore settings.
 - Style editor identity tests for duplicate labels and curveId-safe resets.
 - Hover/readout, custom-legend hover/focus highlight, marker-preservation during hover, and >20 curve assistance tests.
@@ -286,7 +292,7 @@ Create or collect fixture datasets for:
 - Static checked-in sample fixture files do not exist yet; generated workbook fixtures are used in Vitest and Playwright tests.
 - PCR-specific expected normalized JSON snapshots do not exist yet.
 - Browser checks have been performed with Playwright: upload-first smoke, generated `.xlsx` upload, appended `.xlsx` upload, collapsed reagent-first selection, internal analysis tab switching, fixed hover readout smoke, chart canvas nonblank pixel check, fixed chart viewport height after settings expansion, sticky chart panel behavior, and public URL technical smoke with generated `.xlsx` upload.
-- Clipboard behavior has not been manually verified in Chrome/Edge under the final deployment origin.
+- Clipboard image behavior and rich Excel-cell legend paste have not been manually verified in Chrome/Edge under the final deployment origin.
 - GitHub Pages deployment behavior was verified on 2026-07-08 through the Pages workflow and public URL technical smoke with generated `.xlsx` data.
 - GitHub Actions Pages deploy currently runs `npm run test` and `npm run build`; `npm run test:e2e` and `npm audit --omit=dev` are local release checks unless the workflow is expanded later.
 - Performance budgets for file size, specimen count, imported curve count, and rendered curve count have not been finalized.
@@ -294,7 +300,7 @@ Create or collect fixture datasets for:
 - Analysis XLSX export/import is implemented for full-dataset restore files; native editable Excel charts and report-style chart-image XLSX output remain deferred.
 - Internal analysis tabs are implemented; tab-count warning/hard-cap behavior remains undecided.
 - Hover readout, app-controlled curve highlight, custom-legend hover/focus highlight, marker-preserving hover behavior, and >20 visible-curve assistance are implemented; large style/legend lists use search/scroll affordances.
-- Dirty tab close/replace UX and internal tab count policy remain product decisions.
+- Dirty tab close/replace confirmation is implemented; internal tab count policy remains a product decision.
 
 ## Current Automated Coverage - 2026-07-08
 - Vitest: parser `.xlsx` / `.xls`, first-sheet-only, invalid first sheet, blank/nonnumeric/formula cells, similar-name warnings, append merge identity, selection tree state, single-curve subgroup row simplification, multi-curve subgroup tri-state behavior, chart option theme/scale/style, tooltip/readout configuration, curveId hover payload extraction, marker-preserving app-controlled highlight, grouping-aware labels, HEX color input, stable colors, default no markers, group/individual marker mappings, style field origin/source metadata, field/curve/selected/all/group style reset behavior, style preset undo, editable P1 scale behavior, analysis-name export filename generation, image export helper validation, plotted-data CSV shape, AnalysisState serialization, Analysis XLSX workbook readback, restore migration/validation, chunk errors, ordinary workbook fallback, and tab-routing safety.

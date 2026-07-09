@@ -79,15 +79,22 @@ const styleGroupingTargets = ["specimen", "reagent"] as const;
 const lineTypes = ["solid", "dashed", "dotted"] as const;
 const markerTypes = ["none", "circle", "triangle", "rect"] as const;
 const imageExportLayouts = ["plotOnly", "plotWithLegend", "legendOnly"] as const;
+const reportLegendLabelModes = ["autoCompact", "full"] as const;
 const overrideSources = ["custom", "preset"] as const;
 const curveStyleFields = ["displayName", "color", "lineType", "markerType", "lineWidth", "visible"] as const;
 const warningSeverities = ["info", "warning", "error"] as const;
 const warningScopes = ["import", "dataset", "header", "curve", "cell", "export"] as const;
 
 export function createAnalysisState(input: CreateAnalysisStateInput): AnalysisState {
+  const legendSettings = input.legendSettings ?? createDefaultLegendSettings();
+  const curveOverrides = promoteReportNamesToAnalysisLabels(input.curveOverrides, legendSettings);
   return {
     ...input,
-    legendSettings: input.legendSettings ?? createDefaultLegendSettings(),
+    curveOverrides,
+    legendSettings: {
+      ...legendSettings,
+      reportNameOverrides: {}
+    },
     exportSettings: input.exportSettings ?? createDefaultExportSettings(),
     sourceFiles: input.sourceFiles ?? [createSourceFileSummary(input.dataset)],
     dirty: input.dirty ?? false
@@ -96,7 +103,9 @@ export function createAnalysisState(input: CreateAnalysisStateInput): AnalysisSt
 
 export function createDefaultLegendSettings(): LegendSettings {
   return {
-    previewVisible: true
+    previewVisible: true,
+    reportLabelMode: "autoCompact",
+    reportNameOverrides: {}
   };
 }
 
@@ -158,6 +167,7 @@ export function deserializeAnalysisState(
   options: DeserializeAnalysisStateOptions = {}
 ): AnalysisState {
   const serialized = validateSerializedAnalysisState(payload);
+  const curveOverrides = promoteReportNamesToAnalysisLabels(serialized.curveOverrides, serialized.legendSettings ?? createDefaultLegendSettings());
   return {
     analysisId: options.analysisId ?? createAnalysisId(),
     analysisName: serialized.analysisName,
@@ -167,14 +177,44 @@ export function deserializeAnalysisState(
     selectionFilter: serialized.selectionFilter,
     chartScale: serialized.chartScale,
     styleRules: serialized.styleRules,
-    curveOverrides: serialized.curveOverrides,
-    legendSettings: serialized.legendSettings ?? createDefaultLegendSettings(),
+    curveOverrides,
+    legendSettings: {
+      ...(serialized.legendSettings ?? createDefaultLegendSettings()),
+      reportNameOverrides: {}
+    },
     exportSettings: serialized.exportSettings ?? createDefaultExportSettings(),
     exportCounter: serialized.exportCounter,
     importFileName: serialized.importFileName,
     sourceFiles: serialized.sourceFiles,
     dirty: false
   };
+}
+
+function promoteReportNamesToAnalysisLabels(
+  curveOverrides: Record<string, CurveStyleOverride>,
+  legendSettings: LegendSettings
+) {
+  const reportNameEntries = Object.entries(legendSettings.reportNameOverrides ?? {});
+  if (reportNameEntries.length === 0) return curveOverrides;
+
+  const nextOverrides: Record<string, CurveStyleOverride> = { ...curveOverrides };
+  reportNameEntries.forEach(([curveId, label]) => {
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) return;
+    const previousOverride = nextOverrides[curveId];
+    if (previousOverride?.displayName) return;
+    nextOverrides[curveId] = {
+      ...previousOverride,
+      displayName: label,
+      source: previousOverride?.source ?? "custom",
+      fieldSources: {
+        ...previousOverride?.fieldSources,
+        displayName: "custom"
+      }
+    };
+  });
+
+  return nextOverrides;
 }
 
 export function validateSerializedAnalysisState(payload: unknown): SerializedAnalysisState {
@@ -222,7 +262,7 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
   validateChartScale(migratedPayload.chartScale);
   validateStyleRules(migratedPayload.styleRules);
   validateCurveOverrides(migratedPayload.curveOverrides, datasetCurveIds);
-  validateLegendSettings(migratedPayload.legendSettings);
+  validateLegendSettings(migratedPayload.legendSettings, datasetCurveIds);
   validateExportSettings(migratedPayload.exportSettings);
   validateSourceFiles(migratedPayload.sourceFiles);
 
@@ -242,7 +282,16 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
   return {
     ...payload,
     styleRules,
-    legendSettings: "legendSettings" in payload ? payload.legendSettings : createDefaultLegendSettings(),
+    legendSettings:
+      "legendSettings" in payload && isRecord(payload.legendSettings)
+        ? {
+            ...createDefaultLegendSettings(),
+            ...payload.legendSettings,
+            reportNameOverrides: isRecord(payload.legendSettings.reportNameOverrides)
+              ? payload.legendSettings.reportNameOverrides
+              : {}
+          }
+        : createDefaultLegendSettings(),
     exportSettings: "exportSettings" in payload ? payload.exportSettings : createDefaultExportSettings()
   };
 }
@@ -456,11 +505,20 @@ function validateStyleRules(value: unknown): asserts value is StyleRules {
   validateMarkerTypeRecord(value.reagentMarkerTypes, "styleRules.reagentMarkerTypes");
 }
 
-function validateLegendSettings(value: unknown): asserts value is LegendSettings {
+function validateLegendSettings(value: unknown, datasetCurveIds?: Set<string>): asserts value is LegendSettings {
   if (!isRecord(value)) {
     throw new Error("Analysis state legendSettings restore data is invalid.");
   }
   assertBoolean(value.previewVisible, "legendSettings.previewVisible");
+  assertOneOf(value.reportLabelMode, reportLegendLabelModes, "legendSettings.reportLabelMode");
+  validateStringRecord(value.reportNameOverrides, "legendSettings.reportNameOverrides");
+  if (datasetCurveIds) {
+    Object.keys(value.reportNameOverrides).forEach((curveId) => {
+      if (!datasetCurveIds.has(curveId)) {
+        throw new Error("legendSettings.reportNameOverrides contains an unknown curveId.");
+      }
+    });
+  }
 }
 
 function validateExportSettings(value: unknown): asserts value is ExportSettings {

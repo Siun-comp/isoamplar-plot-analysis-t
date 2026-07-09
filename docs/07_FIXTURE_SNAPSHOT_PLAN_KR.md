@@ -190,7 +190,7 @@ Example shape:
       "reagentId": "reagent_A1",
       "specimenLabel": "검체 1",
       "reagentLabel": "A1",
-      "displayLabel": "검체 1 / A1",
+      "displayLabel": "검체 1 │ A1",
       "x": [1, 2, 3],
       "yPreview": [41.3350398880229, 26.0445244130879, 19.5399610979439],
       "pointCount": 45,
@@ -374,7 +374,7 @@ Export projection snapshot for simple plotted-data CSV:
   "visibleCurveIds": ["sheet0_col_A", "sheet0_col_B"],
   "legendExportOrder": ["sheet0_col_A", "sheet0_col_B"],
   "sharedX": [1, 2, 3],
-  "csvColumns": ["Cycle", "검체 1 / A1", "검체 1 / A2"],
+  "csvColumns": ["Cycle", "검체 1 │ A1", "검체 1 │ A2"],
   "nullCell": "",
   "duplicateHeaderPolicy": "append-source-column",
   "enabled": true
@@ -402,7 +402,7 @@ Plotted-data CSV shape:
 
 - Header row starts with `Cycle`.
 - Curve columns follow current legend/export order.
-- Duplicate display labels are disambiguated by source column, for example `검체 1 / A1 [A]`.
+- Duplicate display labels are disambiguated by source column, for example `검체 1 │ A1 [A]`.
 - `null` Y values export as blank cells.
 - CSV values are RFC 4180-style quoted when needed for commas, quotes, or line breaks.
 - Rows are ordered by generated cycle X ascending.

@@ -1,19 +1,26 @@
 import { useState, type KeyboardEvent } from "react";
 import { useAppStore } from "../app/appStore";
-
-const dirtyCloseMessage = "Save this analysis before closing it, or wait for the close confirmation flow.";
+import { createAnalysisState } from "../analysis/analysisState";
+import { createAnalysisWorkbookFileName, exportAnalysisWorkbookBlob } from "../analysis/analysisWorkbook";
+import { downloadBlob } from "../chart/exportChart";
 
 export function AnalysisTabs() {
+  const confirmationTitleId = "analysis-close-confirmation-title";
   const activeAnalysisId = useAppStore((state) => state.activeAnalysisId);
   const analysisOrder = useAppStore((state) => state.analysisOrder);
   const analyses = useAppStore((state) => state.analyses);
   const analysisName = useAppStore((state) => state.analysisName);
   const dirty = useAppStore((state) => state.dirty);
+  const dataset = useAppStore((state) => state.dataset);
+  const selection = useAppStore((state) => state.selection);
   const createAnalysis = useAppStore((state) => state.createAnalysis);
   const switchAnalysis = useAppStore((state) => state.switchAnalysis);
   const renameAnalysis = useAppStore((state) => state.renameAnalysis);
   const closeAnalysis = useAppStore((state) => state.closeAnalysis);
+  const markAnalysisSaveSuccess = useAppStore((state) => state.markAnalysisSaveSuccess);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
+  const [savingClose, setSavingClose] = useState(false);
 
   function handleCreateAnalysis() {
     const nextId = createAnalysis();
@@ -33,7 +40,63 @@ export function AnalysisTabs() {
 
   function handleCloseAnalysis(analysisId: string) {
     const didClose = closeAnalysis(analysisId);
-    setMessage(didClose ? null : dirtyCloseMessage);
+    setMessage(null);
+    setPendingCloseId(didClose ? null : analysisId);
+  }
+
+  function cancelPendingClose() {
+    setPendingCloseId(null);
+    setMessage(null);
+  }
+
+  function discardAndClosePendingAnalysis() {
+    if (!pendingCloseId) return;
+    const didClose = closeAnalysis(pendingCloseId, { force: true });
+    setPendingCloseId(didClose ? null : pendingCloseId);
+    setMessage(didClose ? null : "Analysis could not be closed.");
+  }
+
+  async function saveAndClosePendingAnalysis() {
+    if (!pendingCloseId) return;
+    const state = useAppStore.getState();
+    if (state.activeAnalysisId !== pendingCloseId || !state.dataset || !state.selection) {
+      setMessage("Only the active analysis with imported data can be saved before closing.");
+      return;
+    }
+
+    setSavingClose(true);
+    setMessage(null);
+    try {
+      const nextExportCounter = state.exportCounter + 1;
+      const analysisState = createAnalysisState({
+        analysisId: state.activeAnalysisId,
+        analysisName: state.analysisName,
+        dataset: state.dataset,
+        selection: state.selection,
+        searchQuery: state.searchQuery,
+        selectionFilter: state.selectionFilter,
+        chartScale: state.chartScale,
+        styleRules: state.styleRules,
+        curveOverrides: state.curveOverrides,
+        legendSettings: state.legendSettings,
+        exportSettings: state.exportSettings,
+        exportCounter: nextExportCounter,
+        importFileName: state.importFileName,
+        sourceFiles: state.sourceFiles,
+        dirty: state.dirty
+      });
+      const blob = await exportAnalysisWorkbookBlob(analysisState);
+      const fileName = createAnalysisWorkbookFileName(state.exportCounter, new Date(), state.analysisName);
+      downloadBlob(blob, fileName);
+      markAnalysisSaveSuccess(`Saved ${fileName}.`);
+      const didClose = useAppStore.getState().closeAnalysis(pendingCloseId, { force: true });
+      setPendingCloseId(didClose ? null : pendingCloseId);
+      setMessage(didClose ? null : "Analysis could not be closed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Analysis XLSX export failed.");
+    } finally {
+      setSavingClose(false);
+    }
   }
 
   return (
@@ -102,6 +165,28 @@ export function AnalysisTabs() {
         <p className="analysis-tab-message" role="status">
           {message}
         </p>
+      )}
+      {pendingCloseId && (
+        <div className="confirmation-panel" role="alertdialog" aria-modal="true" aria-labelledby={confirmationTitleId}>
+          <h3 id={confirmationTitleId}>Unsaved analysis</h3>
+          <p>현재 분석에 저장되지 않은 변경사항이 있습니다. 닫기 전에 Analysis XLSX로 저장하거나 저장하지 않고 닫을 수 있습니다.</p>
+          <div className="confirmation-actions">
+            <button type="button" aria-label="Cancel close" disabled={savingClose} onClick={cancelPendingClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              aria-label="Save Analysis XLSX then close"
+              disabled={savingClose || !dataset || !selection}
+              onClick={() => void saveAndClosePendingAnalysis()}
+            >
+              Analysis XLSX 저장 후 닫기
+            </button>
+            <button type="button" aria-label="Close without saving" disabled={savingClose} onClick={discardAndClosePendingAnalysis}>
+              저장하지 않고 닫기
+            </button>
+          </div>
+        </div>
       )}
     </section>
   );

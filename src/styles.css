@@ -273,6 +273,41 @@ button:disabled {
   font-weight: 700;
 }
 
+.confirmation-panel {
+  grid-column: 1 / -1;
+  border: 1px solid #f1c77a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff8e6;
+}
+
+.confirmation-panel h3 {
+  margin: 0 0 6px;
+  color: #172033;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.confirmation-panel p {
+  margin: 0;
+  color: #5d450c;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.confirmation-actions button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(420px, 1fr) minmax(280px, 340px);
@@ -914,8 +949,7 @@ button:disabled {
 
 .style-row,
 .individual-row,
-.legend-order-row,
-.preset-status {
+.legend-order-row {
   display: grid;
   align-items: center;
   gap: 6px;
@@ -995,13 +1029,6 @@ button:disabled {
   font-weight: 800;
 }
 
-.preset-row {
-  display: grid;
-  gap: 6px;
-}
-
-.preset-row button,
-.preset-status button,
 .legend-order-row button,
 .compact-button {
   padding: 6px;
@@ -1015,12 +1042,6 @@ button:disabled {
   padding: 0;
   font-size: 15px;
   line-height: 1;
-}
-
-.preset-status {
-  grid-template-columns: 1fr auto;
-  color: #617085;
-  font-size: 12px;
 }
 
 .individual-editor {
@@ -1271,12 +1292,44 @@ button:disabled {
   background: #eef6ff;
 }
 
+.legend-editor {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 14px;
+}
+
+.legend-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.legend-tabs button {
+  min-height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #263448;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.legend-tabs button.active {
+  border-color: #172033;
+  background: #eef6ff;
+}
+
 .legend-order-list {
   display: grid;
   gap: 6px;
   max-height: 430px;
   overflow: auto;
   padding: 0 12px 14px;
+}
+
+.legend-editor .legend-order-list {
+  max-height: 360px;
+  padding: 0;
 }
 
 .legend-controls {
@@ -1317,14 +1370,127 @@ button:disabled {
   font-size: 12px;
 }
 
+.report-legend-editor {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8e1ec;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.report-legend-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #253349;
+  font-size: 12px;
+}
+
+.report-legend-heading span {
+  min-width: 0;
+  overflow: hidden;
+  color: #718198;
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-mode-control {
+  display: grid;
+  gap: 5px;
+  color: #536174;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-mode-control select,
+.report-legend-row input {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 7px;
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.report-legend-rows {
+  display: grid;
+  gap: 6px;
+  max-height: 210px;
+  overflow: auto;
+}
+
+.report-legend-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.9fr) minmax(120px, 1fr) 28px;
+  align-items: center;
+  gap: 6px;
+  color: #263448;
+  font-size: 12px;
+}
+
 .export-controls {
   display: grid;
   gap: 8px;
   padding: 0 12px 14px;
 }
 
+.export-group {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8e1ec;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.export-group-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #253349;
+  font-size: 12px;
+}
+
+.export-group-header span {
+  min-width: 0;
+  color: #718198;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.export-group-header-stacked {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 2px;
+}
+
+.export-button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.export-more {
+  border-top: 1px solid #e3e8ef;
+  padding-top: 6px;
+}
+
+.export-more summary {
+  padding: 4px 0;
+  color: #536174;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .export-layout-control {
   display: grid;
+  grid-template-columns: auto minmax(110px, 1fr);
+  align-items: center;
   gap: 5px;
   color: #536174;
   font-size: 12px;

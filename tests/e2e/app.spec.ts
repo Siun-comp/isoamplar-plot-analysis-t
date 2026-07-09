@@ -26,11 +26,11 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await expect(page.getByRole("radio", { name: "시약별" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("button", { name: /▸ A1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /▸ A2/ })).toBeVisible();
-  await expect(page.getByText("검체 1 / A1")).toHaveCount(0);
+  await expect(page.getByText("검체 1 │ A1")).toHaveCount(0);
 
   await page.getByRole("button", { name: /▸ A1/ }).click();
   await expect(page.getByRole("checkbox", { name: "검체 1 선택" })).toHaveCount(0);
-  await expect(page.getByRole("checkbox", { name: "A1 / 검체 1" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "A1 │ 검체 1" })).toBeVisible();
 
   await page.getByRole("searchbox", { name: "검색" }).fill("A2");
   await expect(page.getByText("표시 1")).toBeVisible();
@@ -60,12 +60,15 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await expect(page.getByLabel("마커 기준")).toBeVisible();
   await page.getByLabel("A2 line and marker editor").click();
   await page.getByRole("button", { name: "A2 marker circle" }).click();
-  await expect(page.getByLabel("A2 / 검체 1 marker type", { exact: true })).toHaveValue("circle");
+  await expect(page.getByLabel("A2 │ 검체 1 marker type", { exact: true })).toHaveValue("circle");
   await expect(page.locator('.custom-legend [data-marker-type="circle"]')).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath("phase-r8-style-legend-panel.png"), fullPage: false });
   await page.locator(".settings-accordion summary", { hasText: "Export" }).click();
   await page.getByLabel("Image export layout").selectOption("legendOnly");
-  await expect(page.getByRole("button", { name: "Copy legend PNG to clipboard" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy selected layout PNG to clipboard" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy report legend Excel cells" })).toBeVisible();
+  await page.getByText("Legend file save").click();
+  await expect(page.getByRole("button", { name: "Save report legend PNG" })).toBeVisible();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save PNG" }).click();
   const download = await downloadPromise;
@@ -96,7 +99,9 @@ test("creates and switches internal analysis tabs", async ({ page }, testInfo) =
   await expect(page.getByRole("tab", { name: /phase-r3-tabs.xlsx/ })).toHaveAttribute("aria-selected", "true");
 
   await page.getByRole("button", { name: /Close phase-r3-tabs.xlsx/ }).click();
-  await expect(page.getByText("Save this analysis before closing it, or wait for the close confirmation flow.")).toBeVisible();
+  await expect(page.getByRole("alertdialog", { name: "Unsaved analysis" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save Analysis XLSX then close" })).toBeEnabled();
+  await page.getByRole("button", { name: "Cancel close" }).click();
 
   await page.getByRole("button", { name: "New analysis" }).click();
   await expect(page.getByRole("tab", { name: "Analysis 2" })).toHaveAttribute("aria-selected", "true");

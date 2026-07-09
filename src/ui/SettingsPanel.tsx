@@ -2,13 +2,20 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, SyntheticEvent } from "react";
 import type { AxisId, AxisScaleState, ScaleMode, ScalePresetId } from "../chart/chartScale";
 import { getAxisAutoDomain, isScalePresetConfigured } from "../chart/chartScale";
-import { builtInStylePresets, defaultChartColors } from "../chart/chartStyle";
+import { defaultChartColors } from "../chart/chartStyle";
 import { buildPcrChartOption } from "../chart/chartConfig";
-import { buildChartProjection } from "../chart/chartProjection";
-import { copyPngBlobToClipboard, downloadBlob, exportChartLayoutImageBlob } from "../chart/exportChart";
+import { buildChartProjection, type LegendItem } from "../chart/chartProjection";
+import {
+  copyPngBlobToClipboard,
+  copyReportLegendExcelTableToClipboard,
+  downloadBlob,
+  exportChartLayoutImageBlob,
+  exportReportLegendImageBlob
+} from "../chart/exportChart";
 import type { ImageExportType } from "../chart/exportFilenames";
 import { createImageExportFileName, createPlottedDataFileName } from "../chart/exportFilenames";
 import { createPlottedDataCsv } from "../chart/plottedDataExport";
+import { buildReportLegendProjection } from "../chart/reportLegend";
 import { useAppStore } from "../app/appStore";
 import { createAnalysisState } from "../analysis/analysisState";
 import { createAnalysisWorkbookFileName, exportAnalysisWorkbookBlob } from "../analysis/analysisWorkbook";
@@ -21,6 +28,7 @@ import type {
   ImageExportLayout,
   LineType,
   MarkerType,
+  ReportLegendLabelMode,
   ResolvedCurveStyle,
   StyleGroupingTarget
 } from "../data/types";
@@ -42,8 +50,6 @@ export function SettingsPanel() {
   const sourceFiles = useAppStore((state) => state.sourceFiles);
   const dirty = useAppStore((state) => state.dirty);
   const exportMessage = useAppStore((state) => state.exportMessage);
-  const lastPresetMessage = useAppStore((state) => state.lastPresetMessage);
-  const canUndoPreset = useAppStore((state) => Boolean(state.lastPresetUndo));
   const setAxisScaleMode = useAppStore((state) => state.setAxisScaleMode);
   const setAxisFixedValue = useAppStore((state) => state.setAxisFixedValue);
   const setAxisPresetValue = useAppStore((state) => state.setAxisPresetValue);
@@ -58,9 +64,8 @@ export function SettingsPanel() {
   const resetSelectedCurveOverrides = useAppStore((state) => state.resetSelectedCurveOverrides);
   const resetAllCurveOverrides = useAppStore((state) => state.resetAllCurveOverrides);
   const setLegendPreviewVisible = useAppStore((state) => state.setLegendPreviewVisible);
+  const setReportLegendLabelMode = useAppStore((state) => state.setReportLegendLabelMode);
   const setExportImageLayout = useAppStore((state) => state.setExportImageLayout);
-  const applyStylePreset = useAppStore((state) => state.applyStylePreset);
-  const undoLastPreset = useAppStore((state) => state.undoLastPreset);
   const moveCurveOrder = useAppStore((state) => state.moveCurveOrder);
   const markExportSuccess = useAppStore((state) => state.markExportSuccess);
   const markAnalysisSaveSuccess = useAppStore((state) => state.markAnalysisSaveSuccess);
@@ -82,6 +87,19 @@ export function SettingsPanel() {
   const yAutoDomain = getAxisAutoDomain("y", selectedCurves);
   const specimenDefaultColors = createDefaultEntityColorMap(dataset?.specimens ?? []);
   const reagentDefaultColors = createDefaultEntityColorMap(dataset?.reagents ?? []);
+  const setAnalysisLabel = (curveId: string, label: string) => {
+    if (label.trim() === "") {
+      resetCurveOverrideField(curveId, "displayName");
+      return;
+    }
+    setCurveOverride(curveId, { displayName: label });
+  };
+  const resetAnalysisLabel = (curveId: string) => {
+    resetCurveOverrideField(curveId, "displayName");
+  };
+  const resetSelectedAnalysisLabels = () => {
+    selectedCurves.forEach((curve) => resetCurveOverrideField(curve.curveId, "displayName"));
+  };
 
   return (
     <div className="settings-accordion">
@@ -175,25 +193,6 @@ export function SettingsPanel() {
             onResetGroup={resetGroupStyle}
           />
 
-          <div className="preset-row">
-            {builtInStylePresets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                disabled={selectedCurves.length === 0}
-                onClick={() => applyStylePreset(preset.id, selectedCurves.map((curve) => curve.curveId))}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-          <div className="preset-status">
-            <span>{lastPresetMessage ?? "Preset은 선택된 curve의 개별 스타일을 덮어씁니다."}</span>
-            <button type="button" disabled={!canUndoPreset} onClick={undoLastPreset}>
-              Undo
-            </button>
-          </div>
-
           <IndividualCurveEditor
             curves={selectedCurves}
             labelMode={labelMode}
@@ -211,12 +210,18 @@ export function SettingsPanel() {
         </section>
       </details>
       <details>
-        <summary>Legend Order</summary>
-        <LegendOrderEditor
+        <summary>Legend</summary>
+        <LegendEditor
           curves={selectedCurves}
           labelMode={labelMode}
           legendSettings={legendSettings}
+          legendItems={chartProjection.legendItems}
+          curveOverrides={curveOverrides}
           onPreviewLegendChange={setLegendPreviewVisible}
+          onReportLabelModeChange={setReportLegendLabelMode}
+          onAnalysisLabelChange={setAnalysisLabel}
+          onAnalysisLabelReset={resetAnalysisLabel}
+          onSelectedAnalysisLabelsReset={resetSelectedAnalysisLabels}
           onMove={moveCurveOrder}
         />
       </details>
@@ -321,7 +326,8 @@ function ExportControls({
         scale: chartScale,
         labelMode,
         styleRules,
-        curveOverrides
+        curveOverrides,
+        legendSettings
       });
       const blob = await exportChartLayoutImageBlob({
         option: chart.option,
@@ -351,7 +357,8 @@ function ExportControls({
         scale: chartScale,
         labelMode,
         styleRules,
-        curveOverrides
+        curveOverrides,
+        legendSettings
       });
       const blob = await exportChartLayoutImageBlob({
         option: chart.option,
@@ -363,6 +370,113 @@ function ExportControls({
       setExportMessage(successMessage);
     } catch (error) {
       setExportMessage(`${error instanceof Error ? error.message : "Clipboard copy failed."} Download PNG instead.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportReportLegend(type: ImageExportType) {
+    if (!dataset) return;
+    setBusy(true);
+    setExportMessage(null);
+    try {
+      const chart = buildPcrChartOption({
+        dataset,
+        selectedCurveIds,
+        orderedCurveIds,
+        scale: chartScale,
+        labelMode,
+        styleRules,
+        curveOverrides,
+        legendSettings
+      });
+      const reportLegend = buildReportLegendProjection({
+        curves: chart.visibleCurves,
+        legendItems: chart.legendItems,
+        labelMode,
+        legendSettings,
+        curveOverrides
+      });
+      const blob = await exportReportLegendImageBlob({
+        items: reportLegend.items,
+        type,
+        title: reportLegend.title
+      });
+      const fileName = createImageExportFileName(exportCounter, type, new Date(), `${analysisName}_legend`);
+      downloadBlob(blob, fileName);
+      markExportSuccess(`Saved ${fileName}.`);
+    } catch (error) {
+      setExportMessage(error instanceof Error ? error.message : "Report legend export failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyReportLegendPng() {
+    if (!dataset) return;
+    setBusy(true);
+    setExportMessage(null);
+    try {
+      const chart = buildPcrChartOption({
+        dataset,
+        selectedCurveIds,
+        orderedCurveIds,
+        scale: chartScale,
+        labelMode,
+        styleRules,
+        curveOverrides,
+        legendSettings
+      });
+      const reportLegend = buildReportLegendProjection({
+        curves: chart.visibleCurves,
+        legendItems: chart.legendItems,
+        labelMode,
+        legendSettings,
+        curveOverrides
+      });
+      const blob = await exportReportLegendImageBlob({
+        items: reportLegend.items,
+        type: "png",
+        title: reportLegend.title
+      });
+      await copyPngBlobToClipboard(blob);
+      setExportMessage("Copied report legend PNG to clipboard.");
+    } catch (error) {
+      setExportMessage(`${error instanceof Error ? error.message : "Clipboard copy failed."} Download PNG instead.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyReportLegendExcel() {
+    if (!dataset) return;
+    setBusy(true);
+    setExportMessage(null);
+    try {
+      const chart = buildPcrChartOption({
+        dataset,
+        selectedCurveIds,
+        orderedCurveIds,
+        scale: chartScale,
+        labelMode,
+        styleRules,
+        curveOverrides,
+        legendSettings
+      });
+      const reportLegend = buildReportLegendProjection({
+        curves: chart.visibleCurves,
+        legendItems: chart.legendItems,
+        labelMode,
+        legendSettings,
+        curveOverrides
+      });
+      await copyReportLegendExcelTableToClipboard({
+        title: reportLegend.title,
+        items: reportLegend.items
+      });
+      setExportMessage("Copied report legend as Excel cells.");
+    } catch (error) {
+      setExportMessage(`${error instanceof Error ? error.message : "Rich Excel clipboard copy failed."} Use report legend PNG instead.`);
     } finally {
       setBusy(false);
     }
@@ -417,18 +531,23 @@ function ExportControls({
   return (
     <section className="export-controls">
       <p>다음 파일 번호: plot{exportCounter}</p>
-      <label className="export-layout-control">
-        Image export layout
-        <select
-          aria-label="Image export layout"
-          value={exportSettings.imageLayout}
-          onChange={(event) => onExportLayoutChange(event.currentTarget.value as ImageExportLayout)}
-        >
-          <option value="plotOnly">Plot only</option>
-          <option value="plotWithLegend">Plot + Legend</option>
-          <option value="legendOnly">Legend only</option>
-        </select>
-      </label>
+      <section className="export-group" aria-label="Chart image export">
+        <div className="export-group-header">
+          <strong>Chart image</strong>
+          <label className="export-layout-control">
+            <span>Layout</span>
+            <select
+              aria-label="Image export layout"
+              value={exportSettings.imageLayout}
+              onChange={(event) => onExportLayoutChange(event.currentTarget.value as ImageExportLayout)}
+            >
+              <option value="plotOnly">Plot only</option>
+              <option value="plotWithLegend">Plot + Legend</option>
+              <option value="legendOnly">Legend only</option>
+            </select>
+          </label>
+        </div>
+        <div className="export-button-grid">
       <button type="button" aria-label="Save PNG" disabled={disabled} onClick={() => void exportImage("png")}>
         PNG 저장
       </button>
@@ -438,20 +557,72 @@ function ExportControls({
       <button type="button" aria-label="Copy selected layout PNG to clipboard" disabled={disabled} onClick={() => void copyPng()}>
         클립보드 PNG
       </button>
+        </div>
+      </section>
+      <section className="export-group" aria-label="Legend export">
+        <div className="export-group-header export-group-header-stacked">
+          <strong>Legend outputs</strong>
+          <span>Current legend order and analysis labels are used.</span>
+        </div>
+        <div className="export-button-grid">
       <button
+        hidden
         type="button"
-        aria-label="Copy legend PNG to clipboard"
+        aria-label="Copy standard legend PNG to clipboard"
         disabled={disabled}
         onClick={() => void copyPng("legendOnly", "Copied legend PNG to clipboard.")}
       >
         범례 클립보드 PNG
       </button>
+        </div>
+        <details className="export-more">
+          <summary>Legend file save</summary>
+          <div className="export-button-grid">
+      <button type="button" aria-label="Save report legend PNG" disabled={disabled} onClick={() => void exportReportLegend("png")}>
+        Legend PNG
+      </button>
+      <button
+        type="button"
+        aria-label="Save report legend JPEG"
+        disabled={disabled}
+        onClick={() => void exportReportLegend("jpeg")}
+      >
+        Legend JPEG
+      </button>
+          </div>
+        </details>
+        <div className="export-button-grid">
+      <button
+        type="button"
+        aria-label="Copy report legend PNG to clipboard"
+        disabled={disabled}
+        onClick={() => void copyReportLegendPng()}
+      >
+        Legend Clipboard PNG
+      </button>
+      <button
+        type="button"
+        aria-label="Copy report legend Excel cells"
+        disabled={disabled}
+        onClick={() => void copyReportLegendExcel()}
+      >
+        Copy for Excel
+      </button>
+        </div>
+      </section>
+      <section className="export-group" aria-label="Data and analysis export">
+        <div className="export-group-header">
+          <strong>Data / session</strong>
+        </div>
+        <div className="export-button-grid">
       <button type="button" disabled={busy || !csvResult.ok} onClick={exportCsv}>
         Plotted CSV
       </button>
       <button type="button" disabled={analysisExportDisabled} onClick={() => void exportAnalysisXlsx()}>
         Analysis XLSX
       </button>
+        </div>
+      </section>
       {!csvResult.ok && <p>{csvResult.reason}</p>}
       {exportMessage && <p className="export-message">{exportMessage}</p>}
     </section>
@@ -573,12 +744,6 @@ function useStylePopoverState() {
   const ref = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
-    function closePopover() {
-      if (ref.current?.open) {
-        ref.current.open = false;
-      }
-    }
-
     function closeOnOutsidePointer(event: PointerEvent) {
       if (ref.current?.open && !ref.current.contains(event.target as Node)) {
         closePopover();
@@ -624,7 +789,13 @@ function useStylePopoverState() {
     }
   }
 
-  return { ref, onToggle, onKeyDown };
+  function closePopover() {
+    if (ref.current?.open) {
+      ref.current.open = false;
+    }
+  }
+
+  return { ref, onToggle, onKeyDown, closePopover };
 }
 
 function ColorPopoverButton({
@@ -702,7 +873,10 @@ function LineMarkerPopoverButton({
                 className={lineType === option.value ? "is-active" : ""}
                 aria-label={`${label} line ${option.value}`}
                 aria-pressed={lineType === option.value}
-                onClick={() => onLineTypeChange(option.value)}
+                onClick={() => {
+                  onLineTypeChange(option.value);
+                  popover.closePopover();
+                }}
               >
                 <LineMarkerPreview color={safeColor} lineType={option.value} markerType="none" />
                 <span>{option.label}</span>
@@ -720,7 +894,10 @@ function LineMarkerPopoverButton({
                 className={markerType === option.value ? "is-active" : ""}
                 aria-label={`${label} marker ${option.value}`}
                 aria-pressed={markerType === option.value}
-                onClick={() => onMarkerTypeChange(option.value)}
+                onClick={() => {
+                  onMarkerTypeChange(option.value);
+                  popover.closePopover();
+                }}
               >
                 <LineMarkerPreview color={safeColor} lineType="solid" markerType={option.value} />
                 <span>{option.label}</span>
@@ -862,7 +1039,7 @@ function IndividualCurveEditor({
                 <StyleFieldCell>
                   <input
                     type="text"
-                    aria-label={`${controlLabel} legend name`}
+                    aria-label={`${controlLabel} analysis label`}
                     value={override?.displayName ?? ""}
                     placeholder={displayPlaceholder}
                     onChange={(event) => {
@@ -876,7 +1053,7 @@ function IndividualCurveEditor({
                   />
                   <FieldOriginBadge style={resolvedStyle} field="displayName" />
                   <FieldResetButton
-                    label={`${controlLabel} legend name reset`}
+                    label={`${controlLabel} analysis label reset`}
                     disabled={override?.displayName === undefined}
                     onClick={() => onResetField(curve.curveId, "displayName")}
                   />
@@ -1027,61 +1204,186 @@ function HexColorInput({
   );
 }
 
-function LegendOrderEditor({
+function LegendEditor({
   curves,
   labelMode,
   legendSettings,
+  legendItems,
+  curveOverrides,
   onPreviewLegendChange,
+  onReportLabelModeChange,
+  onAnalysisLabelChange,
+  onAnalysisLabelReset,
+  onSelectedAnalysisLabelsReset,
   onMove
 }: {
   curves: Curve[];
   labelMode: GroupingMode;
   legendSettings: ReturnType<typeof useAppStore.getState>["legendSettings"];
+  legendItems: LegendItem[];
+  curveOverrides: Record<string, CurveStyleOverride>;
   onPreviewLegendChange: (visible: boolean) => void;
+  onReportLabelModeChange: (mode: ReportLegendLabelMode) => void;
+  onAnalysisLabelChange: (curveId: string, name: string) => void;
+  onAnalysisLabelReset: (curveId: string) => void;
+  onSelectedAnalysisLabelsReset: () => void;
   onMove: (curveId: string, direction: "up" | "down") => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"order" | "labels">("order");
   const labelCounts = createCurveLabelCounts(curves, labelMode);
 
   return (
-    <div className="legend-order-list">
-      <div className="legend-controls">
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            aria-label="Preview 범례 표시"
-            checked={legendSettings.previewVisible}
-            onChange={(event) => onPreviewLegendChange(event.currentTarget.checked)}
-          />
-          Preview 범례 표시
-        </label>
+    <div className="legend-editor">
+      <div className="legend-tabs" role="tablist" aria-label="Legend settings">
+        <button type="button" role="tab" aria-selected={activeTab === "order"} className={activeTab === "order" ? "active" : ""} onClick={() => setActiveTab("order")}>
+          Order
+        </button>
+        <button type="button" role="tab" aria-selected={activeTab === "labels"} className={activeTab === "labels" ? "active" : ""} onClick={() => setActiveTab("labels")}>
+          Labels
+        </button>
       </div>
-      {curves.length === 0 && <p>선택된 curve가 없습니다.</p>}
-      {curves.map((curve, index) => {
-        const label = formatCurveLabel(curve, labelMode);
-        const sourceSuffix = formatCurveSourceSuffix(curve);
-        const controlLabel = createCurveControlLabel(label, sourceSuffix, labelCounts);
 
-        return (
-        <div className="legend-order-row" key={curve.curveId}>
-          <span title={sourceSuffix}>
-            {label}
-            <small>{sourceSuffix}</small>
-          </span>
-          <button type="button" aria-label={`${controlLabel} move up`} disabled={index === 0} onClick={() => onMove(curve.curveId, "up")}>
-            ↑
-          </button>
-          <button
-            type="button"
-            aria-label={`${controlLabel} move down`}
-            disabled={index === curves.length - 1}
-            onClick={() => onMove(curve.curveId, "down")}
-          >
-            ↓
-          </button>
+      <section className="legend-order-list" hidden={activeTab !== "order"} aria-label="Legend order">
+        <div className="legend-controls">
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              aria-label="미리보기 범례 표시"
+              checked={legendSettings.previewVisible}
+              onChange={(event) => onPreviewLegendChange(event.currentTarget.checked)}
+            />
+            미리보기 범례 표시
+          </label>
         </div>
-        );
-      })}
+        {curves.length === 0 && <p>?좏깮??curve媛 ?놁뒿?덈떎.</p>}
+        {curves.map((curve, index) => {
+          const label = formatCurveLabel(curve, labelMode);
+          const sourceSuffix = formatCurveSourceSuffix(curve);
+          const controlLabel = createCurveControlLabel(label, sourceSuffix, labelCounts);
+          const displayLabel = curveOverrides[curve.curveId]?.displayName || label;
+
+          return (
+            <div className="legend-order-row" key={curve.curveId}>
+              <span title={`${label} ${sourceSuffix}`}>
+                {displayLabel}
+                <small>{displayLabel === label ? sourceSuffix : `${label} - ${sourceSuffix}`}</small>
+              </span>
+              <button type="button" aria-label={`${controlLabel} move up`} disabled={index === 0} onClick={() => onMove(curve.curveId, "up")}>
+                ↑
+              </button>
+              <button type="button" aria-label={`${controlLabel} move down`} disabled={index === curves.length - 1} onClick={() => onMove(curve.curveId, "down")}>
+                ↓
+              </button>
+            </div>
+          );
+        })}
+      </section>
+
+      <section hidden={activeTab !== "labels"} aria-label="Analysis labels">
+        <AnalysisLabelEditor
+          curves={curves}
+          labelMode={labelMode}
+          legendItems={legendItems}
+          curveOverrides={curveOverrides}
+          legendSettings={legendSettings}
+          onLabelModeChange={onReportLabelModeChange}
+          onAnalysisLabelChange={onAnalysisLabelChange}
+          onAnalysisLabelReset={onAnalysisLabelReset}
+          onSelectedAnalysisLabelsReset={onSelectedAnalysisLabelsReset}
+        />
+      </section>
     </div>
+  );
+}
+
+function AnalysisLabelEditor({
+  curves,
+  labelMode,
+  legendItems,
+  curveOverrides,
+  legendSettings,
+  onLabelModeChange,
+  onAnalysisLabelChange,
+  onAnalysisLabelReset,
+  onSelectedAnalysisLabelsReset
+}: {
+  curves: Curve[];
+  labelMode: GroupingMode;
+  legendItems: LegendItem[];
+  curveOverrides: Record<string, CurveStyleOverride>;
+  legendSettings: ReturnType<typeof useAppStore.getState>["legendSettings"];
+  onLabelModeChange: (mode: ReportLegendLabelMode) => void;
+  onAnalysisLabelChange: (curveId: string, name: string) => void;
+  onAnalysisLabelReset: (curveId: string) => void;
+  onSelectedAnalysisLabelsReset: () => void;
+}) {
+  const projection = buildReportLegendProjection({
+    curves,
+    legendItems,
+    labelMode,
+    legendSettings,
+    curveOverrides
+  });
+  const projectedLabels = new Map(projection.items.map((item) => [item.curveId, item.label]));
+  const labelCounts = createCurveLabelCounts(curves, labelMode);
+  const hasAnalysisLabels = curves.some((curve) => curveOverrides[curve.curveId]?.displayName !== undefined);
+
+  return (
+    <section className="report-legend-editor" aria-label="Analysis label editor">
+      <div className="report-legend-heading">
+        <strong>Analysis Labels</strong>
+        <span>{projection.title}</span>
+      </div>
+      <label className="report-mode-control">
+        Default legend mode
+        <select
+          aria-label="Legend label mode"
+          value={legendSettings.reportLabelMode}
+          onChange={(event) => onLabelModeChange(event.currentTarget.value as ReportLegendLabelMode)}
+        >
+          <option value="autoCompact">Auto compact</option>
+          <option value="full">Full labels</option>
+        </select>
+      </label>
+      <button type="button" className="compact-button" disabled={!hasAnalysisLabels} onClick={onSelectedAnalysisLabelsReset}>
+        Reset selected labels
+      </button>
+      <div className="report-legend-rows">
+        {curves.map((curve) => {
+          const label = formatCurveLabel(curve, labelMode);
+          const sourceSuffix = formatCurveSourceSuffix(curve);
+          const controlLabel = createCurveControlLabel(label, sourceSuffix, labelCounts);
+          const customName = curveOverrides[curve.curveId]?.displayName ?? legendSettings.reportNameOverrides[curve.curveId] ?? "";
+          const defaultName = projectedLabels.get(curve.curveId) ?? label;
+
+          return (
+            <div className="report-legend-row" key={curve.curveId}>
+              <span className="curve-label" title={sourceSuffix}>
+                {label}
+                <small>{sourceSuffix}</small>
+              </span>
+              <input
+                type="text"
+                aria-label={`${controlLabel} analysis label`}
+                value={customName}
+                placeholder={defaultName}
+                onChange={(event) => onAnalysisLabelChange(curve.curveId, event.currentTarget.value)}
+              />
+              <button
+                type="button"
+                className="field-reset-button"
+                aria-label={`${controlLabel} analysis label reset`}
+                title="Reset analysis label"
+                disabled={!customName}
+                onClick={() => onAnalysisLabelReset(curve.curveId)}
+              >
+                ↺
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

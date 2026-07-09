@@ -41,7 +41,11 @@ function createTestAnalysisState(): AnalysisState {
     curveOverrides: {
       [firstCurveId]: { color: "#123456", lineType: "dotted", markerType: "circle", source: "custom" }
     },
-    legendSettings: { previewVisible: false },
+    legendSettings: {
+      previewVisible: false,
+      reportLabelMode: "full",
+      reportNameOverrides: { [firstCurveId]: "Report A1" }
+    },
     exportSettings: { imageLayout: "legendOnly" },
     exportCounter: 7,
     importFileName: dataset.sourceFileName,
@@ -53,6 +57,7 @@ function createTestAnalysisState(): AnalysisState {
 describe("analysis state serialization", () => {
   it("roundtrips persisted analysis state and restores Set fields", () => {
     const state = createTestAnalysisState();
+    const firstCurveId = state.dataset.curves[0].curveId;
     const serialized = serializeAnalysisState(state);
     const restored = deserializeAnalysisState(JSON.parse(JSON.stringify(serialized)));
 
@@ -67,8 +72,14 @@ describe("analysis state serialization", () => {
     expect(restored.chartScale.y.preset1?.label).toBe("P1 narrow");
     expect(restored.styleRules.markerBy).toBe("reagent");
     expect(restored.styleRules.reagentMarkerTypes[state.dataset.curves[0].reagentId]).toBe("circle");
-    expect(restored.curveOverrides).toEqual(state.curveOverrides);
+    expect(restored.curveOverrides[firstCurveId]).toMatchObject({
+      ...state.curveOverrides[firstCurveId],
+      displayName: "Report A1",
+      fieldSources: { displayName: "custom" }
+    });
     expect(restored.legendSettings.previewVisible).toBe(false);
+    expect(restored.legendSettings.reportLabelMode).toBe("full");
+    expect(restored.legendSettings.reportNameOverrides).toEqual({});
     expect(restored.exportSettings.imageLayout).toBe("legendOnly");
     expect(restored.exportCounter).toBe(7);
     expect(restored.dirty).toBe(false);
@@ -118,7 +129,7 @@ describe("analysis state serialization", () => {
 
     expect(state.dirty).toBe(false);
     expect(state.sourceFiles).toEqual([createSourceFileSummary(dataset)]);
-    expect(state.legendSettings).toEqual({ previewVisible: true });
+    expect(state.legendSettings).toEqual({ previewVisible: true, reportLabelMode: "autoCompact", reportNameOverrides: {} });
     expect(state.exportSettings).toEqual({ imageLayout: "plotWithLegend" });
   });
 
@@ -137,7 +148,7 @@ describe("analysis state serialization", () => {
       styleRules: legacyStyleRules
     }).styleRules;
 
-    expect(restored.legendSettings).toEqual({ previewVisible: true });
+    expect(restored.legendSettings).toEqual({ previewVisible: true, reportLabelMode: "autoCompact", reportNameOverrides: {} });
     expect(restored.exportSettings).toEqual({ imageLayout: "plotWithLegend" });
     expect(restoredLegacyStyleRules.markerBy).toBe("reagent");
     expect(restoredLegacyStyleRules.specimenMarkerTypes).toEqual({});
@@ -193,6 +204,18 @@ describe("analysis state serialization", () => {
         legendSettings: { previewVisible: "yes" }
       })
     ).toThrow("legendSettings.previewVisible");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        legendSettings: { ...serialized.legendSettings, reportLabelMode: "compact" }
+      })
+    ).toThrow("legendSettings.reportLabelMode");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        legendSettings: { ...serialized.legendSettings, reportNameOverrides: { "unknown-curve": "Name" } }
+      })
+    ).toThrow("legendSettings.reportNameOverrides contains an unknown curveId");
     expect(() =>
       deserializeAnalysisState({
         ...serialized,

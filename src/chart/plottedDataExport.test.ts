@@ -13,7 +13,7 @@ describe("plotted data CSV export", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const lines = result.csv.split("\r\n");
-    expect(lines[0]).toBe("Cycle,검체 1 / A1,검체 1 / A2");
+    expect(lines[0]).toBe("Cycle,검체 1 │ A1,검체 1 │ A2");
     expect(lines[2].endsWith(",")).toBe(true);
   });
 
@@ -35,6 +35,21 @@ describe("plotted data CSV export", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.csv.split("\r\n")[0]).toBe("Cycle,A1 / 검체 1");
+    expect(result.csv.split("\r\n")[0]).toBe("Cycle,A1 │ 검체 1");
+  });
+
+  it("uses analysis labels as exported headers", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const curve = dataset.curves[0];
+    const result = createPlottedDataCsv({
+      curves: [curve],
+      curveOverrides: {
+        [curve.curveId]: { displayName: "Condition A" }
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.csv.split("\r\n")[0]).toBe("Cycle,Condition A");
   });
 });

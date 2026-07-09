@@ -7,13 +7,13 @@ describe("createHoverReadout", () => {
       createHoverReadout({
         componentType: "series",
         seriesId: "sheet0_col_A",
-        seriesName: "A1 / 검체 1",
+        seriesName: "A1 │ 검체 1",
         data: [23, 4.5123],
         color: "#0b6fa4"
       })
     ).toEqual({
       curveId: "sheet0_col_A",
-      seriesName: "A1 / 검체 1",
+      seriesName: "A1 │ 검체 1",
       x: 23,
       y: 4.5123,
       color: "#0b6fa4"

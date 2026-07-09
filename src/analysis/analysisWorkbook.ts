@@ -32,7 +32,7 @@ export async function exportAnalysisWorkbookBuffer(state: AnalysisState) {
 
   appendSheet(xlsx, workbook, READ_ME_SHEET_NAME, createReadmeRows());
   appendSheet(xlsx, workbook, SETTINGS_SHEET_NAME, createSettingsRows(state));
-  appendSheet(xlsx, workbook, IMPORTED_DATA_SHEET_NAME, createImportedDataRows(state.dataset.curves));
+  appendSheet(xlsx, workbook, IMPORTED_DATA_SHEET_NAME, createImportedDataRows(state.dataset.curves, state.curveOverrides));
   appendSheet(xlsx, workbook, WARNINGS_SHEET_NAME, createWarningsRows(state.dataset.warnings));
   appendSheet(xlsx, workbook, ANALYSIS_RESTORE_SHEET_NAME, createRestoreRows(serializeAnalysisState(state)));
   hideSheet(workbook, ANALYSIS_RESTORE_SHEET_NAME);
@@ -142,12 +142,13 @@ function createSettingsRows(state: AnalysisState) {
   ];
 }
 
-function createImportedDataRows(curves: Curve[]) {
+function createImportedDataRows(curves: Curve[], curveOverrides: AnalysisState["curveOverrides"]) {
   const maxPoints = Math.max(0, ...curves.map((curve) => curve.x.length));
   return [
     ["Cycle", ...curves.map((curve) => curve.specimenLabel)],
-    ["", ...curves.map((curve) => curve.reagentLabel)],
-    ["", ...curves.map((curve) => curve.curveId)],
+    ["Reagent", ...curves.map((curve) => curve.reagentLabel)],
+    ["Analysis label", ...curves.map((curve) => curveOverrides[curve.curveId]?.displayName ?? "")],
+    ["Curve ID", ...curves.map((curve) => curve.curveId)],
     ...Array.from({ length: maxPoints }, (_, index) => [
       curves[0]?.x[index] ?? index + 1,
       ...curves.map((curve) => curve.y[index] ?? "")

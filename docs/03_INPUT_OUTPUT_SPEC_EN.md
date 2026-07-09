@@ -17,11 +17,11 @@ Engineering / Agent
 - CSV, pasted table data, manual entry, and in-app data editing are deferred beyond MVP.
 - Imported PCR data should normalize into stable specimen/reagent/curve records keyed by `curveId`; appended files must rekey curves to avoid ID collisions.
 - Parsing should preserve original values and surface warnings.
-- Output image and clipboard content should match the current rendered chart.
+- Output image and clipboard content should match the current rendered chart or the explicitly selected report-legend output.
 - PNG and JPEG export use white background and analysis-name-based filenames such as `YYMMDD_<sanitizedAnalysisName>_plotN.ext`.
-- Plotted-data CSV, when enabled, uses the matching analysis-name-based filename stem such as `YYMMDD_<sanitizedAnalysisName>_plotN_data.csv` and includes only the current plotted chart projection.
+- Plotted-data CSV, when enabled, uses the matching analysis-name-based filename stem such as `YYMMDD_<sanitizedAnalysisName>_plotN_data.csv`, includes only the current plotted chart projection, and uses current Analysis labels for curve headers with duplicate disambiguation when needed.
 - Chart styling uses stable default colors by original data/group order, solid no-marker lines by default, and optional individual marker overrides.
-- Analysis XLSX is a web-app restore file containing the full imported dataset and settings; it is separate from plotted-data CSV and report-style chart workbooks.
+- Analysis XLSX is a web-app restore file containing the full imported dataset and settings, including Analysis labels and legend/export settings; it is separate from plotted-data CSV and report-style chart workbooks.
 - Internal analysis tabs keep separate in-browser analysis states; user data remains browser-local unless explicitly exported.
 
 ## Update Rule
@@ -31,11 +31,11 @@ Update this file when parsing rules, data types, invalid data handling, internal
 
 | ID | Input | Initial Rule | Related Requirements | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
-| IO-001 | Excel workbook | Support `.xls` and `.xlsx` upload through browser file APIs; parse only the first worksheet. The user can replace the current dataset or append another file to the current analysis. | FR-001 | AC-001, AC-002, AC-PCR-001, AC-PCR-015, AC-PCR-016, AC-PCR-025 |
+| IO-001 | Excel workbook | Support `.xls` and `.xlsx` upload through browser file APIs; parse only the first worksheet. The user can replace the current dataset or append another file to the current analysis. If the active analysis is dirty, replace upload requires explicit replace or new-analysis confirmation. | FR-001 | AC-001, AC-002, AC-PCR-001, AC-PCR-015, AC-PCR-016, AC-PCR-025 |
 | IO-002 | CSV file | Deferred beyond MVP. | FR-002 | TBD |
 | IO-003 | Pasted table | Deferred beyond MVP. | FR-003 | TBD |
 | IO-004 | Manual entry / editing | Deferred beyond MVP. Imported data is not editable in MVP. | FR-003 | AC-PCR-017 |
-| IO-005 | Analysis XLSX restore file | Support `.xlsx` files containing the hidden IsoAmplar restore sheet. `파일 선택` restores/replaces the active analysis when safe; `추가 선택` opens the saved analysis as a new internal tab. | FR-017, FR-018 | AC-PCR-033, AC-PCR-034, AC-PCR-036, AC-PCR-037 |
+| IO-005 | Analysis XLSX restore file | Support `.xlsx` files containing the hidden IsoAmplar restore sheet. `파일 선택` restores/replaces the active analysis when safe or after explicit dirty replace confirmation; `추가 선택` opens the saved analysis as a new internal tab. | FR-017, FR-018 | AC-PCR-033, AC-PCR-034, AC-PCR-036, AC-PCR-037 |
 
 ## Excel Rules
 MVP target:
@@ -78,6 +78,7 @@ Workbook shape:
 - `README`: human-readable explanation that this file is for restoring an IsoAmplar analysis in the web app.
 - `Settings`: human-readable analysis name, export date, app version, selected count, scale/style/legend summary, and source summary.
 - `ImportedData`: full normalized imported dataset for review, including curves that are not currently selected or plotted.
+- The visible `ImportedData` sheet shows original specimen/reagent labels, an Analysis label row, curve IDs, and raw fluorescence values so review remains traceable without mutating source labels.
 - `Warnings`: import warnings preserved from the analysis.
 - `_IsoAmplarAnalysis`: hidden worksheet containing `schemaVersion` and chunked JSON restore data. This hidden JSON is the authoritative restore source.
 - `_IsoAmplarChecksum`: optional hidden worksheet for checksum or sanity markers; not emitted by the current implementation.
@@ -89,7 +90,7 @@ Restore payload must include:
 - Import warnings.
 - Selected curve IDs, grouping mode, collapsed group IDs, search/filter state where applicable, and ordered curve IDs.
 - Chart scale state, including Fixed and P1/P2 values.
-- Style rules, including color/line/marker grouping rules, individual curve overrides with field-level custom/preset source metadata, legend/export settings, export layout, and export counter.
+- Style rules, including color/line/marker grouping rules, individual curve overrides with field-level custom/preset source metadata and Analysis labels, legend/export settings, legend label mode, export layout, and export counter.
 - Analysis name.
 
 Restore payload must exclude transient UI state:
@@ -102,11 +103,11 @@ Restore payload must exclude transient UI state:
 
 Routing policy:
 
-- `파일 선택` + original Excel: replace active analysis when safe.
+- `파일 선택` + original Excel: replace active analysis when clean, or show dirty confirmation with Cancel / Replace current analysis / Open as new analysis.
 - `추가 선택` + original Excel: append to active analysis.
-- `파일 선택` + Analysis XLSX: restore into active analysis when safe.
+- `파일 선택` + Analysis XLSX: restore into active analysis when clean, or show dirty confirmation with Cancel / Replace current analysis / Open as new analysis.
 - `추가 선택` + Analysis XLSX: open as a new internal analysis tab.
-- If dirty-tab close/replace UX is not finalized, any action that may lose unsaved analysis changes must be blocked with a clear message instead of silently replacing data.
+- Dirty tab close shows explicit options: Cancel, save Analysis XLSX then close, or close without saving. Dirty replacement never proceeds silently.
 
 If the hidden restore worksheet is missing, corrupt, chunk-damaged, or has an unsupported schema version, the app must show an actionable error and must not misinterpret the file as a normal PCR source workbook. Ordinary `.xlsx` source workbooks are treated as Analysis XLSX only when they contain the explicit IsoAmplar restore marker, so review-like sheet names such as `Settings` or `ImportedData` alone do not change routing. Restore may migrate older same-schema payloads by filling newly added non-destructive defaults such as group marker rules or legend/export settings.
 
@@ -216,7 +217,9 @@ MVP chart configuration:
     "exportLayout": "plot-plus-legend"
   },
   "legendSettings": {
-    "previewVisible": true
+    "previewVisible": true,
+    "reportLabelMode": "autoCompact",
+    "reportNameOverrides": {}
   },
   "exportSettings": {
     "imageLayout": "plotWithLegend"
@@ -245,6 +248,8 @@ MVP chart configuration:
 }
 ```
 
+`legendSettings.reportNameOverrides` is retained only for same-schema legacy restore compatibility. New per-curve label edits are stored as `curveOverrides[curveId].displayName` and are treated as Analysis labels.
+
 This structure may be refined during implementation but must preserve curveId-based identity.
 
 ## Outputs
@@ -253,7 +258,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 | --- | --- | --- | --- | --- |
 | IO-101 | Chart preview | Reflect current dataset, filters, mappings, layout, legend, and fixed scales. | FR-006 to FR-010 | AC-004 to AC-008 |
 | IO-102 | Image download | Export the current chart preview as PNG or JPEG with white background. | FR-011 | AC-009, AC-PCR-010 |
-| IO-103 | Clipboard image | Copy the selected chart image layout where supported, provide a dedicated legend-only clipboard action, and show fallback on failure. | FR-012, FR-019 | AC-010, AC-PCR-031, AC-PCR-041 |
+| IO-103 | Clipboard output | Copy the selected chart image layout where supported, provide report legend-only PNG clipboard copy, provide rich Excel-cell report legend clipboard copy where supported, and show fallback on failure. | FR-012, FR-019 | AC-010, AC-PCR-031, AC-PCR-041 |
 | IO-104 | Static build | Produce static assets that work on GitHub Pages. | FR-013 | AC-011 |
 | IO-105 | Plotted data export | Export only currently plotted data when the current chart projection is simple and rectangular; otherwise disable with a clear reason. | FR-016 | AC-PCR-021, AC-PCR-022 |
 | IO-106 | Analysis XLSX export | Export a full analysis restore workbook containing the complete imported dataset and settings. | FR-017 | AC-PCR-033, AC-PCR-034, AC-PCR-037 |
@@ -269,7 +274,7 @@ This structure may be refined during implementation but must preserve curveId-ba
   - `plotOnly`: exports only the chart canvas with the built-in ECharts legend hidden.
   - `plotWithLegend`: exports the chart plus a custom legend area below the plot so the legend does not obscure plotted data.
   - `legendOnly`: exports only the custom legend image for the current selected/order/style projection.
-- PNG/JPEG download and the standard clipboard PNG action use the selected image export layout. The dedicated legend-only clipboard action always uses `legendOnly` without changing the selected layout. Plotted CSV and Analysis XLSX are unaffected by image layout selection.
+- PNG/JPEG download and the standard clipboard PNG action use the selected image export layout. Report legend PNG/JPEG, report legend PNG clipboard copy, and report legend rich Excel clipboard copy use the report legend projection for document assembly and do not change the selected image export layout. Plotted CSV and Analysis XLSX are unaffected by image layout selection.
 - Export uses the same chart option projection as preview. Preview layout height is fixed in the UI, while image export keeps its chart-only export dimensions.
 - More than 20 visible curves warns but does not block export by default.
 - Supported image export layouts:
@@ -288,15 +293,17 @@ This structure may be refined during implementation but must preserve curveId-ba
 - Enable only when the current chart state is simple: one chart, shared X values across visible curves, and rectangular CSV output possible.
 - If not enabled, show a concise reason instead of exporting partial or misleading data.
 - Header row starts with `Cycle`.
-- Duplicate display labels are disambiguated by source file and column, for example `A1 / 검체 1 [sample.xlsx:A]`.
+- Duplicate display labels are disambiguated by source file and column, for example `A1 │ 검체 1 [sample.xlsx:A]`.
 - `null` Y values export as blank CSV cells.
 - CSV values are quoted when required by commas, quotes, or line breaks.
 
 ## Clipboard Rules
-- Supported clipboard MIME type for MVP: `image/png`.
+- Supported chart/legend image clipboard MIME type: `image/png`.
+- Supported report legend Excel clipboard MIME types: `text/html` plus `text/plain` in the same `ClipboardItem`; the plain text exists only as a compatibility flavor, not as a user-facing TSV export.
 - Clipboard copy must be triggered by an explicit user action.
 - Standard clipboard copy uses the selected image export layout, the same chart option projection as PNG export, and a white background.
-- Dedicated legend clipboard copy exports only the custom legend image for the current selected/order/style projection, with white background, and does not mutate the selected image export layout.
+- Report legend PNG clipboard copy exports a larger, report-readable legend-only PNG for the current selected/order/style/Analysis-label projection, with white background, and does not mutate the selected image export layout.
+- Report legend Excel clipboard copy writes a rich HTML table so Excel can paste the style sample and legend name into separate cells where browser/Excel support it. The style sample is an Excel-friendly colored text glyph representation, not a native vector line object, because Excel may strip SVG or complex inline drawing markup from clipboard HTML. It uses Analysis labels, auto-compact/full label mode, Malgun Gothic 9 pt table text, and a plain-text compatibility flavor. It is not a native editable Excel chart.
 - If `navigator.clipboard.write` or `ClipboardItem` is unavailable, or if permission is denied, show a fallback message telling the user to download PNG instead.
 - Clipboard copy does not consume the `plotN` filename counter unless a fallback download is explicitly performed.
 
@@ -331,5 +338,5 @@ The application should provide clear messages for:
 - Clipboard permission failure
 - Export generation failure
 - Missing or unsupported Analysis XLSX restore sheet
-- Dirty active analysis replacement blocked because close/replace UX is not finalized
-- Dirty analysis tab close blocked because close/replace UX is not finalized
+- Dirty active analysis replacement requires explicit replace/new-analysis confirmation
+- Dirty analysis tab close requires explicit cancel/save-and-close/discard confirmation

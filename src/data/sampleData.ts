@@ -1,3 +1,4 @@
+import { formatCurveEntityPair } from "./curveLabels";
 import { createEntityId, createPcrDatasetFromCurves, createStats } from "./normalizePcrData";
 import type { Curve, PcrDataset } from "./types";
 
@@ -114,7 +115,7 @@ function createSyntheticCurve(input: SyntheticCurveInput): Curve {
     reagentId,
     specimenLabel: input.specimenLabel,
     reagentLabel: input.reagentLabel,
-    displayLabel: `${input.specimenLabel} / ${input.reagentLabel}`,
+    displayLabel: formatCurveEntityPair(input.specimenLabel, input.reagentLabel),
     x,
     y,
     source: {

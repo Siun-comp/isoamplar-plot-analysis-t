@@ -31,6 +31,7 @@ export function ChartPanel() {
     labelMode: selection?.groupingMode,
     styleRules,
     curveOverrides,
+    legendSettings,
     highlightedCurveId: hoveredCurveId
   });
   const selectedCount = buildResult.visibleCurves.length;

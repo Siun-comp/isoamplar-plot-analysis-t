@@ -1,4 +1,5 @@
 import type * as XLSX from "xlsx";
+import { formatCurveEntityPair } from "./curveLabels";
 import { createEntityId, createPcrDatasetFromCurves, createStats } from "./normalizePcrData";
 import type { Curve, PcrDataset, PcrWarning } from "./types";
 
@@ -195,7 +196,10 @@ function createCurveFromColumn(args: {
     reagentId: createEntityId("reagent", reagentLabel, `missing_${curveId}`),
     specimenLabel,
     reagentLabel,
-    displayLabel: `${specimenLabel || `Empty specimen ${specimenCell}`} / ${reagentLabel || `Empty reagent ${reagentCell}`}`,
+    displayLabel: formatCurveEntityPair(
+      specimenLabel || `Empty specimen ${specimenCell}`,
+      reagentLabel || `Empty reagent ${reagentCell}`
+    ),
     x,
     y,
     source: {

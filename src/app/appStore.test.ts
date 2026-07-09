@@ -186,7 +186,11 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().exportSettings.imageLayout).toBe("legendOnly");
 
     const secondTabId = useAppStore.getState().createAnalysis("Second analysis");
-    expect(useAppStore.getState().legendSettings.previewVisible).toBe(true);
+    expect(useAppStore.getState().legendSettings).toEqual({
+      previewVisible: true,
+      reportLabelMode: "autoCompact",
+      reportNameOverrides: {}
+    });
     expect(useAppStore.getState().exportSettings.imageLayout).toBe("plotWithLegend");
 
     useAppStore.getState().switchAnalysis(firstTabId);
@@ -195,8 +199,32 @@ describe("app store style preset and legend order", () => {
 
     useAppStore.getState().switchAnalysis(secondTabId);
     useAppStore.getState().loadDataset(dataset);
-    expect(useAppStore.getState().legendSettings.previewVisible).toBe(true);
+    expect(useAppStore.getState().legendSettings).toEqual({
+      previewVisible: true,
+      reportLabelMode: "autoCompact",
+      reportNameOverrides: {}
+    });
     expect(useAppStore.getState().exportSettings.imageLayout).toBe("plotWithLegend");
+  });
+
+  it("promotes legacy report legend name actions to analysis labels", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const curve = dataset.curves[0];
+
+    useAppStore.getState().loadDataset(dataset);
+    useAppStore.getState().setReportLegendLabelMode("full");
+    useAppStore.getState().setReportLegendName(curve.curveId, "Report only A1");
+
+    expect(useAppStore.getState().legendSettings).toMatchObject({
+      reportLabelMode: "full",
+      reportNameOverrides: {}
+    });
+    expect(useAppStore.getState().curveOverrides[curve.curveId].displayName).toBe("Report only A1");
+    expect(useAppStore.getState().curveOverrides[curve.curveId].fieldSources?.displayName).toBe("custom");
+
+    useAppStore.getState().resetReportLegendName(curve.curveId);
+    expect(useAppStore.getState().legendSettings.reportNameOverrides[curve.curveId]).toBeUndefined();
+    expect(useAppStore.getState().curveOverrides[curve.curveId]).toBeUndefined();
   });
 
   it("uses current user order as chart series order", () => {
@@ -378,6 +406,17 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().analyses["analysis-1"].dirty).toBe(true);
   });
 
+  it("allows dirty close only when force close is explicitly requested", () => {
+    useAppStore.getState().loadDataset(createOneSpecimenEightReagentDataset());
+    const activeTabId = useAppStore.getState().activeAnalysisId;
+
+    expect(useAppStore.getState().closeAnalysis(activeTabId)).toBe(false);
+    expect(useAppStore.getState().closeAnalysis(activeTabId, { force: true })).toBe(true);
+    expect(useAppStore.getState().analysisOrder).toEqual(["analysis-1"]);
+    expect(useAppStore.getState().dirty).toBe(false);
+    expect(useAppStore.getState().dataset).toBeNull();
+  });
+
   it("keeps source file summaries when appending Excel files to the active tab", async () => {
     await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
     await useAppStore.getState().appendFile(createWorkbookFile("second.xlsx", "Specimen 2", "A2", 0.2));
@@ -498,6 +537,52 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().dataset?.sourceFileName).toBe("first.xlsx");
     expect(useAppStore.getState().importError).toContain("Replace is blocked");
     expect(useAppStore.getState().importStatus).toBe("ready");
+  });
+
+  it("replaces a dirty analysis only through explicit replace confirmation mode", async () => {
+    await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
+
+    await useAppStore.getState().importFileWithMode(createWorkbookFile("replacement.xlsx", "Specimen 9", "A9", 9), "replace");
+
+    const state = useAppStore.getState();
+    expect(state.analysisOrder).toHaveLength(1);
+    expect(state.dataset?.sourceFileName).toBe("replacement.xlsx");
+    expect(state.dataset?.curves[0].specimenLabel).toBe("Specimen 9");
+    expect(state.dirty).toBe(true);
+    expect(state.importError).toBeNull();
+  });
+
+  it("uses the confirmation-time target tab for explicit replace even if the active tab changes", async () => {
+    await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
+    const firstTabId = useAppStore.getState().activeAnalysisId;
+    const secondTabId = useAppStore.getState().createAnalysis("Second analysis");
+
+    await useAppStore
+      .getState()
+      .importFileWithMode(createWorkbookFile("replacement.xlsx", "Specimen 9", "A9", 9), "replace", firstTabId);
+
+    const state = useAppStore.getState();
+    expect(state.activeAnalysisId).toBe(secondTabId);
+    expect(state.dataset).toBeNull();
+    expect(state.analyses[firstTabId].dataset?.sourceFileName).toBe("replacement.xlsx");
+    expect(state.analyses[firstTabId].dataset?.curves[0].specimenLabel).toBe("Specimen 9");
+    expect(state.analyses[secondTabId].dataset).toBeNull();
+  });
+
+  it("opens source Excel as a new analysis through explicit new-tab confirmation mode", async () => {
+    await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
+    const firstTabId = useAppStore.getState().activeAnalysisId;
+
+    await useAppStore.getState().importFileWithMode(createWorkbookFile("second.xlsx", "Specimen 2", "A2", 0.2), "newTab");
+
+    const state = useAppStore.getState();
+    expect(state.activeAnalysisId).not.toBe(firstTabId);
+    expect(state.analysisOrder).toHaveLength(2);
+    expect(state.analyses[firstTabId].dataset?.sourceFileName).toBe("first.xlsx");
+    expect(state.analyses[firstTabId].importStatus).toBe("ready");
+    expect(state.dataset?.sourceFileName).toBe("second.xlsx");
+    expect(state.dataset?.curves[0].specimenLabel).toBe("Specimen 2");
+    expect(state.dirty).toBe(true);
   });
 
   it("preserves the existing analysis after failed append import", async () => {

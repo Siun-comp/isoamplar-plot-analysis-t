@@ -101,9 +101,12 @@ export type ResolvedCurveStyle = {
 };
 
 export type ImageExportLayout = "plotOnly" | "plotWithLegend" | "legendOnly";
+export type ReportLegendLabelMode = "autoCompact" | "full";
 
 export type LegendSettings = {
   previewVisible: boolean;
+  reportLabelMode: ReportLegendLabelMode;
+  reportNameOverrides: Record<string, string>;
 };
 
 export type ExportSettings = {

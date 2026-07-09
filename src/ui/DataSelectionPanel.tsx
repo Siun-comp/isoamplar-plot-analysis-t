@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { SelectionFilter } from "../data/types";
 import { useAppStore } from "../app/appStore";
 import type { GroupingMode } from "../data/types";
+import { curveLabelSeparator } from "../data/curveLabels";
 import { buildSelectionTree } from "../selection/buildTrees";
 import { getFilteredCurveIds, getMatchedCurveIds } from "../selection/searchCurves";
 import { IndeterminateCheckbox } from "./IndeterminateCheckbox";
@@ -243,7 +244,7 @@ function renderSubgroupRows({
 }
 
 function createSingleCurveRowLabel(subgroupLabel: string, curveLabel: string) {
-  return curveLabel.includes(subgroupLabel) ? curveLabel : `${subgroupLabel} / ${curveLabel}`;
+  return curveLabel.includes(subgroupLabel) ? curveLabel : `${subgroupLabel}${curveLabelSeparator}${curveLabel}`;
 }
 
 function estimateGroupHeight(group: ReturnType<typeof buildSelectionTree>[number]) {

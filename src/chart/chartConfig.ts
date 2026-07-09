@@ -1,7 +1,8 @@
 import type { EChartsCoreOption } from "echarts/core";
 import type { ChartScaleState, AxisScaleIssue } from "./chartScale";
 import { buildChartProjection, defaultChartColors } from "./chartProjection";
-import type { Curve, CurveStyleOverride, GroupingMode, PcrDataset, StyleRules } from "../data/types";
+import { buildReportLegendProjection } from "./reportLegend";
+import type { Curve, CurveStyleOverride, GroupingMode, LegendSettings, PcrDataset, StyleRules } from "../data/types";
 import type { LegendItem } from "./chartProjection";
 
 export type ChartBuildResult = {
@@ -19,13 +20,24 @@ export function buildPcrChartOption(args: {
   labelMode?: GroupingMode;
   styleRules?: StyleRules;
   curveOverrides?: Record<string, CurveStyleOverride>;
+  legendSettings?: LegendSettings;
   highlightedCurveId?: string | null;
 }): ChartBuildResult {
   const projection = buildChartProjection(args);
+  const displayLegendItems = args.legendSettings
+    ? buildReportLegendProjection({
+        curves: projection.visibleCurves,
+        legendItems: projection.legendItems,
+        labelMode: args.labelMode ?? "specimen",
+        legendSettings: args.legendSettings,
+        curveOverrides: args.curveOverrides
+      }).items
+    : projection.legendItems;
+  const displayLegendNameByCurveId = new Map(displayLegendItems.map((item) => [item.curveId, item.label]));
 
   return {
     visibleCurves: projection.visibleCurves,
-    legendItems: projection.legendItems,
+    legendItems: displayLegendItems,
     scaleIssues: projection.scaleIssues,
     option: {
       backgroundColor: "#ffffff",
@@ -59,7 +71,9 @@ export function buildPcrChartOption(args: {
           color: "#263448",
           fontSize: 12
         },
-        data: projection.visibleCurves.map((curve) => projection.chartNames.get(curve.curveId) ?? curve.displayLabel)
+        data: projection.visibleCurves.map(
+          (curve) => displayLegendNameByCurveId.get(curve.curveId) ?? projection.chartNames.get(curve.curveId) ?? curve.displayLabel
+        )
       },
       xAxis: {
         type: "value",
@@ -114,7 +128,7 @@ export function buildPcrChartOption(args: {
 
         return {
           id: curve.curveId,
-          name: projection.chartNames.get(curve.curveId) ?? curve.displayLabel,
+          name: displayLegendNameByCurveId.get(curve.curveId) ?? projection.chartNames.get(curve.curveId) ?? curve.displayLabel,
           type: "line",
           data: curve.x.map((x, pointIndex) => [x, curve.y[pointIndex]]),
           showSymbol: markerType !== "none",

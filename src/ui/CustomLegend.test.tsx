@@ -49,7 +49,7 @@ describe("CustomLegend", () => {
     const items: LegendItem[] = [
       {
         curveId: "curve-a",
-        label: "A1 / S1",
+        label: "A1 │ S1",
         color: "#0b6fa4",
         lineType: "solid",
         markerType: "none",
@@ -59,7 +59,7 @@ describe("CustomLegend", () => {
 
     render(<CustomLegend items={items} highlightedCurveId="curve-a" onHoverCurve={(curveId) => hoveredCurveIds.push(curveId)} />);
 
-    const item = screen.getByText("A1 / S1").closest("li");
+    const item = screen.getByText("A1 │ S1").closest("li");
     expect(item).toHaveClass("custom-legend-item-active");
     await user.hover(item!);
     await user.unhover(item!);

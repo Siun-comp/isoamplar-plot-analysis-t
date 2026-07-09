@@ -24,22 +24,45 @@ Active
 - Browser tab/bookmark/PWA icon assets use the selected Option A amplification-curve icon.
 - The current implementation plan is `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`. Phases R0 through R13 are complete.
 - The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, balanced Y-axis spacing, dedicated legend-only clipboard PNG copy, compact group style controls, and native style popover closing.
+- The current pre-use refinement adds slash-safe ` │ ` curve labels, report-readable legend PNG/JPEG/clipboard export, Analysis label editing, rich Excel-cell legend clipboard copy with Malgun Gothic 9 pt formatting, Export control grouping, dirty close/replace confirmation flows, Style-panel preset shortcut removal, line/marker popover auto-close after selection, report legend image text alignment fixes, Excel-friendly colored glyph legend clipboard samples, and raw-point/no-smoothing regression coverage.
+- The latest patch fixes the preview legend visibility Korean label, applies Auto compact labels to the chart preview/custom legend and plot/legend image exports, changes the Labels reset control back to an icon-sized button, stacks the Export Legend header to avoid text overlap, adds current Analysis XLSX continuity regression coverage, and removes unused legacy Legend/Report editor code that still referenced the old report-name override model.
 
 ## Current Goal
-Ready for real-use validation on GitHub Pages after the final pre-use style popover and deployment documentation pass.
+Ready for real-use validation after the current slash-label, Analysis-label, report-legend, rich Excel clipboard, Export grouping, dirty-confirmation, and report-legend alignment/Excel-paste refinement is reviewed by the user.
 
 ## Current Milestone
 M8 - MVP release preparation complete locally, with post-MVP UI refinement applied.
 
 ## Last Completed Step
-Committed and pushed the final pre-use style popover correction, verified the GitHub Pages deploy workflow, and passed public URL smoke with generated `.xlsx` upload, visible chart/legend, and Escape/outside-click popover closing.
+Implemented the current slash-safe labels, report legend export/copy, Analysis label editing, rich Excel-cell legend clipboard copy, Export control grouping, dirty close/replace confirmation, Style-panel preset shortcut removal, popover auto-close, report legend image alignment correction, Excel-friendly legend glyph clipboard sample, raw-point regression test, Auto compact preview/export legend fix, preview legend Korean text fix, Export Legend header layout fix, Analysis XLSX continuity regression test, unused legacy Legend/Report editor removal, and documentation updates. Local focused/full Vitest, production build, Playwright E2E, browser DOM smoke, and diff checks passed.
 
 ## Latest Changed Files
-- `src/chart/chartConfig.ts`
+- `src/data/curveLabels.ts`
+- `src/data/parseExcel.ts`
+- `src/data/sampleData.ts`
+- `src/chart/exportChart.ts`
+- `src/chart/reportLegend.ts`
+- `src/chart/reportLegend.test.ts`
 - `src/chart/chartConfig.test.ts`
+- `src/chart/ChartView.test.ts`
+- `src/chart/plottedDataExport.test.ts`
+- `src/ui/CustomLegend.test.tsx`
 - `src/ui/SettingsPanel.tsx`
+- `src/analysis/analysisWorkbook.test.ts`
+- `src/ui/DataImportPanel.tsx`
+- `src/ui/AnalysisTabs.tsx`
+- `src/ui/DataSelectionPanel.tsx`
+- `src/app/appStore.ts`
 - `src/styles.css`
 - `src/app/App.test.tsx`
+- `src/app/appStore.test.ts`
+- `src/chart/exportChart.test.ts`
+- `src/data/curveLabels.test.ts`
+- `tests/e2e/app.spec.ts`
+- `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`
+- `docs/03_INPUT_OUTPUT_SPEC_EN.md`
+- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
+- `DECISIONS.md`
 - `CHANGELOG.md`
 - `DEVELOPMENT_STATE.md`
 
@@ -87,13 +110,16 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
   - compact group style popovers with HEX-first color editing and combined line/marker preview selection
   - color picker plus HEX color input for group and individual curve styles
   - default solid lines with no markers; optional individual markers: circle, triangle, rect
-  - built-in presets with overwrite semantics and one-step undo
+  - built-in presets with overwrite semantics and one-step undo for explicit assistance flows
   - user legend/export order
   - curve labels in selection, chart, legend order, and CSV follow the active grouping mode
 - Export:
   - PNG/JPEG image download with white background and analysis-name-based filenames such as `YYMMDD_<analysisName>_plotN.ext`
   - selected-layout PNG clipboard copy with fallback message
-  - dedicated legend-only PNG clipboard copy that does not mutate the selected image export layout
+  - report-readable legend-only PNG/JPEG download and PNG clipboard copy for assembling documents with multiple plots and one shared legend
+  - Analysis label editing with Auto compact / Full labels; labels apply to chart/custom legends, report legend outputs, plotted CSV headers, and Analysis XLSX restore state while original specimen/reagent/source labels remain traceable
+  - rich Excel-cell legend clipboard copy using `text/html` table data plus plain-text compatibility flavor in one `ClipboardItem`, with Malgun Gothic 9 pt text and Excel-friendly colored glyph samples rather than SVG/native line markup
+  - Export controls grouped by Chart image, Report legend, and Data/session, with less common report legend image file saves behind a nested disclosure
   - plotted-data CSV with `YYMMDD_<analysisName>_plotN_data.csv` when common-X rectangular output is safe
   - failed export attempts do not consume `plotN`
 - Browser-local processing only; no backend or remote upload.
@@ -121,7 +147,7 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
   - Workspace state includes `activeAnalysisId`, `analysisOrder`, `analyses`, and `analysisSequence`.
   - Existing UI selectors (`dataset`, `selection`, `chartScale`, `styleRules`, `curveOverrides`, `exportCounter`, etc.) remain as the active-analysis facade.
   - New actions include `createAnalysis`, `switchAnalysis`, `renameAnalysis`, and `closeAnalysis`.
-  - Dirty close and dirty replace are blocked until the exact confirmation UX is finalized.
+  - Dirty close and dirty replace require explicit confirmation and never silently discard or overwrite data.
   - Async import/append captures the originating tab ID and cannot overwrite whichever tab is active when parsing finishes.
 - Phase R3 visible analysis tabs:
   - `src/ui/AnalysisTabs.tsx`
@@ -130,7 +156,7 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
   - `tests/e2e/app.spec.ts`
   - Tabs are displayed above file input controls so imports target the visible active analysis.
   - New analysis, switch, rename, dirty indicator, active clean close, dirty close blocking, and arrow-key tab switching are implemented.
-  - Close/replace confirmation UX remains undecided; current behavior blocks dirty close/replace rather than silently losing data.
+  - Dirty close prompts for Cancel, Analysis XLSX save-and-close, or close without saving.
 - Phase R4 Analysis XLSX export/import:
   - `src/analysis/analysisWorkbook.ts`
   - `src/analysis/analysisWorkbook.test.ts`
@@ -142,7 +168,7 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
   - Hidden restore JSON is authoritative and contains full imported dataset, unselected curves, warnings, selection/order, scale, style rules, curve overrides, source files, analysis name, and export counter.
   - Serialized restore payload excludes runtime `analysisId`, dirty state, import/export progress, messages, hover/clipboard state, and preset undo stack.
   - Analysis XLSX import validates schema, dataset shape, selection/order integrity, chunk count/index continuity, and source/style/scale state before restoring.
-  - `파일 선택` with Analysis XLSX restores the clean active tab when safe; dirty active tabs are blocked.
+  - `파일 선택` with Analysis XLSX restores the clean active tab when safe or after explicit dirty replace confirmation.
   - `추가 선택` with Analysis XLSX opens a new independent internal analysis tab instead of merging into the active dataset.
   - Ordinary `.xlsx` workbooks with review-like sheet names are still parsed as source Excel unless they contain the explicit IsoAmplar restore marker.
   - Async import/append routing stays tied to the tab where the action started, including empty-tab add-select imports.
@@ -216,7 +242,7 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
   - `src/styles.css`
   - `src/app/appStore.test.ts`
   - `src/app/App.test.tsx`
-  - Individual Style rows and Legend Order rows show source suffixes such as `file.xlsx:A` to distinguish duplicate labels.
+  - Individual Style rows and Legend rows show source suffixes such as `file.xlsx:A` to distinguish duplicate labels.
   - Style override edits remain keyed by `curveId`; legend order moves only change `orderedCurveIds`.
   - Legend order moves use the previous/next selected curve, so unselected curves between selected entries do not make a move appear inert.
   - Duplicate-label style control names include source suffixes where needed, and individual style search can match source suffixes.
@@ -274,6 +300,10 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
 - `D029`: style origin and reset semantics are explicit; group marker styles are supported.
 - `D030`: hover readout is fixed outside the plot; >20 curve assistance remains non-blocking.
 - `D031`: chart/legend hover highlighting is app-controlled by `curveId`, marker-preserving, transient, and export filenames include sanitized analysis names.
+- `D032`: large Y-axis spacing, dedicated legend clipboard behavior, and compact group style controls.
+- `D033`: slash-safe labels, report-readable legend image export, dirty confirmation flows, Style-panel preset shortcut removal, popover close, and raw-data passthrough coverage.
+- `D034`: rich Excel-cell report legend clipboard copy and purpose-grouped Export controls; report-only label editing was superseded by D035.
+- `D035`: Analysis labels replace report-only labels and apply consistently to chart legends, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state.
 
 ## Verification Status
 - Phase R1 `git diff --check`: passed, with CRLF replacement warnings only.
@@ -349,6 +379,36 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
 - Final pre-use native popover local Playwright smoke: passed at `http://127.0.0.1:5173/` using a generated `.xlsx`; style line/marker popover count was 1 after open, 0 after Escape, and 0 after outside click.
 - Final pre-use style popover commit `32c9d56` GitHub Actions Pages deploy: passed for run `28963240680`; the workflow gate ran `npm run test` and `npm run build`.
 - Final pre-use style popover public URL smoke: passed at `https://siun-comp.github.io/isoamplar-plot-analysis/` with latest app asset `index-Ct78MOGl.js`, generated `.xlsx` upload, explicit displayed-curve selection, nonblank chart canvas (`3586` sampled non-white pixels), custom legend visibility, and style popover counts of 1 after open, 0 after Escape, and 0 after outside click.
+- Current slash/report/dirty refinement focused `npm run test -- --run src/data/curveLabels.test.ts src/chart/exportChart.test.ts src/chart/chartConfig.test.ts src/chart/plottedDataExport.test.ts src/chart/ChartView.test.ts src/ui/CustomLegend.test.tsx src/app/App.test.tsx`: passed, 7 files / 43 Vitest tests.
+- Current slash/report/dirty refinement focused `npm run test -- --run src/app/appStore.test.ts src/app/App.test.tsx`: passed, 2 files / 50 Vitest tests after expert race-condition review.
+- Current slash/report/dirty refinement focused `npm run test -- --run src/app/appStore.test.ts src/app/App.test.tsx src/chart/chartConfig.test.ts src/chart/exportChart.test.ts`: passed, 4 files / 67 Vitest tests before race-condition follow-up.
+- Current slash/report/dirty refinement full `npm run test`: passed, 15 files / 107 Vitest tests.
+- Current slash/report/dirty refinement `npm run build`: passed.
+- Current slash/report/dirty refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current slash/report/dirty refinement `git diff --check`: passed with CRLF replacement warnings only.
+- Current report legend Excel/export grouping refinement focused `npm run test -- --run src/chart/reportLegend.test.ts src/chart/exportChart.test.ts src/analysis/analysisState.test.ts src/analysis/analysisWorkbook.test.ts src/app/appStore.test.ts src/app/App.test.tsx`: passed, 6 files / 73 Vitest tests.
+- Current report legend Excel/export grouping refinement full `npm run test`: passed, 16 files / 112 Vitest tests.
+- Current report legend Excel/export grouping refinement `npm run build`: passed.
+- Current report legend Excel/export grouping refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current report legend alignment/Excel paste refinement focused `npm run test -- --run src/chart/exportChart.test.ts`: passed, 1 file / 5 Vitest tests.
+- Current report legend alignment/Excel paste refinement full `npm run test`: passed, 16 files / 112 Vitest tests.
+- Current report legend alignment/Excel paste refinement `npm run build`: passed.
+- Current report legend alignment/Excel paste refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current report legend alignment/Excel paste refinement `git diff --check`: passed with CRLF conversion warnings only.
+- Current report legend Excel/export grouping refinement `git diff --check`: passed with CRLF replacement warnings only.
+- Current Analysis-label refinement focused `npm run test -- --run src/chart/reportLegend.test.ts src/chart/exportChart.test.ts src/analysis/analysisState.test.ts src/analysis/analysisWorkbook.test.ts src/app/appStore.test.ts src/app/App.test.tsx`: passed, 6 files / 73 Vitest tests.
+- Current Analysis-label refinement full `npm run test`: passed, 16 files / 113 Vitest tests.
+- Current Analysis-label refinement `npm run build`: passed.
+- Current Analysis-label refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current Analysis-label refinement in-app browser DOM smoke: passed for app title, developer credit, and Legend/Export settings visibility.
+- Current Analysis-label refinement `git diff --check`: passed with CRLF replacement warnings only.
+- Current Legend compact/label layout fix focused `npm run test -- --run src/chart/chartConfig.test.ts src/chart/reportLegend.test.ts src/chart/exportChart.test.ts src/app/App.test.tsx`: passed, 4 files / 41 Vitest tests.
+- Current Legend compact/label layout fix full `npm run test`: passed, 16 files / 114 Vitest tests.
+- Current Legend compact/label layout fix `npm run build`: passed.
+- Current Legend compact/label layout fix `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current Legend compact/label layout fix in-app browser DOM smoke: passed for `미리보기 범례 표시`, stacked Export Legend header, and app title.
+- Current final Analysis XLSX continuity and bug review: expert code review found no blockers; focused `npm run test -- --run src/analysis/analysisState.test.ts src/analysis/analysisWorkbook.test.ts src/app/appStore.test.ts src/app/App.test.tsx src/chart/chartConfig.test.ts src/chart/reportLegend.test.ts src/chart/exportChart.test.ts src/chart/plottedDataExport.test.ts` passed, 8 files / 93 Vitest tests.
+- Current final release verification after removing unused legacy Legend/Report editor code: full `npm run test` passed, 16 files / 115 Vitest tests; `npm run build` passed; `npm run test:e2e` passed, 3 Chromium Playwright tests; `git diff --check` passed with CRLF replacement warnings only.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.
@@ -361,14 +421,14 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
   - `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
 
 ## Known Gaps
-- Clipboard image copy has not been manually verified in Chrome/Edge on the final deployment origin.
+- Clipboard image copy and rich Excel-cell legend paste have not been manually verified in Chrome/Edge on the final deployment origin.
 - Static fixture files and expected normalized JSON snapshots are still not checked in; tests currently generate workbook fixtures.
 - Public URL technical smoke used generated `.xlsx` workbooks. Real `C:\Users\siunj\Desktop\graph_TEST.xlsx` has been inspected read-only but has not yet been uploaded through the finished UI in this session; final domain judgement for real labels/curve counts remains a user/manual validation item.
 - Performance budgets for max file size, row count, specimen count, imported curve count, and rendered curve count remain undecided.
 - P1/P2 scale presets are user-editable per analysis session and represented in AnalysisState; they can be preserved through explicit Analysis XLSX export/import but not automatic browser-session persistence.
 - Analysis XLSX currently stores restore JSON and visible review sheets, but it does not include a native editable Excel chart or a static chart image workbook.
 - Group style controls are now compact, but individual curve style rows can still become dense when many curves are selected; a broader style overview/editor pattern remains a future UX candidate.
-- Dirty tab close/replace confirmation behavior and tab-count warning/hard-cap policy remain undecided.
+- Internal analysis tab count warning/hard-cap policy remains undecided.
 
 ## Important Links
 - Project root: `H:\Vibe Cording\Graph`
@@ -382,5 +442,5 @@ Committed and pushed the final pre-use style popover correction, verified the Gi
 
 ## Next 3 Tasks
 1. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
-2. Manually verify clipboard image copy behavior in Chrome/Edge on the deployed HTTPS origin.
-3. Decide dirty tab close/replace confirmation UX and internal tab-count warning policy before making destructive tab actions more permissive.
+2. Manually verify selected-layout PNG clipboard, report legend PNG clipboard, and rich Excel-cell legend paste behavior in Chrome/Edge on the deployed HTTPS origin.
+3. Decide internal tab-count warning policy and practical performance budgets for very large imported datasets.

@@ -25,6 +25,14 @@ Update this file when user visible behavior, documentation baseline, release rea
 ## [Unreleased]
 
 ### Added
+- Added Analysis label editing under the Legend settings, with Auto compact / Full label modes and per-curve labels that apply consistently to chart/custom legends, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state while preserving original specimen/reagent/source labels for reset and traceability.
+- Added rich Excel-cell legend clipboard copy using an HTML table clipboard payload with Malgun Gothic 9 pt text so style samples and names can paste into separate Excel cells where supported.
+- Added purpose-grouped Export controls for Chart image, Report legend, and Data/session, with report legend image file saves moved behind a nested disclosure.
+- Added Analysis XLSX continuity regression coverage for current Analysis labels, preview legend state, label mode, image export layout, export counter, selected/unselected curves, and user order.
+
+### Fixed
+- Fixed the preview legend visibility label mojibake and applied Auto compact legend labels consistently to the chart preview legend and plot/legend image exports.
+- Tightened the Legend Labels reset control and stacked the Export Legend header to prevent narrow-panel text overlap.
 - Created initial documentation scaffold.
 - Added agent operating rules and context compression protocol.
 - Added initial project charter in Korean.
@@ -82,7 +90,7 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Added icon option source previews under `docs/icon_options/` for future visual review.
 - Added staged UX refinement implementation plan in `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`, covering selection tree simplification, style hierarchy cleanup, custom legend/export layouts, plotted XLSX export review, and large-list usability.
 - Added unique rekeying for appended curves to avoid `curveId` collisions across files.
-- Added grouping-aware curve labels so reagent mode displays `reagent / specimen` and specimen mode displays `specimen / reagent` in selection, chart legend, legend order, and plotted CSV.
+- Added grouping-aware curve labels so reagent mode displays `reagent │ specimen` and specimen mode displays `specimen │ reagent` in selection, chart legend, legend order, and plotted CSV.
 - Added sticky desktop chart preview behavior while long side panels/page content scrolls.
 - Added first- and second-level selection tree row background banding.
 - Added HEX color text input beside color pickers for group styles and individual curve styles.
@@ -124,6 +132,10 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Added a dedicated `범례 클립보드 PNG` action for copying only the current custom legend without changing the selected export layout.
 - Added compact group style controls: HEX-first color popover and combined line/marker preview popover for specimen and reagent group rows.
 - Added Playwright coverage using large Y-axis fluorescence values around 1,200,000 for chart spacing regression checks.
+- Added a report-readable legend image export path with larger legend typography, including PNG/JPEG download and PNG clipboard copy.
+- Added dirty analysis close confirmation with cancel, Analysis XLSX save-and-close, and close-without-saving choices.
+- Added dirty file-replace confirmation with replace-current-analysis and open-as-new-analysis choices.
+- Added regression coverage that chart series use raw fluorescence points without smoothing or resampling.
 
 ### Changed
 - Replaced default replicate/series/exclude/restore-style wording in the active GUI baseline with individual curve and selected/unselected terminology.
@@ -158,7 +170,7 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Updated the staged UX refinement plan to exclude native editable Excel chart generation, prioritize Analysis XLSX for analysis continuity, and defer report-style XLSX chart work.
 - Updated D027 from provisional to accepted because the user requested sequential implementation of `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md` Phase R0 through R13.
 - Updated the Analysis XLSX restore contract so runtime tab IDs and dirty state are excluded from saved payloads; restored files receive a tab-local ID and clean dirty state.
-- Updated Excel import/append state handling so async parse results apply only to the tab where the action started, failed append preserves the active analysis, and dirty replace is blocked until the replace confirmation UX is finalized.
+- Updated Excel import/append state handling so async parse results apply only to the tab where the action started, failed append preserves the active analysis, and dirty replace requires explicit confirmation.
 - Moved analysis tabs above file input controls so Excel replace/append actions visibly target the active analysis.
 - Updated Analysis XLSX saved state so runtime tab IDs and dirty state are never restored, and the next export counter continues after a successful Analysis XLSX save.
 - Updated Analysis XLSX detection so ordinary workbooks with `Settings` or `ImportedData` sheet names are not misclassified unless they contain the explicit IsoAmplar restore marker.
@@ -183,8 +195,13 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Updated chart grid spacing to reduce excessive left-side empty space while preserving large Y-axis label readability.
 - Updated compact group style rows so group names remain visible, color controls show only a compact swatch, line/marker controls use a smaller preview button, and reset uses a compact icon button.
 - Updated compact style popovers to use native `details` state for more reliable Escape and outside-click closing.
+- Updated curve labels to use ` │ ` between specimen and reagent so labels remain readable when source names contain `/`.
+- Updated the Style panel by removing permanent built-in preset shortcut buttons; preset logic remains available for explicit assistance flows such as the >20 visible-curve helper.
+- Updated line/marker popovers so a selected line or marker choice closes the popover instead of leaving it over later controls.
 
 ### Fixed
+- Adjusted report legend image spacing so legend text aligns with the line sample and no longer crowds the title.
+- Changed the Excel report-legend clipboard style sample from SVG/CSS line snippets to colored text glyph samples with fixed-width cells, improving paste fidelity in Windows Excel.
 - Fixed chart preview height stretching with expanded left/right panel content.
 - Fixed default curve color shifting when earlier curves are selected later.
 - Fixed static `시약별` selection-panel header text after switching to specimen view.
@@ -199,9 +216,12 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Fixed group style popovers being visually covered by following style sections.
 - Fixed compact style popovers staying open after outside clicks, Escape, or opening another style popover.
 - Fixed an Escape-close regression caused by controlling the native `details` open state from React state.
+- Fixed dirty close/replace flows that previously showed only an explanatory warning without an actionable next step.
+- Fixed ambiguous chart/legend/CSV labels when specimen or reagent names themselves contain `/`.
 
 ### Removed
-- Nothing yet.
+- Removed permanent built-in style preset shortcut buttons from the Style panel to reduce clutter.
+- Removed unused legacy Legend/Report editor code that still referenced the old report-name override model.
 
 ### Known Limitations
 - Clipboard image copy support has not been manually tested in Chrome/Edge on the final deployment origin.

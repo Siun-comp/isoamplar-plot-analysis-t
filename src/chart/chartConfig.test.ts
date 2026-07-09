@@ -33,6 +33,21 @@ describe("PCR chart configuration", () => {
     expect(option.series.every((series: any) => series.emphasis.disabled === true)).toBe(true);
   });
 
+  it("passes raw fluorescence points to ECharts without smoothing or resampling", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const curve = dataset.curves[0];
+    const result = buildPcrChartOption({
+      dataset,
+      selectedCurveIds: new Set([curve.curveId]),
+      scale: createDefaultChartScale()
+    });
+    const option = result.option as Record<string, any>;
+
+    expect(option.series[0].data).toEqual(curve.x.map((x, index) => [x, curve.y[index]]));
+    expect(option.series[0].smooth).toBeUndefined();
+    expect(option.series[0].sampling).toBeUndefined();
+  });
+
   it("uses app-controlled curve highlight without changing marker settings", () => {
     const dataset = createOneSpecimenEightReagentDataset();
     const [firstCurve, secondCurve] = dataset.curves;
@@ -149,8 +164,8 @@ describe("PCR chart configuration", () => {
     });
     const option = result.option as Record<string, any>;
 
-    expect(option.legend.data).toEqual(["A1 / 검체 1"]);
-    expect(option.series[0].name).toBe("A1 / 검체 1");
+    expect(option.legend.data).toEqual(["A1 │ 검체 1"]);
+    expect(option.series[0].name).toBe("A1 │ 검체 1");
   });
 
   it("keeps the built-in ECharts legend hidden while exposing custom legend items", () => {
@@ -167,11 +182,31 @@ describe("PCR chart configuration", () => {
     expect(result.legendItems).toEqual([
       expect.objectContaining({
         curveId: dataset.curves[0].curveId,
-        label: "검체 1 / A1",
+        label: "검체 1 │ A1",
         lineType: "solid",
         markerType: "none"
       })
     ]);
+  });
+
+  it("applies auto compact legend labels to custom legend items and series names", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const curves = dataset.curves.slice(0, 2);
+    const result = buildPcrChartOption({
+      dataset,
+      selectedCurveIds: new Set(curves.map((curve) => curve.curveId)),
+      scale: createDefaultChartScale(),
+      labelMode: "reagent",
+      legendSettings: {
+        previewVisible: true,
+        reportLabelMode: "autoCompact",
+        reportNameOverrides: {}
+      }
+    });
+    const option = result.option as Record<string, any>;
+
+    expect(result.legendItems.map((item) => item.label)).toEqual(curves.map((curve) => curve.reagentLabel));
+    expect(option.series.map((series: any) => series.name)).toEqual(curves.map((curve) => curve.reagentLabel));
   });
 
   it.each(["circle", "triangle", "rect"] as const)("maps %s marker overrides to ECharts symbols", (markerType) => {

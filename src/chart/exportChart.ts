@@ -7,6 +7,7 @@ type EchartsCoreModule = typeof import("echarts/core");
 
 const EXPORT_PIXEL_RATIO = 2;
 let echartsPromise: Promise<EchartsCoreModule> | null = null;
+type LegendImageVariant = "standard" | "report";
 
 export async function exportChartImageBlob(args: {
   option: EChartsCoreOption;
@@ -59,18 +60,38 @@ export async function exportLegendImageBlob(args: {
   items: LegendItem[];
   type: ImageExportType;
   width?: number;
+  variant?: LegendImageVariant;
+  title?: string;
 }) {
   const dataUrl = await exportLegendImageDataUrl(args);
   return dataUrlToBlob(dataUrl);
+}
+
+export async function exportReportLegendImageBlob(args: {
+  items: LegendItem[];
+  type: ImageExportType;
+  width?: number;
+  title?: string;
+}) {
+  return exportLegendImageBlob({
+    items: args.items,
+    type: args.type,
+    width: args.width ?? 900,
+    variant: "report",
+    title: args.title
+  });
 }
 
 export async function exportLegendImageDataUrl(args: {
   items: LegendItem[];
   type: ImageExportType;
   width?: number;
+  variant?: LegendImageVariant;
+  title?: string;
 }) {
-  const size = calculateLegendImageSize(args.items, args.width ?? 1200);
-  const svg = createLegendSvg(args.items, size.width, size.height);
+  const variant = args.variant ?? "standard";
+  const size = calculateLegendImageSize(args.items, args.width ?? (variant === "report" ? 900 : 1200), variant);
+  const svg = createLegendSvg(args.items, size.width, size.height, variant, args.title);
   const image = await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
   const canvas = document.createElement("canvas");
   canvas.width = size.width * EXPORT_PIXEL_RATIO;
@@ -82,32 +103,50 @@ export async function exportLegendImageDataUrl(args: {
   return canvasToDataUrl(canvas, args.type);
 }
 
-export function calculateLegendImageSize(items: LegendItem[], width = 1200) {
-  const columns = Math.max(1, Math.min(4, Math.floor((width - 48) / 260)));
+export function calculateLegendImageSize(items: LegendItem[], width = 1200, variant: LegendImageVariant = "standard") {
+  const horizontalPadding = variant === "report" ? 56 : 48;
+  const minColumnWidth = variant === "report" ? 360 : 260;
+  const maxColumns = variant === "report" ? 2 : 4;
+  const columns = Math.max(1, Math.min(maxColumns, Math.floor((width - horizontalPadding) / minColumnWidth)));
   const rows = Math.max(1, Math.ceil(Math.max(items.length, 1) / columns));
   return {
     width,
-    height: 58 + rows * 30
+    height: variant === "report" ? 96 + rows * 58 : 58 + rows * 30
   };
 }
 
-export function createLegendSvg(items: LegendItem[], width: number, height: number) {
-  const columns = Math.max(1, Math.min(4, Math.floor((width - 48) / 260)));
-  const columnWidth = (width - 48) / columns;
+export function createLegendSvg(
+  items: LegendItem[],
+  width: number,
+  height: number,
+  variant: LegendImageVariant = "standard",
+  title = "Legend"
+) {
+  const horizontalPadding = variant === "report" ? 56 : 48;
+  const minColumnWidth = variant === "report" ? 360 : 260;
+  const maxColumns = variant === "report" ? 2 : 4;
+  const columns = Math.max(1, Math.min(maxColumns, Math.floor((width - horizontalPadding) / minColumnWidth)));
+  const columnWidth = (width - horizontalPadding) / columns;
   const escapedItems = items.length > 0 ? items : [];
+  const startX = variant === "report" ? 28 : 24;
+  const firstRowY = variant === "report" ? 82 : 44;
+  const rowHeight = variant === "report" ? 58 : 30;
   const rows = escapedItems
     .map((item, index) => {
       const column = index % columns;
       const row = Math.floor(index / columns);
-      const x = 24 + column * columnWidth;
-      const y = 44 + row * 30;
-      return createLegendSvgItem(item, x, y, columnWidth);
+      const x = startX + column * columnWidth;
+      const y = firstRowY + row * rowHeight;
+      return createLegendSvgItem(item, x, y, columnWidth, variant);
     })
     .join("");
+  const titleX = variant === "report" ? 28 : 24;
+  const titleY = variant === "report" ? 32 : 24;
+  const titleSize = variant === "report" ? 22 : 15;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <rect width="100%" height="100%" fill="#ffffff"/>
-  <text x="24" y="24" fill="#263448" font-family="Arial, sans-serif" font-size="15" font-weight="700">Legend</text>
+  <text x="${titleX}" y="${titleY}" fill="#263448" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700">${escapeHtml(title)}</text>
   ${rows}
 </svg>`;
 }
@@ -162,6 +201,66 @@ export async function copyPngBlobToClipboard(blob: Blob) {
   ]);
 }
 
+export async function copyReportLegendExcelTableToClipboard(args: { title: string; items: LegendItem[] }) {
+  const payload = createReportLegendExcelClipboardPayload(args);
+  await copyHtmlTableToClipboard(payload.html, payload.text);
+}
+
+export function createReportLegendExcelClipboardPayload(args: { title: string; items: LegendItem[] }) {
+  const rows = args.items
+    .map(
+      (item) => `<tr>
+    <td style="width:116pt;padding:5px 8px;border:1px solid #d8dee8;vertical-align:middle;text-align:center;white-space:nowrap;mso-number-format:'\\@';font-family:'Malgun Gothic','Segoe UI Symbol',Arial,sans-serif;font-size:9pt;">
+      ${createExcelLegendSampleHtml(item)}
+    </td>
+    <td style="width:220pt;padding:5px 8px;border:1px solid #d8dee8;mso-number-format:'\\@';font-family:'Malgun Gothic',Arial,sans-serif;font-size:9pt;color:#263448;white-space:nowrap;">
+      ${escapeExcelHtmlText(item.label)}
+    </td>
+  </tr>`
+    )
+    .join("");
+  const html = `<!doctype html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<table style="border-collapse:collapse;background:#ffffff;">
+  <colgroup>
+    <col style="width:116pt;mso-width-source:userset;">
+    <col style="width:220pt;mso-width-source:userset;">
+  </colgroup>
+  <tr>
+    <th colspan="2" style="padding:6px 8px;border:1px solid #d8dee8;background:#f8fafc;text-align:left;font-family:'Malgun Gothic',Arial,sans-serif;font-size:10pt;font-weight:700;color:#263448;">${escapeExcelHtmlText(args.title)}</th>
+  </tr>
+  <tr>
+    <th style="padding:5px 8px;border:1px solid #d8dee8;background:#f8fafc;text-align:center;font-family:'Malgun Gothic',Arial,sans-serif;font-size:9pt;font-weight:700;color:#526174;">Style</th>
+    <th style="padding:5px 8px;border:1px solid #d8dee8;background:#f8fafc;text-align:left;font-family:'Malgun Gothic',Arial,sans-serif;font-size:9pt;font-weight:700;color:#526174;">Name</th>
+  </tr>
+  ${rows}
+</table>
+</body>
+</html>`;
+  const text = [
+    sanitizeExcelPlainText(args.title),
+    ["Style", "Name"].join("\t"),
+    ...args.items.map((item) => [createPlainStyleLabel(item), sanitizeExcelPlainText(item.label)].join("\t"))
+  ].join("\r\n");
+
+  return { html, text };
+}
+
+export async function copyHtmlTableToClipboard(html: string, plainText: string) {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+    throw new Error("Rich Excel clipboard copy is not supported in this browser.");
+  }
+
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      "text/html": new Blob([html], { type: "text/html" }),
+      "text/plain": new Blob([plainText], { type: "text/plain" })
+    })
+  ]);
+}
+
 export function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -190,30 +289,129 @@ export function dataUrlToBlob(dataUrl: string) {
   return blob;
 }
 
-function createLegendSvgItem(item: LegendItem, x: number, y: number, columnWidth: number) {
+function createLegendSvgItem(
+  item: LegendItem,
+  x: number,
+  y: number,
+  columnWidth: number,
+  variant: LegendImageVariant = "standard"
+) {
   const safeColor = escapeHtml(item.color);
-  const textX = x + 72;
-  const maxTextWidth = Math.max(120, columnWidth - 84);
-  const marker = createLegendSvgMarker(item, x + 32, y);
+  const sampleLength = variant === "report" ? 98 : 64;
+  const markerX = x + sampleLength / 2;
+  const textX = x + (variant === "report" ? 120 : 72);
+  const maxTextWidth = Math.max(120, columnWidth - (variant === "report" ? 136 : 84));
+  const marker = createLegendSvgMarker(item, markerX, y, variant === "report" ? 7 : 4.5);
+  const strokeWidth = variant === "report" ? Math.max(3.5, item.lineWidth * 1.35) : Math.max(2, item.lineWidth);
+  const text =
+    variant === "report"
+      ? createReportLegendText(item.label, textX, y, maxTextWidth)
+      : `<text x="${textX}" y="${y + 4}" fill="#263448" font-family="Arial, sans-serif" font-size="13">${escapeHtml(truncateLabel(item.label, Math.floor(maxTextWidth / 7.2)))}</text>`;
 
   return `<g data-curve-id="${escapeHtml(item.curveId)}">
-    <line x1="${x}" y1="${y}" x2="${x + 64}" y2="${y}" stroke="${safeColor}" stroke-width="${Math.max(2, item.lineWidth)}" stroke-linecap="${item.lineType === "dotted" ? "round" : "butt"}" stroke-dasharray="${getStrokeDashArray(item.lineType)}"/>
+    <line x1="${x}" y1="${y}" x2="${x + sampleLength}" y2="${y}" stroke="${safeColor}" stroke-width="${strokeWidth}" stroke-linecap="${item.lineType === "dotted" ? "round" : "butt"}" stroke-dasharray="${getStrokeDashArray(item.lineType)}"/>
     ${marker}
-    <text x="${textX}" y="${y + 4}" fill="#263448" font-family="Arial, sans-serif" font-size="13">${escapeHtml(truncateLabel(item.label, Math.floor(maxTextWidth / 7.2)))}</text>
+    ${text}
   </g>`;
 }
 
-function createLegendSvgMarker(item: LegendItem, x: number, y: number) {
+function createLegendSvgMarker(item: LegendItem, x: number, y: number, size: number) {
   const color = escapeHtml(item.color);
   if (item.markerType === "none") return "";
-  if (item.markerType === "circle") return `<circle cx="${x}" cy="${y}" r="4.5" fill="${color}"/>`;
-  if (item.markerType === "triangle") return `<polygon points="${x},${y - 5} ${x + 5.5},${y + 5} ${x - 5.5},${y + 5}" fill="${color}"/>`;
-  return `<rect x="${x - 4.5}" y="${y - 4.5}" width="9" height="9" fill="${color}"/>`;
+  if (item.markerType === "circle") return `<circle cx="${x}" cy="${y}" r="${size}" fill="${color}"/>`;
+  if (item.markerType === "triangle") {
+    return `<polygon points="${x},${y - size * 1.1} ${x + size * 1.2},${y + size * 1.1} ${x - size * 1.2},${y + size * 1.1}" fill="${color}"/>`;
+  }
+  return `<rect x="${x - size}" y="${y - size}" width="${size * 2}" height="${size * 2}" fill="${color}"/>`;
+}
+
+function createReportLegendText(label: string, x: number, centerY: number, maxTextWidth: number) {
+  const maxChars = Math.max(14, Math.floor(maxTextWidth / 12));
+  const lines = wrapLegendLabel(label, maxChars, 2);
+  const firstBaselineY = centerY + 8 - ((lines.length - 1) * 24) / 2;
+  const tspans = lines
+    .map((line, index) => `<tspan x="${x}" y="${firstBaselineY + index * 24}">${escapeHtml(line)}</tspan>`)
+    .join("");
+  return `<text fill="#263448" font-family="Arial, sans-serif" font-size="22" font-weight="700">${tspans}</text>`;
+}
+
+function createExcelLegendSampleHtml(item: LegendItem) {
+  const color = escapeHtml(item.color);
+  return `<span style="font-family:'Malgun Gothic','Segoe UI Symbol',Consolas,monospace;font-size:9pt;font-weight:700;color:${color};white-space:nowrap;">${createExcelLegendGlyphHtml(item)}</span>`;
+}
+
+function createExcelLegendGlyphHtml(item: LegendItem) {
+  const marker = getExcelMarkerEntity(item.markerType);
+  if (item.lineType === "dashed") {
+    return marker ? `&#9472;&#9472;&nbsp;&nbsp;${marker}&nbsp;&nbsp;&#9472;&#9472;` : "&#9472;&#9472;&nbsp;&nbsp;&#9472;&#9472;&nbsp;&nbsp;&#9472;&#9472;";
+  }
+  if (item.lineType === "dotted") {
+    return marker ? `&#8226;&nbsp;&#8226;&nbsp;${marker}&nbsp;&#8226;&nbsp;&#8226;` : "&#8226;&nbsp;&#8226;&nbsp;&#8226;&nbsp;&#8226;&nbsp;&#8226;";
+  }
+  return marker ? `&#9473;&#9473;&#9473;${marker}&#9473;&#9473;&#9473;` : "&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;&#9473;";
+}
+
+function getExcelMarkerEntity(markerType: LegendItem["markerType"]) {
+  if (markerType === "circle") return "&#9679;";
+  if (markerType === "triangle") return "&#9650;";
+  if (markerType === "rect") return "&#9632;";
+  return "";
+}
+
+function createPlainStyleLabel(item: LegendItem) {
+  return `${item.lineType}, ${item.markerType}, ${item.color}`;
+}
+
+function escapeExcelHtmlText(value: string) {
+  return escapeHtml(sanitizeExcelText(value)).replaceAll("\u200B", "&#8203;");
+}
+
+function sanitizeExcelPlainText(value: string) {
+  return sanitizeExcelText(value).replaceAll("\t", " ").replaceAll(/\r?\n/gu, " ");
+}
+
+function sanitizeExcelText(value: string) {
+  const trimmed = value.trimStart();
+  if (/^[=+\-@]/u.test(trimmed)) {
+    return `\u200B${value}`;
+  }
+  return value;
+}
+
+function wrapLegendLabel(label: string, maxChars: number, maxLines: number) {
+  const words = label.split(/\s+/u).filter(Boolean);
+  const lines: string[] = [];
+
+  for (const word of words.length > 0 ? words : [label]) {
+    const chunks = splitLongLegendLine(word, maxChars);
+    for (const chunk of chunks) {
+      const current = lines.at(-1);
+      if (!current || current.length + 1 + chunk.length > maxChars) {
+        lines.push(chunk);
+      } else {
+        lines[lines.length - 1] = `${current} ${chunk}`;
+      }
+    }
+  }
+
+  if (lines.length <= maxLines) return lines;
+  const visible = lines.slice(0, maxLines);
+  visible[maxLines - 1] = truncateLabel(visible[maxLines - 1], maxChars);
+  return visible;
+}
+
+function splitLongLegendLine(line: string, maxChars: number) {
+  if (line.length <= maxChars) return [line];
+  const chunks: string[] = [];
+  for (let index = 0; index < line.length; index += maxChars) {
+    chunks.push(line.slice(index, index + maxChars));
+  }
+  return chunks;
 }
 
 function truncateLabel(label: string, maxLength: number) {
   if (label.length <= maxLength) return label;
-  return `${label.slice(0, Math.max(1, maxLength - 1))}…`;
+  return `${label.slice(0, Math.max(1, maxLength - 3))}...`;
 }
 
 function escapeHtml(value: string) {

@@ -53,7 +53,11 @@ describe("Analysis XLSX workbook", () => {
           fieldSources: { color: "custom", lineType: "custom", markerType: "custom" }
         }
       },
-      legendSettings: { previewVisible: false },
+      legendSettings: {
+        previewVisible: false,
+        reportLabelMode: "full",
+        reportNameOverrides: { [dataset.curves[0].curveId]: "Report A1" }
+      },
       exportSettings: { imageLayout: "legendOnly" },
       exportCounter: 3,
       importFileName: dataset.sourceFileName,
@@ -83,7 +87,9 @@ describe("Analysis XLSX workbook", () => {
     expect(hiddenSheetMeta?.Hidden).toBe(1);
     expect(workbook.Sheets.ImportedData.A1?.v).toBe("Cycle");
     expect(workbook.Sheets.ImportedData.B1?.v).toBe(dataset.curves[0].specimenLabel);
-    expect(workbook.Sheets.ImportedData.B3?.v).toBe(dataset.curves[0].curveId);
+    expect(workbook.Sheets.ImportedData.A3?.v).toBe("Analysis label");
+    expect(workbook.Sheets.ImportedData.B3?.v).toBe("Report A1");
+    expect(workbook.Sheets.ImportedData.B4?.v).toBe(dataset.curves[0].curveId);
 
     const restored = await readAnalysisWorkbookBuffer(buffer);
     expect(restored.kind).toBe("analysis");
@@ -109,16 +115,82 @@ describe("Analysis XLSX workbook", () => {
     });
     expect(restored.analysis.curveOverrides[dataset.curves[0].curveId]).toMatchObject({
       color: "#123456",
+      displayName: "Report A1",
       lineType: "dotted",
       markerType: "none",
       source: "custom",
-      fieldSources: { color: "custom", lineType: "custom", markerType: "custom" }
+      fieldSources: { color: "custom", displayName: "custom", lineType: "custom", markerType: "custom" }
     });
     expect(restored.analysis.legendSettings.previewVisible).toBe(false);
+    expect(restored.analysis.legendSettings.reportLabelMode).toBe("full");
+    expect(restored.analysis.legendSettings.reportNameOverrides).toEqual({});
     expect(restored.analysis.exportSettings.imageLayout).toBe("legendOnly");
     expect(restored.analysis.exportCounter).toBe(3);
     expect(restored.analysis.dirty).toBe(false);
     expect(restored.analysis.analysisId).not.toBe("analysis-test");
+  });
+
+  it("roundtrips current analysis labels and legend/export settings without relying on legacy report names", async () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const selection = createInitialSelectionState(dataset);
+    const firstCurve = dataset.curves[0];
+    const secondCurve = dataset.curves[1];
+    selection.selectedCurveIds.add(firstCurve.curveId);
+    selection.orderedCurveIds = [secondCurve.curveId, firstCurve.curveId, ...selection.orderedCurveIds.slice(2)];
+
+    const state = createAnalysisState({
+      analysisId: "analysis-current-label",
+      analysisName: "Condition Review",
+      dataset,
+      selection,
+      searchQuery: "RSV",
+      selectionFilter: "selected",
+      chartScale: createDefaultChartScale(),
+      styleRules: createDefaultStyleRules(),
+      curveOverrides: {
+        [firstCurve.curveId]: {
+          displayName: "Condition A",
+          markerType: "circle",
+          source: "custom",
+          fieldSources: { displayName: "custom", markerType: "custom" }
+        }
+      },
+      legendSettings: {
+        previewVisible: true,
+        reportLabelMode: "autoCompact",
+        reportNameOverrides: {}
+      },
+      exportSettings: { imageLayout: "plotWithLegend" },
+      exportCounter: 11,
+      importFileName: dataset.sourceFileName
+    });
+
+    const buffer = await exportAnalysisWorkbookBuffer(state);
+    const workbook = XLSX.read(buffer, { type: "array", raw: true });
+    expect(workbook.Sheets.ImportedData.A3?.v).toBe("Analysis label");
+    expect(workbook.Sheets.ImportedData.B3?.v).toBe("Condition A");
+    expect(workbook.Sheets.ImportedData.C3?.v).toBe("");
+
+    const restored = await readAnalysisWorkbookBuffer(buffer);
+    expect(restored.kind).toBe("analysis");
+    if (restored.kind !== "analysis") return;
+    expect(restored.analysis.dataset.curves).toHaveLength(dataset.curves.length);
+    expect(restored.analysis.selection.selectedCurveIds.has(firstCurve.curveId)).toBe(true);
+    expect(restored.analysis.selection.selectedCurveIds.has(secondCurve.curveId)).toBe(false);
+    expect(restored.analysis.selection.orderedCurveIds.slice(0, 2)).toEqual([secondCurve.curveId, firstCurve.curveId]);
+    expect(restored.analysis.curveOverrides[firstCurve.curveId]).toMatchObject({
+      displayName: "Condition A",
+      markerType: "circle",
+      fieldSources: { displayName: "custom", markerType: "custom" }
+    });
+    expect(restored.analysis.legendSettings).toEqual({
+      previewVisible: true,
+      reportLabelMode: "autoCompact",
+      reportNameOverrides: {}
+    });
+    expect(restored.analysis.exportSettings.imageLayout).toBe("plotWithLegend");
+    expect(restored.analysis.exportCounter).toBe(11);
+    expect(restored.analysis.dirty).toBe(false);
   });
 
   it("detects missing restore sheets and corrupt restore chunks", () => {

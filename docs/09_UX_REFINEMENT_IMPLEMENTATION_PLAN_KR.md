@@ -254,7 +254,7 @@ _IsoAmplarChecksum
 파일 선택 routing 초안:
 - `파일 선택` + 원본 Excel: 현재 active analysis를 교체한다.
 - `추가 선택` + 원본 Excel: 현재 active analysis에 append한다.
-- `파일 선택` + Analysis XLSX: 저장된 analysis를 active tab에 restore한다. active tab이 dirty이고 dirty 정책이 미확정이면 restore를 진행하지 않고 사용자 결정 필요 안내를 표시한다.
+- `파일 선택` + Analysis XLSX: 저장된 analysis를 active tab에 restore한다. active tab이 dirty이면 Cancel / 현재 분석 대체 / 새 분석으로 열기 확인을 거친다.
 - `추가 선택` + Analysis XLSX: 현재 analysis에 병합하지 않고 새 내부 tab으로 연다.
 
 ## Report/Plotted XLSX
@@ -311,7 +311,7 @@ docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md의 Phase R0을 수행하라.
 - AC-PCR-026 이후 번호로 신규 acceptance criteria를 작성하라.
 - DECISIONS.md에는 확정/조건부/사용자 결정 대기 항목을 분리하라.
 - native editable Excel chart 제외, 전체 imported dataset + 설정 포함 Analysis XLSX, no localStorage persistence 기본값, clinical interpretation 제외를 최신 결정으로 기록하라.
-- 내부 분석 탭은 D027 `Accepted`로 기록하되, dirty close/replace UX와 tab hard cap은 사용자 결정 대기 항목으로 남겨라.
+- 내부 분석 탭은 D027 `Accepted`로 기록하되, tab hard cap은 사용자 결정 대기 항목으로 남겨라.
 - DEVELOPMENT_STATE.md와 CHANGELOG.md를 갱신하라.
 - 아직 구현되지 않은 기능을 완료된 것처럼 쓰지 말라.
 
@@ -471,7 +471,7 @@ Phase R4를 구현하라.
 - _IsoAmplarAnalysis에는 schemaVersion과 serialized AnalysisState를 JSON chunk로 저장하라.
 - ImportedData에는 선택 여부와 무관한 전체 normalized imported dataset을 포함하라.
 - Analysis XLSX import는 hidden restore sheet를 authoritative source로 사용하라.
-- `파일 선택` + 원본 Excel은 active analysis replace, `추가 선택` + 원본 Excel은 append, `파일 선택` + Analysis XLSX는 active tab restore, `추가 선택` + Analysis XLSX는 new tab open으로 동작하게 하라. 단 dirty active tab의 replace/restore 정책이 확정되지 않았으면 데이터 손실 가능성이 있는 동작은 차단하고 사용자 확인 필요 메시지를 표시하라.
+- `파일 선택` + 원본 Excel은 active analysis replace, `추가 선택` + 원본 Excel은 append, `파일 선택` + Analysis XLSX는 active tab restore, `추가 선택` + Analysis XLSX는 new tab open으로 동작하게 하라. dirty active tab의 replace/restore는 Cancel / 현재 분석 대체 / 새 분석으로 열기 확인 후에만 진행한다.
 - native editable Excel chart와 chart image insertion은 구현하지 말라.
 
 테스트:
@@ -896,7 +896,7 @@ Phase R13을 수행하라.
 | AC-PCR-033 | Analysis XLSX export | Analysis XLSX는 선택 여부와 무관하게 전체 imported dataset, source metadata, warnings, selection, order, scale, style, legend/export settings를 저장한다. 파일명은 안전하게 sanitize되고 transient UI state는 제외된다. |
 | AC-PCR-034 | Analysis XLSX import | Analysis XLSX를 다시 열면 hidden restore JSON 기준으로 분석 상태가 복원되고, 선택하지 않은 curve도 dataset에 남아 있다. |
 | AC-PCR-035 | Internal tabs | 여러 analysis tab은 dataset, selection, search, collapse, scale, style, legend/export order, exportCounter를 독립적으로 유지한다. |
-| AC-PCR-036 | File action routing | dirty가 아닌 상태 또는 dirty 정책 확정 후, `파일 선택`/`추가 선택`은 원본 Excel과 Analysis XLSX를 구분해 replace, append, restore, new-tab open 동작을 혼동 없이 수행한다. dirty 정책이 미확정이면 데이터 손실 가능성이 있는 close/replace/restore는 차단된다. |
+| AC-PCR-036 | File action routing | `파일 선택`/`추가 선택`은 원본 Excel과 Analysis XLSX를 구분해 replace, append, restore, new-tab open 동작을 혼동 없이 수행한다. dirty close/replace/restore는 명시 확인 후에만 진행되며 데이터 손실 가능성이 있는 동작은 조용히 실행되지 않는다. |
 | AC-PCR-037 | No native chart / no clinical transform | Analysis XLSX는 native editable Excel chart를 포함하지 않으며, 저장/복원 과정에서도 fluorescence 원본값을 보정/변환/판독하지 않는다. |
 | AC-PCR-038 | Performance smoke | X scale 1-100 수준의 데이터에서 100 visible curves x 100 points는 브라우저 smoke 기준을 통과하고, 수백~1000 imported curves는 selection virtualization으로 조작 가능해야 한다. |
 | AC-PCR-039 | Hover/readout | hover 정보는 plot 분석을 방해하지 않는 고정 readout 또는 동등한 방식으로 제공된다. |
@@ -920,23 +920,15 @@ Phase R13을 수행하라.
 
 아래 항목은 아직 제품 판단이 필요한 부분이다. 구현 중 안전한 기본값을 둘 수는 있으나, 품질 저하나 사용자 데이터 손실 위험이 있으면 임의 확정하지 않고 질문하거나 해당 범위를 제외한다.
 
-1. dirty tab 닫기/교체 UX  
-   - 저장하지 않은 analysis tab을 닫거나 `파일 선택`으로 교체할 때 확인 modal을 띄울지, 단순 warning + 취소/진행 버튼으로 처리할지 결정이 필요하다.
-
-2. `파일 선택` + Analysis XLSX가 dirty active tab에서 동작하는 방식  
-   - dirty가 아니면 active tab restore가 기본 동작이다.  
-   - dirty 상태에서 확인 후 교체할지, 자동으로 새 tab으로 열지, 항상 차단할지는 향후 사용자 결정 항목이다.
-   - 결정 전에는 데이터 손실 가능성이 있는 restore/replace/close를 차단한다.
-
-3. 내부 tab 수 제한  
+1. 내부 tab 수 제한
    - 탭을 많이 열면 메모리 사용량이 커질 수 있다.  
    - 권장 기본값은 hard cap 없이 warning/탭 정리 안내를 제공하는 방식이다. hard cap이 필요한지는 사용 경험 후 결정한다.
 
-4. Analysis XLSX visible `ImportedData` sheet의 대용량 표시 방식  
+2. Analysis XLSX visible `ImportedData` sheet의 대용량 표시 방식
    - hidden JSON은 authoritative restore source로 고정한다.  
    - visible sheet는 wide table 하나로 둘지, source file별 sheet/section으로 나눌지는 파일 크기와 Excel 가독성을 보고 구현 중 결정할 수 있다.
 
-5. Report/Plotted XLSX 필요성  
+3. Report/Plotted XLSX 필요성
    - 현재는 Analysis XLSX로 분석 재개 요구를 충족하므로 후순위로 둔다.  
    - “현재 plot image + 현재 plotted data를 보고서 파일로 저장” 요구가 다시 우선순위가 되면 별도 Phase로 산정한다.
 
@@ -969,7 +961,7 @@ Phase R13을 수행하라.
 - native editable Excel chart와 report-image XLSX 구현은 제외/후순위로 분리했다.
 - 내부 분석 탭은 탭별 AnalysisState, dirty flag, analysisName/sourceFileName/chartTitle 분리를 요구하도록 추가했다.
 - 내부 분석 탭은 이번 R0~R13 구현 지시로 D027 `Accepted` 범위가 되었으며, R2/R3 구현 대상으로 정리했다.
-- dirty tab close/replace 정책은 미확정 상태에서 임의 확인 UX를 구현하지 않고, 데이터 손실 가능성이 있는 동작을 차단하도록 보강했다.
+- dirty tab close/replace 정책은 이후 보완에서 명시 확인 UX로 확정되었다. dirty close는 저장/폐기 선택을 요구하고, dirty file replace는 현재 분석 대체 또는 새 분석 열기를 요구한다.
 - Analysis XLSX roundtrip 테스트 범위를 analysisName, sourceFiles, warnings, grouping/collapse, P1/P2, exportCounter, legend/export layout, hidden JSON chunk 오류까지 넓혔다.
 - Phase 번호를 R0~R13으로 일렬화해 R1A/R1B 이후 다시 R1이 나오는 혼선을 제거했다.
 - reset 범위를 field, curve, selected curves, all overrides, group reset으로 구분했다.

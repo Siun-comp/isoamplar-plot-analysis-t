@@ -22,6 +22,7 @@ import type {
   LineType,
   MarkerType,
   PcrDataset,
+  ReportLegendLabelMode,
   SelectionFilter,
   SelectionState,
   StyleGroupingTarget,
@@ -42,6 +43,10 @@ import {
 enableMapSet();
 
 type ImportStatus = "idle" | "importing" | "ready" | "error";
+type ImportFileMode = "replace" | "newTab";
+type CloseAnalysisOptions = {
+  force?: boolean;
+};
 
 type PresetUndoSnapshot = {
   previousOverrides: Record<string, CurveStyleOverride | undefined>;
@@ -59,7 +64,7 @@ export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
 };
 
 export const DIRTY_REPLACE_BLOCKED_MESSAGE =
-  "Unsaved analysis changes are present. Replace is blocked until the close/replace confirmation UX is finalized.";
+  "Unsaved analysis changes are present. Replace is blocked until you confirm replacing the current analysis or open the file as a new analysis.";
 
 type ActiveAnalysisAdapterState = Omit<AnalysisTabState, "analysisId">;
 
@@ -75,12 +80,13 @@ type AppState = WorkspaceState & ActiveAnalysisAdapterState;
 type AppStore = AppState & {
   loadDataset: (dataset: PcrDataset) => void;
   importFile: (file: File) => Promise<void>;
+  importFileWithMode: (file: File, mode: ImportFileMode, targetAnalysisId?: string) => Promise<void>;
   appendFile: (file: File) => Promise<void>;
   reset: () => void;
   createAnalysis: (analysisName?: string) => string;
   switchAnalysis: (analysisId: string) => void;
   renameAnalysis: (analysisId: string, analysisName: string) => void;
-  closeAnalysis: (analysisId: string) => boolean;
+  closeAnalysis: (analysisId: string, options?: CloseAnalysisOptions) => boolean;
   setSearchQuery: (query: string) => void;
   setSelectionFilter: (filter: SelectionFilter) => void;
   setAxisScaleMode: (axis: AxisId, mode: ScaleMode) => void;
@@ -97,6 +103,9 @@ type AppStore = AppState & {
   resetSelectedCurveOverrides: () => void;
   resetAllCurveOverrides: () => void;
   setLegendPreviewVisible: (visible: boolean) => void;
+  setReportLegendLabelMode: (mode: ReportLegendLabelMode) => void;
+  setReportLegendName: (curveId: string, name: string) => void;
+  resetReportLegendName: (curveId: string) => void;
   setExportImageLayout: (layout: ExportSettings["imageLayout"]) => void;
   applyStylePreset: (preset: BuiltInStylePresetId, curveIds: Iterable<string>) => void;
   undoLastPreset: () => void;
@@ -172,6 +181,50 @@ export const useAppStore = create<AppStore>()(
         set((state) => {
           if (blockDirtyReplaceIfNeeded(state, targetAnalysisId)) return;
           replaceAnalysisDataset(state, targetAnalysisId, result.dataset);
+        });
+      } else {
+        set((state) => {
+          setAnalysisImportError(state, targetAnalysisId, result.error.message);
+        });
+      }
+    },
+    importFileWithMode: async (file, mode, requestedTargetAnalysisId) => {
+      const targetAnalysisId = requestedTargetAnalysisId ?? get().activeAnalysisId;
+      if (!get().analyses[targetAnalysisId]) return;
+
+      if (mode === "replace") {
+        set((state) => {
+          setAnalysisImporting(state, targetAnalysisId, file.name);
+        });
+      }
+
+      const analysisWorkbook = await readAnalysisWorkbookFile(file);
+      if (analysisWorkbook.kind === "analysis") {
+        set((state) => {
+          if (mode === "newTab") {
+            openAnalysisInNewTab(state, analysisWorkbook.analysis);
+            return;
+          }
+          restoreAnalysisToTab(state, targetAnalysisId, analysisWorkbook.analysis, { force: true });
+        });
+        return;
+      }
+
+      if (analysisWorkbook.kind === "invalid-analysis") {
+        set((state) => {
+          setAnalysisImportError(state, targetAnalysisId, analysisWorkbook.message);
+        });
+        return;
+      }
+
+      const result = await parseExcelFile(file);
+      if (result.ok) {
+        set((state) => {
+          if (mode === "newTab") {
+            openDatasetInNewTab(state, result.dataset);
+            return;
+          }
+          replaceAnalysisDataset(state, targetAnalysisId, result.dataset, { force: true });
         });
       } else {
         set((state) => {
@@ -278,11 +331,11 @@ export const useAppStore = create<AppStore>()(
         }
       });
     },
-    closeAnalysis: (analysisId) => {
+    closeAnalysis: (analysisId, options) => {
       let didClose = false;
       set((state) => {
         const analysis = state.activeAnalysisId === analysisId ? snapshotAdapterAsAnalysis(state) : state.analyses[analysisId];
-        if (!analysis || analysis.dirty) return;
+        if (!analysis || (analysis.dirty && !options?.force)) return;
 
         if (state.analysisOrder.length === 1) {
           const replacement = createEmptyAnalysisTab("analysis-1", "Analysis 1");
@@ -452,6 +505,64 @@ export const useAppStore = create<AppStore>()(
     setLegendPreviewVisible: (visible) => {
       set((state) => {
         state.legendSettings.previewVisible = visible;
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setReportLegendLabelMode: (mode) => {
+      set((state) => {
+        state.legendSettings.reportLabelMode = mode;
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setReportLegendName: (curveId, name) => {
+      set((state) => {
+        const nextName = name.trim();
+        delete state.legendSettings.reportNameOverrides[curveId];
+        if (nextName) {
+          const previousOverride = state.curveOverrides[curveId];
+          state.curveOverrides[curveId] = {
+            ...previousOverride,
+            displayName: name,
+            source: previousOverride?.source ?? "custom",
+            fieldSources: {
+              ...previousOverride?.fieldSources,
+              displayName: "custom"
+            }
+          };
+        } else {
+          const previousOverride = state.curveOverrides[curveId];
+          if (previousOverride) {
+            delete previousOverride.displayName;
+            delete previousOverride.fieldSources?.displayName;
+            if (previousOverride.fieldSources && Object.keys(previousOverride.fieldSources).length === 0) {
+              delete previousOverride.fieldSources;
+            }
+            if (!hasCurveOverrideValue(previousOverride)) {
+              delete state.curveOverrides[curveId];
+            } else {
+              previousOverride.source = inferOverrideSource(previousOverride);
+            }
+          }
+        }
+        markDirtyAndPersistActive(state);
+      });
+    },
+    resetReportLegendName: (curveId) => {
+      set((state) => {
+        delete state.legendSettings.reportNameOverrides[curveId];
+        const previousOverride = state.curveOverrides[curveId];
+        if (previousOverride) {
+          delete previousOverride.displayName;
+          delete previousOverride.fieldSources?.displayName;
+          if (previousOverride.fieldSources && Object.keys(previousOverride.fieldSources).length === 0) {
+            delete previousOverride.fieldSources;
+          }
+          if (!hasCurveOverrideValue(previousOverride)) {
+            delete state.curveOverrides[curveId];
+          } else {
+            previousOverride.source = inferOverrideSource(previousOverride);
+          }
+        }
         markDirtyAndPersistActive(state);
       });
     },
@@ -677,8 +788,13 @@ function blockDirtyReplaceIfNeeded(state: AppState, analysisId: string) {
   return true;
 }
 
-function replaceAnalysisDataset(state: AppState, analysisId: string, dataset: PcrDataset) {
-  if (blockDirtyReplaceIfNeeded(state, analysisId)) return;
+function replaceAnalysisDataset(
+  state: AppState,
+  analysisId: string,
+  dataset: PcrDataset,
+  options: CloseAnalysisOptions = {}
+) {
+  if (!options.force && blockDirtyReplaceIfNeeded(state, analysisId)) return;
   const previous = getAnalysisForWrite(state, analysisId);
   if (!previous) return;
   const nextAnalysis: AnalysisTabState = {
@@ -755,11 +871,40 @@ function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDa
   writeAnalysis(state, nextAnalysis);
 }
 
-function restoreAnalysisToTab(state: AppState, analysisId: string, analysis: AnalysisState) {
-  if (blockDirtyReplaceIfNeeded(state, analysisId)) return;
+function restoreAnalysisToTab(
+  state: AppState,
+  analysisId: string,
+  analysis: AnalysisState,
+  options: CloseAnalysisOptions = {}
+) {
+  if (!options.force && blockDirtyReplaceIfNeeded(state, analysisId)) return;
   const previous = getAnalysisForWrite(state, analysisId);
   if (!previous) return;
   writeAnalysis(state, createTabFromAnalysisState({ ...analysis, analysisId }));
+}
+
+function openDatasetInNewTab(state: AppState, dataset: PcrDataset) {
+  persistActiveAnalysis(state);
+  const nextSequence = state.analysisSequence + 1;
+  const analysisId = `analysis-${nextSequence}`;
+  const baseAnalysis = createEmptyAnalysisTab(analysisId, dataset.sourceFileName || `Analysis ${nextSequence}`);
+  const nextAnalysis: AnalysisTabState = {
+    ...baseAnalysis,
+    dataset,
+    selection: createInitialSelectionState(dataset),
+    importStatus: "ready",
+    importError: null,
+    importFileName: dataset.sourceFileName,
+    sourceFiles: [createSourceFileSummary(dataset)],
+    dirty: true
+  };
+
+  state.analysisSequence = nextSequence;
+  state.analyses[analysisId] = nextAnalysis;
+  state.analysisOrder.push(analysisId);
+  state.activeAnalysisId = analysisId;
+  applyAnalysisToAdapter(state, nextAnalysis);
+  persistActiveAnalysis(state);
 }
 
 function openAnalysisInNewTab(state: AppState, analysis: AnalysisState) {

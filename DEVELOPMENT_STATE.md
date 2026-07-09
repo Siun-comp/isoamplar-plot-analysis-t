@@ -28,13 +28,13 @@ Active
 - The latest patch fixes the preview legend visibility Korean label, applies Auto compact labels to the chart preview/custom legend and plot/legend image exports, changes the Labels reset control back to an icon-sized button, stacks the Export Legend header to avoid text overlap, adds current Analysis XLSX continuity regression coverage, and removes unused legacy Legend/Report editor code that still referenced the old report-name override model.
 
 ## Current Goal
-Ready for real-use validation after the current slash-label, Analysis-label, report-legend, rich Excel clipboard, Export grouping, dirty-confirmation, and report-legend alignment/Excel-paste refinement is reviewed by the user.
+Ready for user real-data validation on the deployed GitHub Pages app after the slash-label, Analysis-label, report-legend, rich Excel clipboard, Export grouping, dirty-confirmation, report-legend alignment/Excel-paste, and Analysis XLSX continuity refinement.
 
 ## Current Milestone
 M8 - MVP release preparation complete locally, with post-MVP UI refinement applied.
 
 ## Last Completed Step
-Implemented the current slash-safe labels, report legend export/copy, Analysis label editing, rich Excel-cell legend clipboard copy, Export control grouping, dirty close/replace confirmation, Style-panel preset shortcut removal, popover auto-close, report legend image alignment correction, Excel-friendly legend glyph clipboard sample, raw-point regression test, Auto compact preview/export legend fix, preview legend Korean text fix, Export Legend header layout fix, Analysis XLSX continuity regression test, unused legacy Legend/Report editor removal, and documentation updates. Local focused/full Vitest, production build, Playwright E2E, browser DOM smoke, and diff checks passed.
+Committed and pushed the current slash-safe labels, report legend export/copy, Analysis label editing, rich Excel-cell legend clipboard copy, Export control grouping, dirty close/replace confirmation, Style-panel preset shortcut removal, popover auto-close, report legend image alignment correction, Excel-friendly legend glyph clipboard sample, raw-point regression test, Auto compact preview/export legend fix, preview legend Korean text fix, Export Legend header layout fix, Analysis XLSX continuity regression test, unused legacy Legend/Report editor removal, and documentation updates. Local focused/full Vitest, production build, Playwright E2E, browser DOM smoke, diff checks, GitHub Actions Pages deploy, and public URL HTTP smoke passed.
 
 ## Latest Changed Files
 - `src/data/curveLabels.ts`
@@ -409,6 +409,7 @@ Implemented the current slash-safe labels, report legend export/copy, Analysis l
 - Current Legend compact/label layout fix in-app browser DOM smoke: passed for `미리보기 범례 표시`, stacked Export Legend header, and app title.
 - Current final Analysis XLSX continuity and bug review: expert code review found no blockers; focused `npm run test -- --run src/analysis/analysisState.test.ts src/analysis/analysisWorkbook.test.ts src/app/appStore.test.ts src/app/App.test.tsx src/chart/chartConfig.test.ts src/chart/reportLegend.test.ts src/chart/exportChart.test.ts src/chart/plottedDataExport.test.ts` passed, 8 files / 93 Vitest tests.
 - Current final release verification after removing unused legacy Legend/Report editor code: full `npm run test` passed, 16 files / 115 Vitest tests; `npm run build` passed; `npm run test:e2e` passed, 3 Chromium Playwright tests; `git diff --check` passed with CRLF replacement warnings only.
+- Current release commit `860b1d2` GitHub Actions Pages deploy: passed for run `29027285777`; public URL smoke returned HTTP 200 and contained the `IsoAmplar Plot Analysis` title.
 - `npm audit --omit=dev`: 0 vulnerabilities.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.

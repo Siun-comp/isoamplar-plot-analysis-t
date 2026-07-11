@@ -106,7 +106,7 @@
 
 ### C-P1-01. 잘못된 Fixed scale이 Auto scale로 그려질 수 있음 `[브라우저 재현 + code]`
 
-**사용자 영향**  
+**사용자 영향**
 화면은 Fixed mode로 표시되지만 min/max가 비어 있거나 `min >= max`이면 ECharts에 경계값이 전달되지 않는다. 이때 ECharts는 Auto로 그리며, 이미지 export도 계속 가능하다. 사용자는 “같은 축으로 비교했다”고 생각하지만 실제 산출물은 Auto scale일 수 있다.
 
 Box zoom도 작은 fluorescence 값에서 Y를 소수점 3자리로 반올림한다. 예를 들어 `0.0001` 수준의 값은 `0 / 0`으로 기록될 수 있다.
@@ -128,7 +128,7 @@ Box zoom도 작은 fluorescence 값에서 Y를 소수점 3자리로 반올림한
 
 ### C-P1-02. 긴 범례명이 export 이미지에서 동일하게 잘릴 수 있음 `[독립 브라우저 재현 + code]`
 
-**사용자 영향**  
+**사용자 영향**
 조건명이 앞부분은 같고 끝의 lot, 농도, 온도만 다르면 PNG/JPEG 범례에서 구분 부분이 잘릴 수 있다. 독립 전문가의 shared-prefix fixture에서는 `Lot Alpha`와 `Lot Beta`의 구분 suffix가 사라졌다. 보고서에 넣은 뒤에는 어떤 선이 어떤 조건인지 잘못 연결할 위험이 있다.
 
 **근거**
@@ -147,7 +147,7 @@ Box zoom도 작은 fluorescence 값에서 Y를 소수점 3자리로 반올림한
 
 ### C-P1-03. Excel의 화면 표시 header가 조용히 달라질 수 있음 `[parser probe + code]`
 
-**사용자 영향**  
+**사용자 영향**
 현재 header는 Excel의 표시 문자열 `cell.w`가 아니라 내부 값 `cell.v`를 문자열로 바꾼다. 따라서 Excel에서 `001`로 보이는 검체/시약 코드가 `1`이 되거나 날짜 header가 브라우저 날짜 문자열로 바뀔 수 있다. grouping, legend, CSV, Analysis label의 기준 이름이 원본 파일과 달라질 수 있다.
 
 **근거**
@@ -164,7 +164,7 @@ Box zoom도 작은 fluorescence 값에서 Y를 소수점 3자리로 반올림한
 
 ### C-P1-04. Excel 경고를 실제 위치까지 확인하기 어려움 `[브라우저 확인 + code]`
 
-**사용자 영향**  
+**사용자 영향**
 빈 fluorescence, 비숫자, formula cache 없음, 병합 header, 유사한 이름이 있어도 import panel에는 경고 총 개수만 보인다. 좌측 `경고` 필터와 `!` 표시는 `curve.warnings`만 보므로 dataset-level 유사명/중복 경고의 대상 곡선은 찾기 어렵다. 사용자는 실제 gap인지 입력 오류인지 원본 파일을 다시 열어 수동 대조해야 한다.
 
 append된 curve warning은 ID rekey로 대체로 구분된다. 다만 source 식별정보가 없는 경고, 특히 curve ID가 없는 동일 payload의 workbook-level warning은 exact-JSON dedupe에서 한 건으로 합쳐질 수 있다.
@@ -188,7 +188,7 @@ append된 curve warning은 ID rekey로 대체로 구분된다. 다만 source 식
 
 ### C-P1-05. 브라우저 새로고침/닫기에 Unsaved 보호가 없음 `[브라우저 재현 + code]`
 
-**사용자 영향**  
+**사용자 영향**
 앱 내부 `Close`는 저장 확인을 제공하지만 F5, 브라우저 탭 닫기, 창 닫기는 경고 없이 모든 분석 탭을 잃는다. 자동 영구 저장을 원하지 않는다는 결정과 “실수로 닫을 때 경고”는 별개다.
 
 **근거**
@@ -240,7 +240,7 @@ Quick Paste는 250,000 cells까지 허용하지만 대형 배열을 `Math.min/ma
 - `sourceFiles` 총 curve 수와 각 curve provenance의 일치
 - restore payload size와 내부 관계 일관성
 
-**업무 의미**  
+**업무 의미**
 Analysis XLSX를 Excel에서 변경하거나 파일이 부분 손상되더라도 문법상 유효하면 모순된 상태를 열 수 있다. 현재 목적은 “분석 이어하기”이며 규제용 audit trail이나 파일 authenticity 증명이 아니다. 따라서 같은 workbook 안의 단순 checksum보다 의미 검증과 payload 제한이 우선이다.
 
 근거: `src/analysis/analysisState.ts:381-650`, `src/analysis/analysisWorkbook.ts:191-228`
@@ -387,7 +387,7 @@ lockfile integrity는 고정돼 있지만 `npm ci`는 `cdn.sheetjs.com`의 tarba
 
 `Labels`를 눌러도 `Order` 목록이 그대로 보인다. DOM에는 `hidden`이 적용되지만 CSS `.legend-order-list { display: grid; }`가 이를 덮는다. 실제 브라우저에서 `hidden=true`, computed `display=grid`, visible=true를 확인했다.
 
-**영향**  
+**영향**
 Labels 화면이 불필요하게 길어지고, 사용자는 현재 어느 탭을 편집하는지 혼동한다.
 
 근거: `src/ui/SettingsPanel.tsx:1255-1292`, `src/styles.css:1780-1793`

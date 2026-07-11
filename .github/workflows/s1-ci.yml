@@ -75,6 +75,7 @@ jobs:
         run: npm run build
 
       - name: Hash built dist
+        id: dist_baseline
         run: npm run check:dist:before
 
       - name: Run fresh Chromium against built dist
@@ -85,7 +86,7 @@ jobs:
             --reporter=github,html
 
       - name: Verify dist was not changed by browser tests
-        if: always()
+        if: ${{ always() && steps.dist_baseline.outcome == 'success' }}
         run: |
           npm run check:dist:after
           npm run check:dist:unchanged

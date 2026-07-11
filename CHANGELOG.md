@@ -9,6 +9,7 @@
 - Renamed the completed S10 release contract test and audit command so passing evidence is no longer presented as an open TODO/known-red item.
 - Clarified the public and in-app research/kit-development boundary, aligned the saved-analysis control name, replaced overstated per-file Analysis XLSX verification language, and added a Korean workflow glossary for implementation terms still visible in the UI.
 - Displayed the user-defined P1/P2 label in the applied-scale status instead of the internal `PRESET1`/`PRESET2` state key.
+- Removed historical Markdown trailing whitespace exposed by the full `main` promotion diff, and made post-browser dist comparison conditional on a successfully created dist baseline so early CI failures do not add a misleading missing-dist error.
 
 ## 2026-07-11 - Audit remediation S10 release verification
 

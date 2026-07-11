@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 import { createOneSpecimenEightReagentDataset } from "../data/sampleData";
+import { parsePastedTable } from "../data/parsePastedTable";
 import type { PcrDataset } from "../data/types";
 import { buildPcrChartOption } from "../chart/chartConfig";
 import { createAnalysisState } from "../analysis/analysisState";
@@ -12,6 +13,110 @@ describe("app store style preset and legend order", () => {
     useAppStore.getState().reset();
   });
 
+  it("appends a previewed paste dataset without changing existing selection or overrides", () => {
+    const base = createOneSpecimenEightReagentDataset();
+    useAppStore.getState().loadDataset(base);
+    const firstCurveId = base.curves[0].curveId;
+    useAppStore.getState().setCurvesSelected([firstCurveId], true);
+    useAppStore.getState().setCurveOverride(firstCurveId, { color: "#123456" });
+    const target = useAppStore.getState();
+    const pasted = parsePastedTable("Specimen 2\nA9\n0.2\n1.2", {
+      mode: "fullTable",
+      sourceName: "Paste comparison",
+      sourceInstanceId: "paste-store-test"
+    });
+    expect(pasted.ok).toBe(true);
+    if (!pasted.ok) return;
+
+    const result = useAppStore
+      .getState()
+      .appendPastedDataset(pasted.dataset, target.activeAnalysisId, target.runtimeInstanceId, target.revision);
+
+    expect(result.ok).toBe(true);
+    const state = useAppStore.getState();
+    expect(state.dataset?.curves).toHaveLength(9);
+    expect(state.selection?.selectedCurveIds).toEqual(new Set([firstCurveId]));
+    expect(state.curveOverrides[firstCurveId]?.color).toBe("#123456");
+    expect(state.selection?.orderedCurveIds.at(-1)).toBe("file2_paste0_col_A");
+    expect(state.sourceFiles).toHaveLength(2);
+    expect(state.dirty).toBe(true);
+  });
+
+  it("rejects a paste preview when its target analysis changed or was recreated", () => {
+    const pasted = parsePastedTable("S1\nA1\n0.1", { mode: "fullTable", sourceName: "Paste" });
+    expect(pasted.ok).toBe(true);
+    if (!pasted.ok) return;
+    const target = useAppStore.getState();
+
+    useAppStore.getState().setSearchQuery("changed");
+    const changedResult = useAppStore
+      .getState()
+      .appendPastedDataset(pasted.dataset, target.activeAnalysisId, target.runtimeInstanceId, target.revision);
+    expect(changedResult.ok).toBe(false);
+
+    const current = useAppStore.getState();
+    useAppStore.getState().closeAnalysis(current.activeAnalysisId, { force: true });
+    const recreatedResult = useAppStore
+      .getState()
+      .appendPastedDataset(pasted.dataset, current.activeAnalysisId, current.runtimeInstanceId, current.revision);
+    expect(recreatedResult.ok).toBe(false);
+    expect(useAppStore.getState().dataset).toBeNull();
+  });
+
+  it("opens a paste dataset in a new dirty and unselected analysis", () => {
+    const pasted = parsePastedTable("S1\nA1\n0.1", { mode: "fullTable", sourceName: "New comparison" });
+    expect(pasted.ok).toBe(true);
+    if (!pasted.ok) return;
+
+    const target = useAppStore.getState();
+    const result = useAppStore
+      .getState()
+      .openPastedDatasetInNewAnalysis(
+        pasted.dataset,
+        target.activeAnalysisId,
+        target.runtimeInstanceId,
+        target.revision
+      );
+    expect(result).toEqual({ ok: true, analysisId: "analysis-2" });
+    const state = useAppStore.getState();
+    expect(state.activeAnalysisId).toBe("analysis-2");
+    expect(state.analysisName).toBe("New comparison");
+    expect(state.selection?.selectedCurveIds.size).toBe(0);
+    expect(state.dirty).toBe(true);
+  });
+
+  it("rejects opening a stale paste preview in a new analysis", () => {
+    const pasted = parsePastedTable("S1\nA1\n0.1", { mode: "fullTable", sourceName: "Paste" });
+    expect(pasted.ok).toBe(true);
+    if (!pasted.ok) return;
+    const target = useAppStore.getState();
+
+    useAppStore.getState().setSearchQuery("changed after preview");
+    const changedResult = useAppStore
+      .getState()
+      .openPastedDatasetInNewAnalysis(
+        pasted.dataset,
+        target.activeAnalysisId,
+        target.runtimeInstanceId,
+        target.revision
+      );
+
+    expect(changedResult.ok).toBe(false);
+    expect(useAppStore.getState().analysisOrder).toEqual([target.activeAnalysisId]);
+
+    useAppStore.getState().closeAnalysis(target.activeAnalysisId, { force: true });
+    const closedResult = useAppStore
+      .getState()
+      .openPastedDatasetInNewAnalysis(
+        pasted.dataset,
+        target.activeAnalysisId,
+        target.runtimeInstanceId,
+        target.revision
+      );
+    expect(closedResult.ok).toBe(false);
+    expect(useAppStore.getState().analysisOrder).toHaveLength(1);
+  });
+
   it("applies a preset by overwriting selected curve overrides and supports one-step undo", () => {
     const dataset = createOneSpecimenEightReagentDataset();
     const firstCurveId = dataset.curves[0].curveId;
@@ -21,7 +126,7 @@ describe("app store style preset and legend order", () => {
     useAppStore.getState().applyStylePreset("reagentColorSolid", [firstCurveId]);
 
     expect(useAppStore.getState().curveOverrides[firstCurveId]).toMatchObject({
-      color: "#0b6fa4",
+      color: "#7030A0",
       lineType: "solid",
       markerType: "none"
     });
@@ -43,7 +148,7 @@ describe("app store style preset and legend order", () => {
     useAppStore.getState().applyStylePreset("reagentColorSolid", [secondCurveId]);
 
     expect(useAppStore.getState().curveOverrides[secondCurveId]).toMatchObject({
-      color: "#d97706",
+      color: "#0926FB",
       lineType: "solid",
       markerType: "none"
     });
@@ -97,7 +202,7 @@ describe("app store style preset and legend order", () => {
     useAppStore.getState().resetCurveOverrideField(curve.curveId, "markerType");
 
     expect(useAppStore.getState().curveOverrides[curve.curveId]).toMatchObject({
-      color: "#0b6fa4",
+      color: "#7030A0",
       lineType: "solid",
       source: "preset",
       fieldSources: { color: "preset", lineType: "preset" }
@@ -172,6 +277,132 @@ describe("app store style preset and legend order", () => {
 
     useAppStore.getState().loadDataset(dataset);
     expect(useAppStore.getState().chartScale.y.preset1?.min).toBe("");
+  });
+
+  it("applies box zoom bounds as fixed X/Y scale without changing presets", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+
+    useAppStore.getState().loadDataset(dataset);
+    useAppStore.getState().setAxisPresetValue("x", "preset1", "label", "P1 overview");
+    useAppStore.getState().setAxisPresetValue("x", "preset1", "min", "1");
+    useAppStore.getState().setAxisPresetValue("x", "preset1", "max", "60");
+    useAppStore.getState().setChartFixedScaleBounds({
+      xMin: "18.5",
+      xMax: "42",
+      yMin: "120000",
+      yMax: "900000"
+    });
+
+    const state = useAppStore.getState();
+    expect(state.chartScale.x).toMatchObject({
+      mode: "fixed",
+      fixedMin: "18.5",
+      fixedMax: "42",
+      preset1: { label: "P1 overview", min: "1", max: "60" }
+    });
+    expect(state.chartScale.y).toMatchObject({
+      mode: "fixed",
+      fixedMin: "120000",
+      fixedMax: "900000"
+    });
+  });
+
+  it("returns from box zoom to previous scale snapshots without losing preset definitions", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+
+    useAppStore.getState().loadDataset(dataset);
+    useAppStore.getState().setAxisPresetValue("x", "preset1", "label", "Overview");
+    useAppStore.getState().setAxisPresetValue("x", "preset1", "min", "1");
+    useAppStore.getState().setAxisPresetValue("x", "preset1", "max", "60");
+    useAppStore.getState().setAxisScaleMode("x", "preset1");
+    useAppStore.getState().setAxisFixedValue("y", "min", "-100000");
+    useAppStore.getState().setAxisFixedValue("y", "max", "1200000");
+    useAppStore.getState().setAxisScaleMode("y", "fixed");
+
+    useAppStore.getState().applyBoxZoomScale({
+      xMin: "18",
+      xMax: "42",
+      yMin: "100000",
+      yMax: "900000"
+    });
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(1);
+    useAppStore.getState().applyBoxZoomScale({
+      xMin: "24",
+      xMax: "36",
+      yMin: "200000",
+      yMax: "800000"
+    });
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(2);
+
+    useAppStore.getState().returnFromBoxZoom();
+    expect(useAppStore.getState().chartScale.x).toMatchObject({
+      mode: "fixed",
+      fixedMin: "18",
+      fixedMax: "42"
+    });
+
+    useAppStore.getState().returnFromBoxZoom();
+
+    expect(useAppStore.getState().chartScale.x).toMatchObject({
+      mode: "preset1",
+      preset1: { label: "Overview", min: "1", max: "60" }
+    });
+    expect(useAppStore.getState().chartScale.y).toMatchObject({
+      mode: "fixed",
+      fixedMin: "-100000",
+      fixedMax: "1200000"
+    });
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(0);
+  });
+
+  it("clears box zoom return history when scale is changed explicitly", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+
+    useAppStore.getState().loadDataset(dataset);
+    useAppStore.getState().applyBoxZoomScale({
+      xMin: "18",
+      xMax: "42",
+      yMin: "100000",
+      yMax: "900000"
+    });
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(1);
+
+    useAppStore.getState().resetScaleToAuto();
+    expect(useAppStore.getState().chartScale.x.mode).toBe("auto");
+    expect(useAppStore.getState().chartScale.y.mode).toBe("auto");
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(0);
+
+    useAppStore.getState().applyBoxZoomScale({
+      xMin: "20",
+      xMax: "30",
+      yMin: "200000",
+      yMax: "600000"
+    });
+    useAppStore.getState().setAxisScaleMode("x", "auto");
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(0);
+  });
+
+  it("keeps box zoom return history independent per analysis tab", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const firstTabId = useAppStore.getState().activeAnalysisId;
+
+    useAppStore.getState().loadDataset(dataset);
+    useAppStore.getState().applyBoxZoomScale({
+      xMin: "18",
+      xMax: "42",
+      yMin: "100000",
+      yMax: "900000"
+    });
+
+    const secondTabId = useAppStore.getState().createAnalysis("Second");
+    expect(useAppStore.getState().activeAnalysisId).toBe(secondTabId);
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(0);
+
+    useAppStore.getState().switchAnalysis(firstTabId);
+    expect(useAppStore.getState().chartScaleReturnStack).toHaveLength(1);
+    useAppStore.getState().returnFromBoxZoom();
+    expect(useAppStore.getState().chartScale.x.mode).toBe("auto");
+    expect(useAppStore.getState().chartScale.y.mode).toBe("auto");
   });
 
   it("resets legend/export settings when loading a new dataset and keeps explicit actions per tab", () => {
@@ -370,13 +601,39 @@ describe("app store style preset and legend order", () => {
     useAppStore.getState().loadDataset(createOneSpecimenEightReagentDataset());
 
     expect(useAppStore.getState().dirty).toBe(true);
+    const target = useAppStore.getState();
+    const result = useAppStore.getState().markAnalysisSaveSuccess({
+      analysisId: target.activeAnalysisId,
+      runtimeInstanceId: target.runtimeInstanceId,
+      expectedRevision: target.revision,
+      savedExportCounter: target.exportCounter + 1,
+      message: "Saved 260708_analysis1.xlsx."
+    });
 
-    useAppStore.getState().markAnalysisSaveSuccess("Saved 260708_analysis1.xlsx.");
-
+    expect(result).toBe("saved");
     expect(useAppStore.getState().dirty).toBe(false);
     expect(useAppStore.getState().exportCounter).toBe(2);
     expect(useAppStore.getState().exportMessage).toBe("Saved 260708_analysis1.xlsx.");
     expect(useAppStore.getState().closeAnalysis(useAppStore.getState().activeAnalysisId)).toBe(true);
+  });
+
+  it("keeps an analysis dirty when it changes while an Analysis XLSX snapshot is being saved", () => {
+    useAppStore.getState().loadDataset(createOneSpecimenEightReagentDataset());
+    const target = useAppStore.getState();
+    useAppStore.getState().setSearchQuery("changed during save");
+
+    const result = useAppStore.getState().markAnalysisSaveSuccess({
+      analysisId: target.activeAnalysisId,
+      runtimeInstanceId: target.runtimeInstanceId,
+      expectedRevision: target.revision,
+      savedExportCounter: target.exportCounter + 1,
+      message: "Saved snapshot.xlsx."
+    });
+
+    expect(result).toBe("changed");
+    expect(useAppStore.getState().dirty).toBe(true);
+    expect(useAppStore.getState().exportCounter).toBe(target.exportCounter + 1);
+    expect(useAppStore.getState().exportMessage).toContain("Unsaved 상태를 유지");
   });
 
   it("tracks analysis names, source summaries, and dirty close blocking per tab", () => {

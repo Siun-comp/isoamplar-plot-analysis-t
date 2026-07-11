@@ -4,6 +4,7 @@ import type {
   CurveSource,
   CurveStats,
   CurveStyleOverride,
+  DatasetSourceKind,
   ExportSettings,
   LegendSettings,
   LineType,
@@ -19,6 +20,8 @@ import type {
 export const ANALYSIS_STATE_SCHEMA_VERSION = 1;
 
 export type SourceFileSummary = {
+  sourceKind?: DatasetSourceKind;
+  sourceInstanceId?: string;
   fileName: string;
   sheetName: string;
   sheetIndex: number;
@@ -84,6 +87,9 @@ const overrideSources = ["custom", "preset"] as const;
 const curveStyleFields = ["displayName", "color", "lineType", "markerType", "lineWidth", "visible"] as const;
 const warningSeverities = ["info", "warning", "error"] as const;
 const warningScopes = ["import", "dataset", "header", "curve", "cell", "export"] as const;
+const importedSourceKinds = ["excel", "paste"] as const;
+const datasetSourceKinds = ["excel", "paste", "mixed"] as const;
+const pasteInputModes = ["fullTable", "singleSpecimen"] as const;
 
 export function createAnalysisState(input: CreateAnalysisStateInput): AnalysisState {
   const legendSettings = input.legendSettings ?? createDefaultLegendSettings();
@@ -116,7 +122,10 @@ export function createDefaultExportSettings(): ExportSettings {
 }
 
 export function createSourceFileSummary(dataset: PcrDataset): SourceFileSummary {
+  const sourceInstanceIds = new Set(dataset.curves.map((curve) => curve.source.sourceInstanceId).filter(Boolean));
   return {
+    sourceKind: dataset.sourceKind ?? "excel",
+    sourceInstanceId: sourceInstanceIds.size === 1 ? [...sourceInstanceIds][0] : `dataset:${dataset.datasetId}`,
     fileName: dataset.sourceFileName,
     sheetName: dataset.sheetName,
     sheetIndex: dataset.sheetIndex,
@@ -281,6 +290,8 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
 
   return {
     ...payload,
+    dataset: migrateDatasetProvenance(payload.dataset),
+    sourceFiles: migrateSourceFileProvenance(payload.sourceFiles),
     styleRules,
     legendSettings:
       "legendSettings" in payload && isRecord(payload.legendSettings)
@@ -294,6 +305,69 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
         : createDefaultLegendSettings(),
     exportSettings: "exportSettings" in payload ? payload.exportSettings : createDefaultExportSettings()
   };
+}
+
+function migrateDatasetProvenance(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  const curves = Array.isArray(value.curves)
+    ? value.curves.map((curve) => migrateCurveProvenance(curve))
+    : value.curves;
+  const curveSourceKinds = Array.isArray(curves)
+    ? curves
+        .map((curve) =>
+          isRecord(curve) && isRecord(curve.source) && typeof curve.source.sourceKind === "string"
+            ? curve.source.sourceKind
+            : null
+        )
+        .filter((sourceKind): sourceKind is string => Boolean(sourceKind))
+    : [];
+  const inferredSourceKind = new Set(curveSourceKinds).size > 1 ? "mixed" : curveSourceKinds[0] ?? "excel";
+
+  return {
+    ...value,
+    sourceKind: "sourceKind" in value ? value.sourceKind : inferredSourceKind,
+    curves
+  };
+}
+
+function migrateCurveProvenance(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.source)) return value;
+  const source = value.source;
+  const sourceKind = "sourceKind" in source ? source.sourceKind : "excel";
+  const fileName = typeof source.fileName === "string" ? source.fileName : "unknown";
+  const sheetName = typeof source.sheetName === "string" ? source.sheetName : "unknown";
+  const sheetIndex = typeof source.sheetIndex === "number" ? source.sheetIndex : 0;
+
+  return {
+    ...value,
+    source: {
+      ...source,
+      sourceKind,
+      sourceInstanceId:
+        typeof source.sourceInstanceId === "string" && source.sourceInstanceId
+          ? source.sourceInstanceId
+          : `legacy:${sourceKind}:${fileName}#${sheetIndex}:${sheetName}`
+    }
+  };
+}
+
+function migrateSourceFileProvenance(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((sourceFile) => {
+    if (!isRecord(sourceFile)) return sourceFile;
+    const sourceKind = "sourceKind" in sourceFile ? sourceFile.sourceKind : "excel";
+    const fileName = typeof sourceFile.fileName === "string" ? sourceFile.fileName : "unknown";
+    const sheetName = typeof sourceFile.sheetName === "string" ? sourceFile.sheetName : "unknown";
+    const sheetIndex = typeof sourceFile.sheetIndex === "number" ? sourceFile.sheetIndex : 0;
+    return {
+      ...sourceFile,
+      sourceKind,
+      sourceInstanceId:
+        typeof sourceFile.sourceInstanceId === "string" && sourceFile.sourceInstanceId
+          ? sourceFile.sourceInstanceId
+          : `legacy:${sourceKind}:${fileName}#${sheetIndex}:${sheetName}`
+    };
+  });
 }
 
 function createAnalysisId() {
@@ -314,6 +388,7 @@ function validateDataset(value: unknown): asserts value is PcrDataset {
   }
 
   assertString(value.datasetId, "dataset.datasetId");
+  assertOneOf(value.sourceKind, datasetSourceKinds, "dataset.sourceKind");
   assertString(value.sourceFileName, "dataset.sourceFileName");
   assertString(value.sheetName, "dataset.sheetName");
   assertNonNegativeInteger(value.sheetIndex, "dataset.sheetIndex");
@@ -371,6 +446,9 @@ function validateCurveSource(value: unknown, path: string): asserts value is Cur
   }
 
   assertString(value.fileName, `${path}.fileName`);
+  assertOneOf(value.sourceKind, importedSourceKinds, `${path}.sourceKind`);
+  assertString(value.sourceInstanceId, `${path}.sourceInstanceId`);
+  assertOptionalOneOf(value.inputMode, pasteInputModes, `${path}.inputMode`);
   assertString(value.sheetName, `${path}.sheetName`);
   assertNonNegativeInteger(value.sheetIndex, `${path}.sheetIndex`);
   assertNonNegativeInteger(value.columnIndex, `${path}.columnIndex`);
@@ -574,6 +652,8 @@ function validateSourceFiles(value: unknown): asserts value is SourceFileSummary
       throw new Error(`${path} is invalid.`);
     }
     assertString(sourceFile.fileName, `${path}.fileName`);
+    assertOneOf(sourceFile.sourceKind, datasetSourceKinds, `${path}.sourceKind`);
+    assertString(sourceFile.sourceInstanceId, `${path}.sourceInstanceId`);
     assertString(sourceFile.sheetName, `${path}.sheetName`);
     assertNonNegativeInteger(sourceFile.sheetIndex, `${path}.sheetIndex`);
     assertString(sourceFile.importedAtIso, `${path}.importedAtIso`);

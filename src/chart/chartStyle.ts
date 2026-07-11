@@ -11,16 +11,14 @@ import type {
 } from "../data/types";
 
 export const defaultChartColors = [
-  "#0b6fa4",
-  "#d97706",
-  "#5b8c5a",
-  "#b23a48",
-  "#6f5fa8",
-  "#1d7a7a",
-  "#a15c38",
-  "#455a64",
-  "#2f80ed",
-  "#f2b705"
+  "#7030A0",
+  "#0926FB",
+  "#00B050",
+  "#FFC000",
+  "#FF0000",
+  "#767171",
+  "#4ACCE6",
+  "#EB45BC"
 ];
 
 const lineTypeCycle: LineType[] = ["solid", "dashed", "dotted"];

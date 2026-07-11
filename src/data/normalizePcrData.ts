@@ -1,28 +1,33 @@
 import { createSimilarNameWarnings } from "./similarNameWarnings";
-import type { Curve, CurveStats, PcrDataset, PcrEntity, PcrWarning } from "./types";
+import type { Curve, CurveStats, DatasetSourceKind, PcrDataset, PcrEntity, PcrWarning } from "./types";
+
+let sourceInstanceSequence = 0;
 
 export function createPcrDatasetFromCurves(args: {
   curves: Curve[];
   fileName: string;
   sheetName: string;
   cycleCount: number;
+  sourceKind?: DatasetSourceKind;
   importedAtIso?: string;
   warnings?: PcrWarning[];
 }): PcrDataset {
-  const orderedCurveIds = args.curves.map((curve) => curve.curveId);
-  const specimenMap = createEntityMap(args.curves, "specimen");
-  const reagentMap = createEntityMap(args.curves, "reagent");
-  const duplicateLabelWarnings = createDuplicateCurveLabelWarnings(args.curves);
+  const sourceKind = args.sourceKind ?? inferDatasetSourceKind(args.curves);
+  const curves = normalizeCurveSources(args.curves, sourceKind, createSourceInstanceId(sourceKind));
+  const orderedCurveIds = curves.map((curve) => curve.curveId);
+  const specimenMap = createEntityMap(curves, "specimen");
+  const reagentMap = createEntityMap(curves, "reagent");
+  const duplicateLabelWarnings = createDuplicateCurveLabelWarnings(curves);
   const similarWarnings = [
     ...createSimilarNameWarnings(
       [...specimenMap.values()].map((entity) => entity.label),
       "specimen",
-      createCurveIdsByLabel(args.curves, "specimen")
+      createCurveIdsByLabel(curves, "specimen")
     ),
     ...createSimilarNameWarnings(
       [...reagentMap.values()].map((entity) => entity.label),
       "reagent",
-      createCurveIdsByLabel(args.curves, "reagent")
+      createCurveIdsByLabel(curves, "reagent")
     )
   ];
 
@@ -30,18 +35,50 @@ export function createPcrDatasetFromCurves(args: {
 
   return {
     schemaVersion: 1,
+    sourceKind,
     datasetId: `dataset:${args.fileName}:${args.sheetName}:${args.curves.length}`,
     sourceFileName: args.fileName,
     sheetName: args.sheetName,
     sheetIndex: 0,
     importedAtIso: args.importedAtIso ?? new Date().toISOString(),
     cycleCount: args.cycleCount,
-    curves: args.curves,
+    curves,
     orderedCurveIds,
     specimens: [...specimenMap.values()],
     reagents: [...reagentMap.values()],
     warnings
   };
+}
+
+function normalizeCurveSources(
+  curves: Curve[],
+  datasetSourceKind: DatasetSourceKind,
+  fallbackSourceInstanceId: string
+) {
+  return curves.map((curve) => {
+    const sourceKind = curve.source.sourceKind ?? (datasetSourceKind === "paste" ? "paste" : "excel");
+    const sourceInstanceId = curve.source.sourceInstanceId ?? fallbackSourceInstanceId;
+    return {
+      ...curve,
+      source: {
+        ...curve.source,
+        sourceKind,
+        sourceInstanceId
+      }
+    };
+  });
+}
+
+function createSourceInstanceId(sourceKind: DatasetSourceKind) {
+  sourceInstanceSequence += 1;
+  const randomId = globalThis.crypto?.randomUUID?.();
+  const token = randomId ?? `${Date.now().toString(36)}-${sourceInstanceSequence.toString(36)}`;
+  return `source:${sourceKind}:${token}`;
+}
+
+function inferDatasetSourceKind(curves: Curve[]): DatasetSourceKind {
+  const sourceKinds = new Set(curves.map((curve) => curve.source.sourceKind ?? "excel"));
+  return sourceKinds.size > 1 ? "mixed" : (sourceKinds.values().next().value ?? "excel");
 }
 
 export function createStats(values: Array<number | null>): CurveStats {
@@ -57,7 +94,7 @@ export function createStats(values: Array<number | null>): CurveStats {
 
 export function createEntityId(kind: "specimen" | "reagent", label: string, fallbackKey?: string) {
   const key =
-    label.length > 0
+    label.trim().length > 0
       ? Array.from(label).map((character) => character.codePointAt(0)?.toString(16)).join("_")
       : fallbackKey;
   return `${kind}:${key || "missing"}`;
@@ -118,4 +155,3 @@ function createDuplicateCurveLabelWarnings(curves: Curve[]): PcrWarning[] {
       curveIds
     }));
 }
-

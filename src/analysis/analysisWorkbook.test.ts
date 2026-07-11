@@ -4,8 +4,10 @@ import packageJson from "../../package.json";
 import { createDefaultChartScale } from "../chart/chartScale";
 import { createDefaultStyleRules } from "../chart/chartStyle";
 import { createOneSpecimenEightReagentDataset } from "../data/sampleData";
+import { appendPcrDataset } from "../data/mergeDatasets";
+import { parsePastedTable } from "../data/parsePastedTable";
 import { createInitialSelectionState } from "../selection/selectionState";
-import { createAnalysisState, serializeAnalysisState } from "./analysisState";
+import { createAnalysisState, createSourceFileSummary, serializeAnalysisState } from "./analysisState";
 import {
   ANALYSIS_RESTORE_SHEET_NAME,
   createAnalysisWorkbookFileName,
@@ -27,6 +29,12 @@ describe("Analysis XLSX workbook", () => {
       ...selection.orderedCurveIds.slice(2)
     ];
     const chartScale = createDefaultChartScale();
+    chartScale.x.mode = "fixed";
+    chartScale.x.fixedMin = "18.5";
+    chartScale.x.fixedMax = "42";
+    chartScale.y.mode = "fixed";
+    chartScale.y.fixedMin = "120000";
+    chartScale.y.fixedMax = "900000";
     chartScale.y.preset1 = { label: "P1 low", min: "0", max: "100" };
     const styleRules = createDefaultStyleRules();
     styleRules.colorBy = "specimen";
@@ -61,15 +69,7 @@ describe("Analysis XLSX workbook", () => {
       exportSettings: { imageLayout: "legendOnly" },
       exportCounter: 3,
       importFileName: dataset.sourceFileName,
-      sourceFiles: [
-        {
-          fileName: dataset.sourceFileName,
-          sheetName: dataset.sheetName,
-          sheetIndex: dataset.sheetIndex,
-          importedAtIso: dataset.importedAtIso,
-          curveCount: dataset.curves.length
-        }
-      ],
+      sourceFiles: [createSourceFileSummary(dataset)],
       dirty: true
     });
 
@@ -90,6 +90,19 @@ describe("Analysis XLSX workbook", () => {
     expect(workbook.Sheets.ImportedData.A3?.v).toBe("Analysis label");
     expect(workbook.Sheets.ImportedData.B3?.v).toBe("Report A1");
     expect(workbook.Sheets.ImportedData.B4?.v).toBe(dataset.curves[0].curveId);
+    const settingsRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.Settings, { header: 1, blankrows: false });
+    expect(settingsRows).toContainEqual(["X scale mode", "fixed"]);
+    expect(settingsRows).toContainEqual(["X fixed min", "18.5"]);
+    expect(settingsRows).toContainEqual(["Y fixed max", "900000"]);
+    expect(settingsRows).toContainEqual([
+      "Source type",
+      "Source ID",
+      "Source name",
+      "Sheet",
+      "Sheet index",
+      "Imported at",
+      "Curve count"
+    ]);
 
     const restored = await readAnalysisWorkbookBuffer(buffer);
     expect(restored.kind).toBe("analysis");
@@ -104,6 +117,8 @@ describe("Analysis XLSX workbook", () => {
       dataset.curves[0].curveId
     ]);
     expect(restored.analysis.selectionFilter).toBe("selected");
+    expect(restored.analysis.chartScale.x).toMatchObject({ mode: "fixed", fixedMin: "18.5", fixedMax: "42" });
+    expect(restored.analysis.chartScale.y).toMatchObject({ mode: "fixed", fixedMin: "120000", fixedMax: "900000" });
     expect(restored.analysis.chartScale.y.preset1?.label).toBe("P1 low");
     expect(restored.analysis.styleRules).toMatchObject({
       colorBy: "specimen",
@@ -128,6 +143,88 @@ describe("Analysis XLSX workbook", () => {
     expect(restored.analysis.exportCounter).toBe(3);
     expect(restored.analysis.dirty).toBe(false);
     expect(restored.analysis.analysisId).not.toBe("analysis-test");
+  });
+
+  it("roundtrips a mixed Excel and paste dataset with visible source traceability", async () => {
+    const excelDataset = createOneSpecimenEightReagentDataset();
+    const pasteResult = parsePastedTable("Comparison sample\nA9\n0.1\nbad\n1.1", {
+      mode: "fullTable",
+      sourceName: "Paste comparison",
+      sourceInstanceId: "paste-analysis-roundtrip",
+      importedAtIso: "2026-07-11T01:00:00.000Z"
+    });
+    expect(pasteResult.ok).toBe(true);
+    if (!pasteResult.ok) return;
+    const merged = appendPcrDataset(excelDataset, pasteResult.dataset);
+    const pasteCurveId = merged.appendedCurveIds[0];
+    const selection = createInitialSelectionState(merged.dataset);
+    selection.selectedCurveIds.add(excelDataset.curves[0].curveId);
+    selection.orderedCurveIds = [pasteCurveId, ...selection.orderedCurveIds.filter((curveId) => curveId !== pasteCurveId)];
+    const state = createAnalysisState({
+      analysisId: "analysis-mixed-source",
+      analysisName: "Mixed source review",
+      dataset: merged.dataset,
+      selection,
+      searchQuery: "",
+      selectionFilter: "all",
+      chartScale: createDefaultChartScale(),
+      styleRules: createDefaultStyleRules(),
+      curveOverrides: {
+        [pasteCurveId]: {
+          displayName: "Comparison A9",
+          color: "#123456",
+          source: "custom",
+          fieldSources: { displayName: "custom", color: "custom" }
+        }
+      },
+      exportCounter: 4,
+      importFileName: "Paste comparison appended",
+      sourceFiles: [createSourceFileSummary(excelDataset), createSourceFileSummary(pasteResult.dataset)]
+    });
+
+    const buffer = await exportAnalysisWorkbookBuffer(state);
+    const workbook = XLSX.read(buffer, { type: "array", raw: true });
+    const importedRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.ImportedData, {
+      header: 1,
+      blankrows: false
+    });
+    expect(importedRows[4]?.[0]).toBe("Source type");
+    expect(importedRows[4]?.at(-1)).toBe("paste");
+    expect(importedRows[5]?.at(-1)).toBe("Paste comparison");
+    expect(importedRows[6]?.at(-1)).toBe("paste-analysis-roundtrip");
+    expect(importedRows[7]?.at(-1)).toBe("A");
+    expect(importedRows[8]?.at(-1)).toBe("fullTable");
+
+    const settingsRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.Settings, { header: 1, blankrows: false });
+    expect(settingsRows).toContainEqual([
+      "paste",
+      "paste-analysis-roundtrip",
+      "Paste comparison",
+      "Paste",
+      0,
+      "2026-07-11T01:00:00.000Z",
+      1
+    ]);
+
+    const restored = await readAnalysisWorkbookBuffer(buffer);
+    expect(restored.kind).toBe("analysis");
+    if (restored.kind !== "analysis") return;
+    const restoredPasteCurve = restored.analysis.dataset.curves.find((curve) => curve.curveId === pasteCurveId);
+    expect(restored.analysis.dataset.sourceKind).toBe("mixed");
+    expect(restoredPasteCurve?.source).toMatchObject({
+      sourceKind: "paste",
+      sourceInstanceId: "paste-analysis-roundtrip",
+      inputMode: "fullTable",
+      fileName: "Paste comparison"
+    });
+    expect(restoredPasteCurve?.y).toEqual([0.1, null, 1.1]);
+    expect(restored.analysis.selection.selectedCurveIds.has(pasteCurveId)).toBe(false);
+    expect(restored.analysis.selection.orderedCurveIds[0]).toBe(pasteCurveId);
+    expect(restored.analysis.curveOverrides[pasteCurveId]).toMatchObject({
+      displayName: "Comparison A9",
+      color: "#123456"
+    });
+    expect(restored.analysis.sourceFiles.map((source) => source.sourceKind)).toEqual(["excel", "paste"]);
   });
 
   it("roundtrips current analysis labels and legend/export settings without relying on legacy report names", async () => {

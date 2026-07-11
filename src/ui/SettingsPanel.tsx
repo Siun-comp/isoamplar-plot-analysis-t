@@ -36,6 +36,8 @@ import type {
 export function SettingsPanel() {
   const chartScale = useAppStore((state) => state.chartScale);
   const activeAnalysisId = useAppStore((state) => state.activeAnalysisId);
+  const runtimeInstanceId = useAppStore((state) => state.runtimeInstanceId);
+  const revision = useAppStore((state) => state.revision);
   const analysisName = useAppStore((state) => state.analysisName);
   const dataset = useAppStore((state) => state.dataset);
   const selection = useAppStore((state) => state.selection);
@@ -230,6 +232,8 @@ export function SettingsPanel() {
         <ExportControls
           dataset={dataset}
           activeAnalysisId={activeAnalysisId}
+          runtimeInstanceId={runtimeInstanceId}
+          revision={revision}
           analysisName={analysisName}
           selection={selection}
           selectedCurves={selectedCurves}
@@ -261,6 +265,8 @@ export function SettingsPanel() {
 function ExportControls({
   dataset,
   activeAnalysisId,
+  runtimeInstanceId,
+  revision,
   analysisName,
   selection,
   selectedCurves,
@@ -286,6 +292,8 @@ function ExportControls({
 }: {
   dataset: ReturnType<typeof useAppStore.getState>["dataset"];
   activeAnalysisId: string;
+  runtimeInstanceId: string;
+  revision: number;
   analysisName: string;
   selection: ReturnType<typeof useAppStore.getState>["selection"];
   selectedCurves: Curve[];
@@ -306,7 +314,13 @@ function ExportControls({
   sourceFiles: ReturnType<typeof useAppStore.getState>["sourceFiles"];
   dirty: boolean;
   markExportSuccess: (message: string) => void;
-  markAnalysisSaveSuccess: (message: string) => void;
+  markAnalysisSaveSuccess: (completion: {
+    analysisId: string;
+    runtimeInstanceId: string;
+    expectedRevision: number;
+    savedExportCounter: number;
+    message: string;
+  }) => "saved" | "changed" | "missing";
   setExportMessage: (message: string | null) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -520,7 +534,13 @@ function ExportControls({
       const blob = await exportAnalysisWorkbookBlob(analysisState);
       const fileName = createAnalysisWorkbookFileName(exportCounter, new Date(), analysisName);
       downloadBlob(blob, fileName);
-      markAnalysisSaveSuccess(`Saved ${fileName}.`);
+      markAnalysisSaveSuccess({
+        analysisId: activeAnalysisId,
+        runtimeInstanceId,
+        expectedRevision: revision,
+        savedExportCounter: nextExportCounter,
+        message: `Saved ${fileName}.`
+      });
     } catch (error) {
       setExportMessage(error instanceof Error ? error.message : "Analysis XLSX export failed.");
     } finally {
@@ -563,17 +583,6 @@ function ExportControls({
         <div className="export-group-header export-group-header-stacked">
           <strong>Legend outputs</strong>
           <span>Current legend order and analysis labels are used.</span>
-        </div>
-        <div className="export-button-grid">
-      <button
-        hidden
-        type="button"
-        aria-label="Copy standard legend PNG to clipboard"
-        disabled={disabled}
-        onClick={() => void copyPng("legendOnly", "Copied legend PNG to clipboard.")}
-      >
-        범례 클립보드 PNG
-      </button>
         </div>
         <details className="export-more">
           <summary>Legend file save</summary>

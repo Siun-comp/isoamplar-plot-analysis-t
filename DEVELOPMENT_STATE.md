@@ -7,12 +7,12 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-07-10
+2026-07-11
 
 ## Compression-Safe Summary
 - IsoAmplar Plot Analysis implementation has moved beyond the initial MVP into release-validation and real-data hardening after Phase 8 plus the 2026-07-08/09 UI/analysis refinement, GitHub Pages deployment, app icon, and staged UX refinement passes.
 - Stack: React + Vite + TypeScript, SheetJS/xlsx, Apache ECharts, Zustand + Immer, `@tanstack/react-virtual`, Vitest + Testing Library, Playwright.
-- MVP input: `.xls` / `.xlsx` upload only, first worksheet only. CSV, paste/manual entry, app-side data editing, and sheet picker are deferred.
+- Historical MVP input remains `.xls` / `.xlsx` upload only, first worksheet only. Post-MVP Quick Paste Import now supports small tab-separated or single-column pasted tables; CSV files, comma/CSV tables, manual cell entry, app-side data editing, and sheet picker remain excluded.
 - Parser preserves raw fluorescence values; no smoothing, normalization, baseline correction, log transform, averaging, or Ct/Cq calculation is applied.
 - Default selection view is reagent-first. Import starts with all major groups collapsed. Selection identity is `curveId`; single-file parser IDs use `sheet0_col_<ExcelColumnLetter>`, and appended file IDs use an import prefix such as `file2_sheet0_col_A`.
 - Search/display-filter bulk actions apply across the full dataset, including collapsed groups.
@@ -27,21 +27,49 @@ Active
 - The current pre-use refinement adds slash-safe ` │ ` curve labels, report-readable legend PNG/JPEG/clipboard export, Analysis label editing, rich Excel-cell legend clipboard copy with Malgun Gothic 9 pt formatting, Export control grouping, dirty close/replace confirmation flows, Style-panel preset shortcut removal, line/marker popover auto-close after selection, report legend image text alignment fixes, Excel-friendly colored glyph legend clipboard samples, and raw-point/no-smoothing regression coverage.
 - The latest patch fixes the preview legend visibility Korean label and the pre-import Legend empty-state Korean mojibake, applies Auto compact labels to the chart preview/custom legend and plot/legend image exports, changes the Labels reset control back to an icon-sized button, stacks the Export Legend header to avoid text overlap, adds current Analysis XLSX continuity and parser edge-case regression coverage, removes unused legacy Legend/Report editor code that still referenced the old report-name override model, and changes the app header status badge from internal phase wording to `Browser-local analysis`.
 - A first-user Korean PDF guide has been generated under `output/pdf/`, covering Excel input format, core workflows, export options, Analysis XLSX continuity, parser edge cases, and troubleshooting. The guide examples use only synthetic `Sample` / `Assay` labels and generated fluorescence values; do not use real user-provided labels or disease/test names in guide examples.
+- The latest uncommitted app change updates the default chart palette order to `#7030A0`, `#0926FB`, `#00B050`, `#FFC000`, `#FF0000`, `#767171`, `#4ACCE6`, `#EB45BC`.
+- The latest uncommitted app change also adds explicit Box zoom: the user enables Box zoom, the valid plot area is highlighted, the user drags a visible plot-area rectangle, and the app writes the selected data-space region into Fixed X/Y scale bounds. `Previous scale` restores the prior scale one Box zoom step at a time from a per-analysis browser-session return stack, while `Auto scale` is a separate full automatic reset that clears return history. It does not use wheel zoom, does not crop the dataset, and does not transform fluorescence data.
+- The latest UI consistency pass normalizes button/form-control sizing across top tabs, import actions, selection controls, chart tools, scale controls, legend controls, and export controls; status badges remain intentionally smaller. It also scopes settings accordion summary styling so nested Style color/line popover triggers stay compact, tightens reset-icon button padding, and removes an obsolete hidden Export legend button wrapper.
+- Quick Paste Import Phases Q0-Q6 are implemented from `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`. It supports full-table and single-specimen input, tab-separated and single-column text, read-only preview, paginated source-position warnings with acknowledgement, stale/target revision guards for append and new-analysis actions, per-import source identity, mixed-source Analysis XLSX continuity, and the existing chart/export pipeline. Comma/CSV tables are rejected to prevent silent delimiter corruption.
+- A 2026-07-11 code/data-integrity/desktop-UX audit is complete in `docs/11_GPT56_PROJECT_AUDIT_KR.md`. Mobile was explicitly excluded. No P0 issue was identified; Stabilization A prioritizes invalid Fixed-scale export fallback, exported-legend identity truncation, Excel formatted-header identity, actionable Excel warnings, browser refresh/close protection, and accepted-size Quick Paste crash prevention. The audit also records P2 state/export/performance risks, documentation drift, and workflow candidates such as Warning Center, explicit save commands, Named Views, and optional export preflight.
+- The audit remediation plan is drafted in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`. It defines sequential Phases S0-S11, proposed AC-PCR-045~053/AC-QP-021 evidence, per-phase copyable prompts, desktop-only quality gates, and 19 unresolved user-decision gates. Four post-draft expert reviews were integrated. No remediation product code has been implemented from this plan.
 
 ## Current Goal
-Ready for user review of the first-user PDF guide and real-data validation on the deployed GitHub Pages app.
+The user approved UD-01 and Phase S0 checkpoint creation. The verified working tree is now on the non-deploying `codex/audit-remediation` branch and is being fixed as the pre-remediation baseline before S1 begins. Do not push or deploy this branch without separate explicit approval. After the checkpoint, proceed with S1 synthetic fixtures, acceptance evidence, and early fresh-build CI.
 
 ## Current Milestone
 M9 - Release validation and real-data hardening.
 
 ## Last Completed Step
-Regenerated the `IsoAmplar Plot Analysis` first-user Korean PDF guide with synthetic deployed-app screenshots and synthetic workbook examples, replacing user-like RSV/date/old/new examples. The guide now explicitly states that all examples are synthetic and not real specimen, reagent, disease, patient, experiment-date, or user-provided data. PDF metadata, extracted text, sensitive-term search, and Poppler-rendered visual pages were checked.
+Completed Phase S0 verification on `codex/audit-remediation`: the full Vitest suite, production build, fresh Chromium Playwright run, dependency audit, synthetic screenshot review, and PDF sensitive-term extraction passed. The approved baseline commit/tag is the remaining S0 action before S1.
 
 ## Latest Changed Files
+- `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`
+- `DEVELOPMENT_STATE.md`
+- `docs/11_GPT56_PROJECT_AUDIT_KR.md`
+- `src/chart/chartStyle.ts`
+- `src/data/parsePastedTable.ts`
+- `src/data/parsePastedTable.test.ts`
+- `src/ui/PasteImportPanel.tsx`
+- `src/ui/PasteImportPanel.test.tsx`
+- `src/chart/pasteSourceRegression.test.ts`
+- `src/chart/chartStyle.test.ts`
+- `src/chart/ChartView.tsx`
+- `src/chart/ChartView.test.ts`
+- `src/ui/ChartPanel.tsx`
+- `src/analysis/analysisWorkbook.ts`
+- `src/app/appStore.test.ts`
+- `src/app/App.test.tsx`
+- `CHANGELOG.md`
+- `DEVELOPMENT_STATE.md`
+- `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`
+- `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`
+- `docs/03_INPUT_OUTPUT_SPEC_EN.md`
+- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
+- `DECISIONS.md`
 - `.gitignore`
 - `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
 - `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.md`
-- `DEVELOPMENT_STATE.md`
 - `src/data/curveLabels.ts`
 - `src/data/parseExcel.test.ts`
 - `src/data/parseExcel.ts`
@@ -74,6 +102,19 @@ Regenerated the `IsoAmplar Plot Analysis` first-user Korean PDF guide with synth
 - `DEVELOPMENT_STATE.md`
 
 ## Implemented
+- Quick Paste Import:
+  - full-table row 1 specimen / row 2 reagent / row 3+ fluorescence mode
+  - single-specimen name field plus pasted row 1 reagent / row 2+ fluorescence mode
+  - tab-separated and unambiguous single-column input; comma/CSV table rejection
+  - browser-local native modal with direct textarea paste and bounded read-only preview
+  - source-cell warnings with bounded pagination and explicit acknowledgement before importing null-producing fluorescence warnings
+  - immutable paste source instance ID, source kind/input mode provenance, and source-name-only metadata rename
+  - unique per-import source instance IDs even for repeated identical filenames/worksheet metadata
+  - target runtime instance/revision validation for current-analysis append and independent new-analysis creation
+  - mobile dialog layout with a scrollable body and always-visible confirmation actions
+  - keyboard-modal dirty file replacement with Escape, focus restoration, and visible file-control focus state
+  - mixed Excel/paste Analysis XLSX visible review rows, hidden restore continuity, and legacy Excel provenance migration
+  - existing chart, style, legend, plotted CSV, PNG/JPEG, and clipboard projection compatibility
 - Documentation baseline: `AGENTS.md`, `DEVELOPMENT_STATE.md`, `DECISIONS.md`, `CHANGELOG.md`, and docs `01` through `08`.
 - React/Vite SPA scaffold with relative asset base for static hosting.
 - Excel parser:
@@ -109,6 +150,7 @@ Regenerated the `IsoAmplar Plot Analysis` first-user Korean PDF guide with synth
   - fixed preview chart viewport height independent from left/right panel expansion
   - sticky center chart panel on desktop while side panels/page scroll
   - Auto/Fixed X/Y scale with validation and current auto-bound display
+  - Box zoom tool that highlights the valid plot area and converts a visible plot-area drag rectangle into Fixed X/Y scale bounds, with Escape cancel, outside/tiny-drag feedback, hover suppression while active, per-analysis Previous scale return stack, and separate Auto scale reset
   - user-editable P1/P2 scale presets per analysis session, selectable only after valid min/max values
   - app-controlled transient curve highlighting by `curveId`
   - >20 visible-curve warning
@@ -421,8 +463,41 @@ Regenerated the `IsoAmplar Plot Analysis` first-user Korean PDF guide with synth
 - Current Korean UI/status refinement full `npm run test`: passed, 16 files / 117 Vitest tests.
 - Current Korean UI/status refinement `npm run build`: passed.
 - Current Korean UI/status refinement `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current palette update focused `npm run test -- --run src/chart/chartStyle.test.ts src/app/appStore.test.ts src/chart/chartConfig.test.ts`: passed, 3 files / 50 Vitest tests.
+- Current palette update `npm run build`: passed.
+- Current palette update full `npm run test`: initially exposed a pre-existing App UI test timeout under full-suite load; after increasing that single test timeout to 10s, full `npm run test` passed, 16 files / 118 Vitest tests.
+- Current Box zoom implementation focused `npm run test -- --run src/chart/ChartView.test.ts src/app/appStore.test.ts src/analysis/analysisWorkbook.test.ts src/app/App.test.tsx src/chart/chartConfig.test.ts src/chart/chartStyle.test.ts`: passed, 6 files / 79 Vitest tests.
+- Current Box zoom implementation `npm run build`: passed.
+- Current Box zoom implementation full `npm run test`: passed, 16 files / 121 Vitest tests.
+- Current Box zoom implementation `npm run test:e2e`: passed, 3 Chromium Playwright tests including a visible-canvas drag that applies Fixed X/Y scale.
+- Current Box zoom expert review notes: implemented as Fixed scale bounds rather than ECharts `dataZoom`; no data cropping or fluorescence transformation; hover/legend emphasis suppressed while active; outside-canvas mouseup is cleaned up with feedback.
+- Current Box zoom previous-scale follow-up expert review: upgraded from a one-shot local snapshot to a per-analysis browser-session scale return stack; focused `npm run test -- --run src/app/appStore.test.ts src/app/App.test.tsx src/chart/ChartView.test.ts src/analysis/analysisWorkbook.test.ts` passed, 4 files / 65 Vitest tests.
+- Current Box zoom previous-scale follow-up `npm run build`: passed.
+- Current Box zoom previous-scale follow-up `npm run test:e2e`: passed, 3 Chromium Playwright tests after restarting the stale preview server; E2E now verifies Box zoom Fixed scale, Previous scale restoration, and disabled history after restore.
+- Current Box zoom previous-scale follow-up full `npm run test`: passed, 16 files / 124 Vitest tests.
+- Current Box zoom plot-area highlight follow-up focused `npm run test -- --run src/chart/ChartView.test.ts src/app/App.test.tsx src/app/appStore.test.ts`: passed, 3 files / 61 Vitest tests.
+- Current Box zoom plot-area highlight follow-up `npm run build`: passed.
+- Current Box zoom plot-area highlight follow-up `npm run test:e2e`: passed, 3 Chromium Playwright tests including `.box-zoom-plot-area` visibility and in-canvas bounds checks.
+- Current Box zoom plot-area highlight follow-up full `npm run test`: passed, 16 files / 126 Vitest tests.
+- Current UI control-size consistency pass expert review: no blocking issues; recommended scoping accordion summary CSS, tightening icon reset padding, preserving small status badges, and avoiding tree-toggle height changes without virtualization recalibration.
+- Current UI control-size consistency pass focused `npm run test -- --run src/app/App.test.tsx src/ui/CustomLegend.test.tsx src/app/appStore.test.ts`: passed, 3 files / 57 Vitest tests.
+- Current UI control-size consistency pass `npm run build`: passed.
+- Current UI control-size consistency pass `npm run test:e2e`: passed, 3 Chromium Playwright tests.
+- Current UI control-size consistency pass full `npm run test`: passed, 16 files / 126 Vitest tests.
+- Current UI control-size consistency pass `git diff --check`: passed with CRLF replacement warnings only.
+- Current UI control-size consistency pass screenshot review: passed for compact Style controls in `test-results\app-uploads-an-xlsx-workbo-26c3e-t-first-collapsed-selection-chromium\phase-r8-style-legend-panel.png` and top/import controls in `test-results\manual-control-home.png`.
+- Quick Paste Q6 final full `npm run test`: passed, 19 Vitest files / 162 tests.
+- Quick Paste Q6 final `npm run build`: passed after TypeScript compilation and production Vite build.
+- Quick Paste Q6 final `npm run test:e2e`: passed, 5 Chromium Playwright tests, including full-table/single-specimen paste, mobile warning pagination/action visibility, and native dirty-replace dialog focus/Escape restoration.
+- Quick Paste Q6 final in-app browser check: passed at `http://127.0.0.1:4173/`; 375 x 812 warning preview stayed inside the viewport, all footer actions remained visible, body scrolling was isolated, warning page 2 exposed source cell `A15`, horizontal overflow was absent, and browser warning/error logs were empty.
+- Quick Paste Q6 final expert re-audit: data/provenance, analysis-state/race safety, and UX/accessibility reviewers reported no remaining blockers after fixes.
+- Quick Paste Q6 final `git diff --check`: passed with line-ending warnings only.
 - `npm audit --omit=dev`: 0 vulnerabilities.
-- First-user PDF guide synthetic-data regeneration: passed. The guide was rebuilt from deployed-app screenshots using a generated synthetic `.xlsx` workbook with `Sample` / `Assay` labels only, output as a 14-page PDF, checked with `pypdf` for page count/metadata/text extraction, searched for user-like sensitive labels (`RSV`, date-like labels, `_old`, `_new`), rendered through Poppler to PNG pages, and visually reviewed with contact sheets for layout, Korean text rendering, tables, screenshots, and troubleshooting pages.
+- 2026-07-11 project audit verification on base `9e77ad2` plus the current dirty working tree: `npm run test` passed 19 files / 162 tests; `npm run build` passed; `npm run test:e2e` passed 5 Chromium tests; `npm audit --omit=dev` found 0 vulnerabilities; in-app browser console warning/error count was 0.
+- 2026-07-11 desktop audit used synthetic data only: lead walkthrough 6 curves x 60 cycles at approximately 1280 x 720 and 1920 x 1080; independent stress review 24 curves x 40 cycles across 1280 x 800, 1366 x 768, 1440 x 900, and 1920 x 1080; independent performance probe 100 curves x 100 points.
+- 2026-07-11 post-draft expert re-audit completed and was integrated into `docs/11_GPT56_PROJECT_AUDIT_KR.md`; no product source files were changed by the audit.
+- Phase S0 pre-remediation verification on `codex/audit-remediation`: `npm run test` passed 19 files / 162 tests; `npm run build` passed; exact fresh command `$env:CI='1'; npm run test:e2e` passed 5 Chromium tests after stopping the prior preview server; `npm audit --omit=dev` found 0 vulnerabilities. Separate production-preview smoke at 1280x720 and 1920x1080 returned HTTP 200 with the expected app title, zero console warnings/errors, zero page errors, and zero non-app-origin requests; screenshots are local test artifacts under `test-results/`. The three new Quick Paste screenshots use only `Synthetic Sample`, `Assay`, `Control`, and generated values; expert review found their `.png` files initially contained JPEG/JFIF bytes, so all three were losslessly re-encoded to real PNG signatures before checkpointing. The 15-page guide PDF text contained none of the scanned prior workbook/disease/date-like example terms. Approved checkpoint target: branch `codex/audit-remediation`, tag `checkpoint/audit-remediation-baseline-20260711`, last-published rollback SHA `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
+- First-user PDF guide synthetic-data regeneration: passed. The guide was rebuilt from local-app screenshots using generated synthetic labels/data only, output as a 15-page PDF, checked with `pypdf` for page count/metadata/text extraction, searched for user-like sensitive labels (`RSV`, date-like labels, `_old`, `_new`), rendered through Poppler to PNG pages, and visually reviewed for layout, Korean text rendering, tables, screenshots, and troubleshooting pages.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Playwright checks include upload-first smoke, generated `.xlsx` upload, append `.xlsx` import, reagent-first collapsed state, virtualized single-curve selection row, search bulk select, Style-panel marker basis/group marker smoke, fixed hover readout smoke, chart canvas visibility, nonwhite pixel count, chart viewport height stability after settings expansion, and sticky chart panel behavior.
 - Visual screenshots:
@@ -434,6 +509,9 @@ Regenerated the `IsoAmplar Plot Analysis` first-user Korean PDF guide with synth
   - `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
 
 ## Known Gaps
+- The remediation plan is documentation only. None of Phase S0-S11 product remediations have been implemented yet.
+- The P1 items identified in `docs/11_GPT56_PROJECT_AUDIT_KR.md` are audit findings only and are not yet implemented: invalid Fixed-scale fallback/export, exported-legend identity truncation, Excel formatted-header identity, actionable Excel warnings, browser refresh/close protection, and accepted-size Quick Paste spread failure.
+- The audit also reproduced a CSS defect where Legend `Labels` does not hide the `Order` panel, plus laptop-height sticky-chart and dense individual-style/legend-editor limitations. These remain unmodified pending user prioritization.
 - Clipboard image copy and rich Excel-cell legend paste have not been manually verified in Chrome/Edge on the final deployment origin.
 - Static fixture files and expected normalized JSON snapshots are still not checked in; tests currently generate workbook fixtures.
 - Public URL technical smoke used generated `.xlsx` workbooks. Real `C:\Users\siunj\Desktop\graph_TEST.xlsx` has been inspected read-only but has not yet been uploaded through the finished UI in this session; final domain judgement for real labels/curve counts remains a user/manual validation item.
@@ -451,10 +529,14 @@ Regenerated the `IsoAmplar Plot Analysis` first-user Korean PDF guide with synth
 - Implementation plan: `docs/06_IMPLEMENTATION_PLAN_KR.md`
 - Fixture plan: `docs/07_FIXTURE_SNAPSHOT_PLAN_KR.md`
 - Release checklist: `docs/08_RELEASE_CHECKLIST_KR.md`
+- Quick Paste implementation plan: `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`
+- GPT-5.6 project audit: `docs/11_GPT56_PROJECT_AUDIT_KR.md`
+- Audit remediation implementation plan: `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`
 - First-user guide PDF: `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
 - Local dev server: `http://127.0.0.1:5173/`
+- Local production preview: `http://127.0.0.1:4173/`
 
 ## Next 3 Tasks
-1. User review of `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf` for wording, screenshot coverage, and troubleshooting completeness.
-2. Manually validate the real `C:\Users\siunj\Desktop\graph_TEST.xlsx` in the deployed app when the user is ready.
-3. Manually verify selected-layout PNG clipboard, report legend PNG clipboard, and rich Excel-cell legend paste behavior in Chrome/Edge on the deployed HTTPS origin.
+1. Complete the approved Phase S0 baseline commit and annotated tag on `codex/audit-remediation`, without pushing or deploying.
+2. Run Phase S1 to freeze synthetic `.xls/.xlsx` fixtures, normalized snapshots, acceptance evidence, and early fresh-build CI before product remediation.
+3. Provide the S1 local review URL and evidence matrix for user inspection before any S1 commit.

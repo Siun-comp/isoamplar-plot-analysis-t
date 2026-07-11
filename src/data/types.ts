@@ -1,5 +1,9 @@
 export type WarningSeverity = "info" | "warning" | "error";
 
+export type ImportedSourceKind = "excel" | "paste";
+export type DatasetSourceKind = ImportedSourceKind | "mixed";
+export type PasteInputMode = "fullTable" | "singleSpecimen";
+
 export type WarningScope = "import" | "dataset" | "header" | "curve" | "cell" | "export";
 
 export type PcrWarningCode =
@@ -14,6 +18,7 @@ export type PcrWarningCode =
   | "EMPTY_FLUORESCENCE_CELL"
   | "FORMULA_WITHOUT_CACHED_VALUE"
   | "MERGED_HEADER_CELL"
+  | "INVALID_PASTED_TABLE"
   | "UNSUPPORTED_FILE_TYPE"
   | "PROTECTED_OR_UNREADABLE_WORKBOOK";
 
@@ -32,6 +37,9 @@ export type PcrWarning = {
 };
 
 export type CurveSource = {
+  sourceKind?: ImportedSourceKind;
+  sourceInstanceId?: string;
+  inputMode?: PasteInputMode;
   fileName: string;
   sheetName: string;
   sheetIndex: number;
@@ -137,6 +145,7 @@ export type PcrEntity = {
 
 export type PcrDataset = {
   schemaVersion: 1;
+  sourceKind?: DatasetSourceKind;
   datasetId: string;
   sourceFileName: string;
   sheetName: string;

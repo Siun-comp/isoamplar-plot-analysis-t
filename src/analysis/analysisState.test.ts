@@ -155,6 +155,26 @@ describe("analysis state serialization", () => {
     expect(restoredLegacyStyleRules.reagentMarkerTypes).toEqual({});
   });
 
+  it("migrates legacy Analysis XLSX provenance fields to Excel source metadata", () => {
+    const legacyPayload = JSON.parse(JSON.stringify(serializeAnalysisState(createTestAnalysisState())));
+    delete legacyPayload.dataset.sourceKind;
+    legacyPayload.dataset.curves.forEach((curve: { source: Record<string, unknown> }) => {
+      delete curve.source.sourceKind;
+      delete curve.source.sourceInstanceId;
+    });
+    legacyPayload.sourceFiles.forEach((source: Record<string, unknown>) => {
+      delete source.sourceKind;
+      delete source.sourceInstanceId;
+    });
+
+    const restored = deserializeAnalysisState(legacyPayload);
+    expect(restored.dataset.sourceKind).toBe("excel");
+    expect(restored.dataset.curves.every((curve) => curve.source.sourceKind === "excel")).toBe(true);
+    expect(restored.dataset.curves.every((curve) => curve.source.sourceInstanceId?.startsWith("legacy:excel:"))).toBe(true);
+    expect(restored.sourceFiles[0].sourceKind).toBe("excel");
+    expect(restored.sourceFiles[0].sourceInstanceId).toMatch(/^legacy:excel:/u);
+  });
+
   it("rejects unsupported schema versions and missing required fields", () => {
     const serialized = serializeAnalysisState(createTestAnalysisState());
 

@@ -88,7 +88,21 @@ export function AnalysisTabs() {
       const blob = await exportAnalysisWorkbookBlob(analysisState);
       const fileName = createAnalysisWorkbookFileName(state.exportCounter, new Date(), state.analysisName);
       downloadBlob(blob, fileName);
-      markAnalysisSaveSuccess(`Saved ${fileName}.`);
+      const saveResult = markAnalysisSaveSuccess({
+        analysisId: state.activeAnalysisId,
+        runtimeInstanceId: state.runtimeInstanceId,
+        expectedRevision: state.revision,
+        savedExportCounter: nextExportCounter,
+        message: `Saved ${fileName}.`
+      });
+      if (saveResult !== "saved") {
+        setMessage(
+          saveResult === "changed"
+            ? "Analysis changed while the file was being saved. The current analysis remains open and Unsaved."
+            : "The original analysis tab is no longer available."
+        );
+        return;
+      }
       const didClose = useAppStore.getState().closeAnalysis(pendingCloseId, { force: true });
       setPendingCloseId(didClose ? null : pendingCloseId);
       setMessage(didClose ? null : "Analysis could not be closed.");

@@ -53,9 +53,14 @@ type PresetUndoSnapshot = {
   affectedCurveIds: string[];
 };
 
+type ChartScaleReturnSnapshot = ChartScaleState;
+
 export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
+  runtimeInstanceId: string;
+  revision: number;
   dataset: PcrDataset | null;
   selection: SelectionState | null;
+  chartScaleReturnStack: ChartScaleReturnSnapshot[];
   lastPresetUndo: PresetUndoSnapshot | null;
   lastPresetMessage: string | null;
   exportMessage: string | null;
@@ -65,6 +70,20 @@ export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
 
 export const DIRTY_REPLACE_BLOCKED_MESSAGE =
   "Unsaved analysis changes are present. Replace is blocked until you confirm replacing the current analysis or open the file as a new analysis.";
+
+export type PastedDatasetImportResult =
+  | { ok: true; analysisId: string }
+  | { ok: false; message: string };
+
+export type AnalysisSaveCompletion = {
+  analysisId: string;
+  runtimeInstanceId: string;
+  expectedRevision: number;
+  savedExportCounter: number;
+  message: string;
+};
+
+export type AnalysisSaveCompletionResult = "saved" | "changed" | "missing";
 
 type ActiveAnalysisAdapterState = Omit<AnalysisTabState, "analysisId">;
 
@@ -82,6 +101,18 @@ type AppStore = AppState & {
   importFile: (file: File) => Promise<void>;
   importFileWithMode: (file: File, mode: ImportFileMode, targetAnalysisId?: string) => Promise<void>;
   appendFile: (file: File) => Promise<void>;
+  appendPastedDataset: (
+    dataset: PcrDataset,
+    targetAnalysisId: string,
+    targetRuntimeInstanceId: string,
+    targetRevision: number
+  ) => PastedDatasetImportResult;
+  openPastedDatasetInNewAnalysis: (
+    dataset: PcrDataset,
+    targetAnalysisId: string,
+    targetRuntimeInstanceId: string,
+    targetRevision: number
+  ) => PastedDatasetImportResult;
   reset: () => void;
   createAnalysis: (analysisName?: string) => string;
   switchAnalysis: (analysisId: string) => void;
@@ -91,6 +122,11 @@ type AppStore = AppState & {
   setSelectionFilter: (filter: SelectionFilter) => void;
   setAxisScaleMode: (axis: AxisId, mode: ScaleMode) => void;
   setAxisFixedValue: (axis: AxisId, bound: "min" | "max", value: string) => void;
+  setChartFixedScaleBounds: (bounds: { xMin: string; xMax: string; yMin: string; yMax: string }) => void;
+  setChartScale: (scale: ChartScaleState) => void;
+  applyBoxZoomScale: (bounds: { xMin: string; xMax: string; yMin: string; yMax: string }) => void;
+  returnFromBoxZoom: () => void;
+  resetScaleToAuto: () => void;
   setAxisPresetValue: (axis: AxisId, preset: ScalePresetId, field: "label" | "min" | "max", value: string) => void;
   setStyleGroupingTarget: (field: "colorBy" | "lineTypeBy" | "markerBy", target: StyleGroupingTarget) => void;
   setGroupColor: (target: StyleGroupingTarget, entityId: string, color: string) => void;
@@ -111,7 +147,7 @@ type AppStore = AppState & {
   undoLastPreset: () => void;
   moveCurveOrder: (curveId: string, direction: "up" | "down") => void;
   markExportSuccess: (message: string) => void;
-  markAnalysisSaveSuccess: (message: string) => void;
+  markAnalysisSaveSuccess: (completion: AnalysisSaveCompletion) => AnalysisSaveCompletionResult;
   setExportMessage: (message: string | null) => void;
   setGroupingMode: (groupingMode: GroupingMode) => void;
   toggleCurve: (curveId: string) => void;
@@ -131,6 +167,7 @@ export const useAppStore = create<AppStore>()(
         state.searchQuery = "";
         state.selectionFilter = "all";
         state.chartScale = createDefaultChartScale();
+        state.chartScaleReturnStack = [];
         state.styleRules = createDefaultStyleRules();
         state.curveOverrides = {};
         state.legendSettings = createDefaultLegendSettings();
@@ -149,6 +186,7 @@ export const useAppStore = create<AppStore>()(
     importFile: async (file) => {
       const targetAnalysisId = get().activeAnalysisId;
       const targetAnalysis = get().analyses[targetAnalysisId];
+      const targetRuntimeInstanceId = targetAnalysis?.runtimeInstanceId;
       if (targetAnalysis?.dirty) {
         set((state) => {
           setAnalysisImportError(state, targetAnalysisId, DIRTY_REPLACE_BLOCKED_MESSAGE);
@@ -163,6 +201,7 @@ export const useAppStore = create<AppStore>()(
       const analysisWorkbook = await readAnalysisWorkbookFile(file);
       if (analysisWorkbook.kind === "analysis") {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           if (blockDirtyReplaceIfNeeded(state, targetAnalysisId)) return;
           restoreAnalysisToTab(state, targetAnalysisId, analysisWorkbook.analysis);
         });
@@ -171,6 +210,7 @@ export const useAppStore = create<AppStore>()(
 
       if (analysisWorkbook.kind === "invalid-analysis") {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           setAnalysisImportError(state, targetAnalysisId, analysisWorkbook.message);
         });
         return;
@@ -179,18 +219,23 @@ export const useAppStore = create<AppStore>()(
       const result = await parseExcelFile(file);
       if (result.ok) {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           if (blockDirtyReplaceIfNeeded(state, targetAnalysisId)) return;
           replaceAnalysisDataset(state, targetAnalysisId, result.dataset);
         });
       } else {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           setAnalysisImportError(state, targetAnalysisId, result.error.message);
         });
       }
     },
     importFileWithMode: async (file, mode, requestedTargetAnalysisId) => {
       const targetAnalysisId = requestedTargetAnalysisId ?? get().activeAnalysisId;
-      if (!get().analyses[targetAnalysisId]) return;
+      const targetAnalysis = get().analyses[targetAnalysisId];
+      if (!targetAnalysis) return;
+      const targetRuntimeInstanceId = targetAnalysis.runtimeInstanceId;
+      const targetRevision = targetAnalysis.revision;
 
       if (mode === "replace") {
         set((state) => {
@@ -205,6 +250,10 @@ export const useAppStore = create<AppStore>()(
             openAnalysisInNewTab(state, analysisWorkbook.analysis);
             return;
           }
+          if (!matchesAnalysisSnapshot(state, targetAnalysisId, targetRuntimeInstanceId, targetRevision)) {
+            setAnalysisImportError(state, targetAnalysisId, "Analysis changed while the file was being read. Confirm replace again.");
+            return;
+          }
           restoreAnalysisToTab(state, targetAnalysisId, analysisWorkbook.analysis, { force: true });
         });
         return;
@@ -212,6 +261,7 @@ export const useAppStore = create<AppStore>()(
 
       if (analysisWorkbook.kind === "invalid-analysis") {
         set((state) => {
+          if (mode === "replace" && !matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           setAnalysisImportError(state, targetAnalysisId, analysisWorkbook.message);
         });
         return;
@@ -224,19 +274,26 @@ export const useAppStore = create<AppStore>()(
             openDatasetInNewTab(state, result.dataset);
             return;
           }
+          if (!matchesAnalysisSnapshot(state, targetAnalysisId, targetRuntimeInstanceId, targetRevision)) {
+            setAnalysisImportError(state, targetAnalysisId, "Analysis changed while the file was being read. Confirm replace again.");
+            return;
+          }
           replaceAnalysisDataset(state, targetAnalysisId, result.dataset, { force: true });
         });
       } else {
         set((state) => {
+          if (mode === "replace" && !matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           setAnalysisImportError(state, targetAnalysisId, result.error.message);
         });
       }
     },
     appendFile: async (file) => {
       const targetAnalysisId = get().activeAnalysisId;
+      const targetRuntimeInstanceId = get().analyses[targetAnalysisId]?.runtimeInstanceId;
       const analysisWorkbook = await readAnalysisWorkbookFile(file);
       if (analysisWorkbook.kind === "analysis") {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           openAnalysisInNewTab(state, analysisWorkbook.analysis);
         });
         return;
@@ -244,6 +301,7 @@ export const useAppStore = create<AppStore>()(
 
       if (analysisWorkbook.kind === "invalid-analysis") {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           setAnalysisImportError(state, targetAnalysisId, analysisWorkbook.message);
         });
         return;
@@ -265,11 +323,13 @@ export const useAppStore = create<AppStore>()(
         const result = await parseExcelFile(file);
         if (result.ok) {
           set((state) => {
+            if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
             if (blockDirtyReplaceIfNeeded(state, targetAnalysisId)) return;
             replaceAnalysisDataset(state, targetAnalysisId, result.dataset);
           });
         } else {
           set((state) => {
+            if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
             setAnalysisImportError(state, targetAnalysisId, result.error.message);
           });
         }
@@ -283,13 +343,71 @@ export const useAppStore = create<AppStore>()(
       const result = await parseExcelFile(file);
       if (result.ok) {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           appendDatasetToAnalysis(state, targetAnalysisId, result.dataset, file.name);
         });
       } else {
         set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
           setAnalysisImportError(state, targetAnalysisId, result.error.message);
         });
       }
+    },
+    appendPastedDataset: (dataset, targetAnalysisId, targetRuntimeInstanceId, targetRevision) => {
+      const target = get().analyses[targetAnalysisId];
+      if (
+        !target ||
+        target.runtimeInstanceId !== targetRuntimeInstanceId ||
+        target.revision !== targetRevision
+      ) {
+        return {
+          ok: false,
+          message: "미리보기를 만든 분석이 닫혔거나 변경되었습니다. 현재 상태에서 미리보기를 다시 생성하십시오."
+        };
+      }
+
+      let applied = false;
+      set((state) => {
+        const currentTarget = state.analyses[targetAnalysisId];
+        if (
+          !currentTarget ||
+          currentTarget.runtimeInstanceId !== targetRuntimeInstanceId ||
+          currentTarget.revision !== targetRevision
+        ) return;
+        appendDatasetToAnalysis(state, targetAnalysisId, dataset, dataset.sourceFileName);
+        applied = true;
+      });
+
+      return applied
+        ? { ok: true, analysisId: targetAnalysisId }
+        : { ok: false, message: "붙여넣은 데이터를 대상 분석에 추가하지 못했습니다." };
+    },
+    openPastedDatasetInNewAnalysis: (
+      dataset,
+      targetAnalysisId,
+      targetRuntimeInstanceId,
+      targetRevision
+    ) => {
+      const target = get().analyses[targetAnalysisId];
+      if (
+        !target ||
+        target.runtimeInstanceId !== targetRuntimeInstanceId ||
+        target.revision !== targetRevision
+      ) {
+        return {
+          ok: false,
+          message: "미리보기를 만든 분석이 닫혔거나 변경되었습니다. 현재 상태에서 미리보기를 다시 생성하십시오."
+        };
+      }
+
+      let analysisId = "";
+      set((state) => {
+        if (!matchesAnalysisSnapshot(state, targetAnalysisId, targetRuntimeInstanceId, targetRevision)) return;
+        analysisId = openDatasetInNewTab(state, dataset);
+      });
+      return analysisId
+        ? { ok: true, analysisId }
+        : { ok: false, message: "붙여넣은 데이터를 새 분석으로 열지 못했습니다." };
     },
     reset: () => {
       set(() => createInitialAppState());
@@ -324,9 +442,11 @@ export const useAppStore = create<AppStore>()(
 
         analysis.analysisName = analysisName;
         analysis.dirty = true;
+        analysis.revision += 1;
         if (state.activeAnalysisId === analysisId) {
           state.analysisName = analysisName;
           state.dirty = true;
+          state.revision = analysis.revision;
           persistActiveAnalysis(state);
         }
       });
@@ -377,6 +497,7 @@ export const useAppStore = create<AppStore>()(
     setAxisScaleMode: (axis, mode) => {
       set((state) => {
         state.chartScale[axis].mode = mode;
+        state.chartScaleReturnStack = [];
         markDirtyAndPersistActive(state);
       });
     },
@@ -387,6 +508,54 @@ export const useAppStore = create<AppStore>()(
         } else {
           state.chartScale[axis].fixedMax = value;
         }
+        state.chartScaleReturnStack = [];
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setChartFixedScaleBounds: (bounds) => {
+      set((state) => {
+        state.chartScale.x.mode = "fixed";
+        state.chartScale.x.fixedMin = bounds.xMin;
+        state.chartScale.x.fixedMax = bounds.xMax;
+        state.chartScale.y.mode = "fixed";
+        state.chartScale.y.fixedMin = bounds.yMin;
+        state.chartScale.y.fixedMax = bounds.yMax;
+        state.chartScaleReturnStack = [];
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setChartScale: (scale) => {
+      set((state) => {
+        state.chartScale = clonePlain(scale);
+        state.chartScaleReturnStack = [];
+        markDirtyAndPersistActive(state);
+      });
+    },
+    applyBoxZoomScale: (bounds) => {
+      set((state) => {
+        state.chartScaleReturnStack.push(clonePlain(state.chartScale));
+        state.chartScale.x.mode = "fixed";
+        state.chartScale.x.fixedMin = bounds.xMin;
+        state.chartScale.x.fixedMax = bounds.xMax;
+        state.chartScale.y.mode = "fixed";
+        state.chartScale.y.fixedMin = bounds.yMin;
+        state.chartScale.y.fixedMax = bounds.yMax;
+        markDirtyAndPersistActive(state);
+      });
+    },
+    returnFromBoxZoom: () => {
+      set((state) => {
+        const previousScale = state.chartScaleReturnStack.pop();
+        if (!previousScale) return;
+        state.chartScale = clonePlain(previousScale);
+        markDirtyAndPersistActive(state);
+      });
+    },
+    resetScaleToAuto: () => {
+      set((state) => {
+        state.chartScale.x.mode = "auto";
+        state.chartScale.y.mode = "auto";
+        state.chartScaleReturnStack = [];
         markDirtyAndPersistActive(state);
       });
     },
@@ -398,6 +567,7 @@ export const useAppStore = create<AppStore>()(
           max: ""
         };
         state.chartScale[axis][preset][field] = value;
+        state.chartScaleReturnStack = [];
         markDirtyAndPersistActive(state);
       });
     },
@@ -650,13 +820,30 @@ export const useAppStore = create<AppStore>()(
         markDirtyAndPersistActive(state);
       });
     },
-    markAnalysisSaveSuccess: (message) => {
+    markAnalysisSaveSuccess: (completion) => {
+      let result: AnalysisSaveCompletionResult = "missing";
       set((state) => {
-        state.exportMessage = message;
-        state.exportCounter += 1;
-        state.dirty = false;
-        persistActiveAnalysis(state);
+        const analysis = getAnalysisForWrite(state, completion.analysisId);
+        if (!analysis || analysis.runtimeInstanceId !== completion.runtimeInstanceId) return;
+
+        if (analysis.revision !== completion.expectedRevision) {
+          analysis.exportMessage = `${completion.message} 현재 분석은 저장 중 변경되어 Unsaved 상태를 유지합니다.`;
+          analysis.exportCounter = Math.max(analysis.exportCounter, completion.savedExportCounter);
+          analysis.dirty = true;
+          analysis.revision += 1;
+          writeAnalysis(state, analysis);
+          result = "changed";
+          return;
+        }
+
+        analysis.exportMessage = completion.message;
+        analysis.exportCounter = completion.savedExportCounter;
+        analysis.dirty = false;
+        analysis.revision += 1;
+        writeAnalysis(state, analysis);
+        result = "saved";
       });
+      return result;
     },
     setExportMessage: (message) => {
       set((state) => {
@@ -716,12 +903,15 @@ function createInitialAppState(): AppState {
 function createEmptyAnalysisTab(analysisId: string, analysisName: string): AnalysisTabState {
   return {
     analysisId,
+    runtimeInstanceId: createRuntimeInstanceId(),
+    revision: 0,
     analysisName,
     dataset: null,
     selection: null,
     searchQuery: "",
     selectionFilter: "all",
     chartScale: createDefaultChartScale(),
+    chartScaleReturnStack: [],
     styleRules: createDefaultStyleRules(),
     curveOverrides: {},
     legendSettings: createDefaultLegendSettings(),
@@ -740,6 +930,7 @@ function createEmptyAnalysisTab(analysisId: string, analysisName: string): Analy
 
 function markDirtyAndPersistActive(state: AppState) {
   state.dirty = true;
+  state.revision += 1;
   persistActiveAnalysis(state);
 }
 
@@ -799,12 +990,14 @@ function replaceAnalysisDataset(
   if (!previous) return;
   const nextAnalysis: AnalysisTabState = {
     ...cloneAnalysisTab(previous),
+    runtimeInstanceId: createRuntimeInstanceId(),
     analysisName: dataset.sourceFileName || previous.analysisName,
     dataset,
     selection: createInitialSelectionState(dataset),
     searchQuery: "",
     selectionFilter: "all",
     chartScale: createDefaultChartScale(),
+    chartScaleReturnStack: [],
     styleRules: createDefaultStyleRules(),
     curveOverrides: {},
     legendSettings: createDefaultLegendSettings(),
@@ -817,9 +1010,27 @@ function replaceAnalysisDataset(
     importError: null,
     importFileName: dataset.sourceFileName,
     sourceFiles: [createSourceFileSummary(dataset)],
-    dirty: true
+    dirty: true,
+    revision: previous.revision + 1
   };
   writeAnalysis(state, nextAnalysis);
+}
+
+function matchesAnalysisInstance(state: AppState, analysisId: string, runtimeInstanceId: string | undefined) {
+  const analysis = state.analyses[analysisId];
+  return Boolean(analysis && runtimeInstanceId && analysis.runtimeInstanceId === runtimeInstanceId);
+}
+
+function matchesAnalysisSnapshot(
+  state: AppState,
+  analysisId: string,
+  runtimeInstanceId: string,
+  revision: number
+) {
+  const analysis = state.analyses[analysisId];
+  return Boolean(
+    analysis && analysis.runtimeInstanceId === runtimeInstanceId && analysis.revision === revision
+  );
 }
 
 function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDataset: PcrDataset, fileName: string) {
@@ -827,7 +1038,23 @@ function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDa
   if (!previous) return;
 
   if (!previous.dataset) {
-    replaceAnalysisDataset(state, analysisId, appendedDataset);
+    const nextAnalysis: AnalysisTabState = {
+      ...cloneAnalysisTab(previous),
+      dataset: appendedDataset,
+      selection: createInitialSelectionState(appendedDataset),
+      searchQuery: "",
+      selectionFilter: "all",
+      importStatus: "ready",
+      importError: null,
+      importFileName: appendedDataset.sourceFileName,
+      sourceFiles: [createSourceFileSummary(appendedDataset)],
+      chartScaleReturnStack: [],
+      lastPresetUndo: null,
+      lastPresetMessage: null,
+      dirty: true,
+      revision: previous.revision + 1
+    };
+    writeAnalysis(state, nextAnalysis);
     return;
   }
 
@@ -862,11 +1089,13 @@ function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDa
     importError: null,
     importFileName: `${fileName} appended`,
     sourceFiles: [...previous.sourceFiles, createSourceFileSummary(appendedDataset)],
+    chartScaleReturnStack: [],
     lastPresetUndo: null,
     lastPresetMessage: previous.lastPresetUndo
       ? "Preset undo was cleared after appended data."
       : previous.lastPresetMessage,
-    dirty: true
+    dirty: true,
+    revision: previous.revision + 1
   };
   writeAnalysis(state, nextAnalysis);
 }
@@ -905,6 +1134,7 @@ function openDatasetInNewTab(state: AppState, dataset: PcrDataset) {
   state.activeAnalysisId = analysisId;
   applyAnalysisToAdapter(state, nextAnalysis);
   persistActiveAnalysis(state);
+  return analysisId;
 }
 
 function openAnalysisInNewTab(state: AppState, analysis: AnalysisState) {
@@ -928,12 +1158,15 @@ function openAnalysisInNewTab(state: AppState, analysis: AnalysisState) {
 function createTabFromAnalysisState(analysis: AnalysisState): AnalysisTabState {
   return {
     analysisId: analysis.analysisId,
+    runtimeInstanceId: createRuntimeInstanceId(),
+    revision: 0,
     analysisName: analysis.analysisName || "Untitled analysis",
     dataset: analysis.dataset,
     selection: cloneSelection(analysis.selection),
     searchQuery: analysis.searchQuery,
     selectionFilter: analysis.selectionFilter,
     chartScale: clonePlain(analysis.chartScale),
+    chartScaleReturnStack: [],
     styleRules: clonePlain(analysis.styleRules),
     curveOverrides: clonePlain(analysis.curveOverrides),
     legendSettings: clonePlain(analysis.legendSettings),
@@ -953,12 +1186,15 @@ function createTabFromAnalysisState(analysis: AnalysisState): AnalysisTabState {
 function snapshotAdapterAsAnalysis(state: AppState): AnalysisTabState {
   return {
     analysisId: state.activeAnalysisId,
+    runtimeInstanceId: state.runtimeInstanceId,
+    revision: state.revision,
     analysisName: state.analysisName,
     dataset: state.dataset,
     selection: cloneSelection(state.selection),
     searchQuery: state.searchQuery,
     selectionFilter: state.selectionFilter,
     chartScale: clonePlain(state.chartScale),
+    chartScaleReturnStack: clonePlain(state.chartScaleReturnStack),
     styleRules: clonePlain(state.styleRules),
     curveOverrides: clonePlain(state.curveOverrides),
     legendSettings: clonePlain(state.legendSettings),
@@ -983,6 +1219,7 @@ function applyAnalysisToAdapter(state: AppState, analysis: AnalysisTabState) {
   state.searchQuery = adapterState.searchQuery;
   state.selectionFilter = adapterState.selectionFilter;
   state.chartScale = adapterState.chartScale;
+  state.chartScaleReturnStack = adapterState.chartScaleReturnStack;
   state.styleRules = adapterState.styleRules;
   state.curveOverrides = adapterState.curveOverrides;
   state.legendSettings = adapterState.legendSettings;
@@ -996,16 +1233,21 @@ function applyAnalysisToAdapter(state: AppState, analysis: AnalysisTabState) {
   state.importFileName = adapterState.importFileName;
   state.sourceFiles = adapterState.sourceFiles;
   state.dirty = adapterState.dirty;
+  state.runtimeInstanceId = adapterState.runtimeInstanceId;
+  state.revision = adapterState.revision;
 }
 
 function analysisToAdapterState(analysis: AnalysisTabState): ActiveAnalysisAdapterState {
   return {
+    runtimeInstanceId: analysis.runtimeInstanceId,
+    revision: analysis.revision,
     analysisName: analysis.analysisName,
     dataset: analysis.dataset,
     selection: cloneSelection(analysis.selection),
     searchQuery: analysis.searchQuery,
     selectionFilter: analysis.selectionFilter,
     chartScale: clonePlain(analysis.chartScale),
+    chartScaleReturnStack: clonePlain(analysis.chartScaleReturnStack),
     styleRules: clonePlain(analysis.styleRules),
     curveOverrides: clonePlain(analysis.curveOverrides),
     legendSettings: clonePlain(analysis.legendSettings),
@@ -1020,6 +1262,14 @@ function analysisToAdapterState(analysis: AnalysisTabState): ActiveAnalysisAdapt
     sourceFiles: cloneSourceFiles(analysis.sourceFiles),
     dirty: analysis.dirty
   };
+}
+
+function createRuntimeInstanceId() {
+  const randomPart =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `tab-${randomPart}`;
 }
 
 function cloneAnalysisTab(analysis: AnalysisTabState): AnalysisTabState {

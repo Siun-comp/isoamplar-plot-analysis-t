@@ -42,7 +42,9 @@ function rekeyCurve(curve: Curve, curveId: string): Curve {
   return {
     ...curve,
     curveId,
-    sourceId: `${curve.source.fileName}#${curve.source.sheetName}!${curve.source.columnLetter}`,
+    sourceId: curve.source.sourceInstanceId
+      ? `${curve.source.sourceInstanceId}!${curve.source.columnLetter}`
+      : `${curve.source.fileName}#${curve.source.sheetName}!${curve.source.columnLetter}`,
     specimenId: createEntityId("specimen", curve.specimenLabel, `missing_${curveId}`),
     reagentId: createEntityId("reagent", curve.reagentLabel, `missing_${curveId}`),
     warnings: curve.warnings.map((warning) => rekeyWarning(warning, new Map([[curve.curveId, curveId]])))

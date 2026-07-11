@@ -7,7 +7,7 @@ Define how the PCR graph web tool will be validated and how completion will be j
 Active draft
 
 ## Last Updated
-2026-07-09
+2026-07-11
 
 ## Owner
 QA / Engineering / Agent
@@ -15,7 +15,8 @@ QA / Engineering / Agent
 ## Compression-Safe Summary
 - MVP testing is PCR-specific, not generic spreadsheet charting.
 - MVP input is Excel upload only: `.xls` and `.xlsx`, first worksheet only.
-- CSV import, pasted input, manual entry, and in-app data editing are deferred beyond MVP.
+- CSV file import, manual entry, and in-app data editing are deferred beyond MVP.
+- Quick Paste Import is implemented as a post-MVP paste/import path and must be tested as a source-import flow, not as source-data editing.
 - Testing must cover PCR/LAMP-style import, append import, stable curve IDs, reagent-first selection, collapsed groups, search, grouping-aware labels, fixed axes, user-editable P1/P2 presets, clean chart visual style, stable colors, default no markers, style/legend behavior, PNG/JPEG export, clipboard fallback, and GitHub Pages.
 - Exported images must match the current rendered chart state, use a white background, and use analysis-name-based safe filenames.
 - Plotted-data CSV export is allowed only for a simple current chart projection.
@@ -34,6 +35,7 @@ Implemented MVP plus R0-R13 refinement scope:
 
 - `.xls` and `.xlsx` Excel upload
 - First-worksheet-only parsing
+- Quick Paste Import for tab-separated or single-column text, with full-table and single-specimen modes
 - PCR header interpretation: row 1 specimen, row 2 reagent, row 3+ fluorescence
 - Generated cycle X values
 - Import warnings without automatic correction
@@ -59,8 +61,7 @@ Implemented MVP plus R0-R13 refinement scope:
 
 Deferred beyond MVP:
 
-- CSV import
-- Pasted table input
+- CSV file import
 - Manual entry
 - In-app data editing
 - Multi-sheet picker
@@ -71,6 +72,11 @@ Deferred beyond MVP:
 - Multi-chart/batch layout
 - Report/Plotted XLSX with static chart image
 - Native editable Excel chart generation
+
+Implemented post-MVP:
+
+- Quick Paste Import for small tab-separated or single-column pasted tables using either full-table mode, row 1 specimen / row 2 reagent / row 3+ fluorescence, or single-specimen mode, one supplied specimen name / pasted row 1 reagent / pasted row 2+ fluorescence. Comma/CSV tables are rejected rather than guessed.
+- Quick Paste must provide read-only preview, warnings, append/new-analysis import, source traceability, and Analysis XLSX continuity without in-app cell editing.
 
 ## Test Levels
 - Smoke tests for the core Excel import to export flow.
@@ -87,7 +93,7 @@ Deferred beyond MVP:
 | --- | --- | --- | --- |
 | AC-001 | FR-001 | User can import a valid `.xls` or `.xlsx` file and see a normalized PCR model parsed from the first worksheet only. | Automated + manual |
 | AC-002 | FR-001, FR-004 | User can review detected specimen labels, reagent labels, fluorescence columns, generated cycles, and import warnings. | Automated + manual |
-| AC-003 | FR-003 | Pasted input, manual entry, and in-app data editing are not required in MVP; correction flow is source-file edit followed by reupload. | Manual/document review |
+| AC-003 | FR-003 | Quick Paste Import is implemented beyond the original MVP and remains paste/import only. Manual entry, spreadsheet-grid editing, and in-app source-data correction are not allowed. | Automated + manual/document review |
 | AC-004 | FR-005 | Selection, grouping, search, and search bulk actions update the selected curve set and rendered chart data. | Automated + manual |
 | AC-005 | FR-007 | Multi-chart layout and batch arrangement are deferred; the single-chart MVP layout remains usable without overlap or clipped controls. | Manual + visual |
 | AC-006 | FR-006, FR-008 | Chart, style, and legend settings affect the rendered chart as configured. | Automated + manual |
@@ -139,14 +145,40 @@ These criteria bind implementation to decisions `D010` through `D016`.
 | AC-PCR-033 | FR-017, D026, D035 | Analysis XLSX export stores the complete imported dataset, source metadata, warnings, selection, order, scale, style, Analysis labels, legend/export settings, analysis name, and export counter, regardless of whether curves are currently selected or plotted. Analysis XLSX filenames are safe and sanitized, visible `ImportedData` keeps original labels separate from Analysis labels, and transient UI state, runtime tab IDs, and dirty state are excluded. | Unit + workbook readback |
 | AC-PCR-034 | FR-017, D026 | Analysis XLSX import restores the hidden JSON state, including unselected curves, while assigning a tab-local analysis ID and clean dirty state; missing, corrupt, chunk-damaged, or unsupported restore sheets show clear errors. | Unit + component + E2E |
 | AC-PCR-035 | FR-018, D027 | Multiple analysis tabs keep dataset, selection, search, display filter, collapse state, scale, style, legend/export order, export counter, source files, and analysis name independent. Tab overflow remains usable without breaking the main layout. | Unit + component + E2E + visual |
-| AC-PCR-036 | FR-001, FR-017, FR-018, D027 | File actions distinguish original Excel and Analysis XLSX: replace, append, restore, and new-tab open do not conflict. Dirty close and dirty replace/restore actions require explicit confirmation and never discard or overwrite analysis state silently. | Unit + component + E2E |
+| AC-PCR-036 | FR-001, FR-017, FR-018, D027 | File actions distinguish original Excel and Analysis XLSX: replace, append, restore, and new-tab open do not conflict. Dirty close and dirty replace/restore actions require explicit confirmation and never discard or overwrite analysis state silently. File-replace confirmation is a keyboard-modal dialog with initial focus, Escape cancel, and focus restoration. | Unit + component + E2E |
 | AC-PCR-037 | FR-006, FR-017, D026 | Analysis XLSX contains no native editable Excel chart, and export/import performs no smoothing, normalization, baseline correction, Ct/Cq, threshold, or positive/negative interpretation. | Unit + package/workbook inspection |
 | AC-PCR-038 | FR-020 | With X values around 1-100, 100 visible curves x 100 points passes browser smoke testing, and hundreds to 1000 imported curves remain selectable through virtualization/search. | Performance smoke + manual |
 | AC-PCR-039 | FR-020 | Hover information is available through a fixed readout or equivalent UI that does not block plot inspection; chart and legend hover highlight clears on pointer exit and does not alter marker/style/export state. | Component + Playwright |
 | AC-PCR-040 | FR-020, D032 | Large style and legend lists remain operable through search, scrolling, virtualization, and compact group controls that avoid unnecessary horizontal scrolling. | Component + Playwright |
 | AC-PCR-041 | FR-008, FR-011, FR-017, FR-019, D028 | Selected, chart-visible, legend-visible, export-layout, and Analysis XLSX persisted settings are separate states; changing one does not implicitly mutate the others. | Unit + component + E2E + Analysis XLSX roundtrip/readback |
 | AC-PCR-042 | FR-008, D029 | Individual style rows show curve identity, clear column labels, source disambiguation for duplicate labels, and reset/status controls that target the intended curve ID. | Component + E2E |
-| AC-PCR-043 | FR-020 | Main tab, tree, accordion, style, legend, and export controls are keyboard reachable and expose accessible names/states where feasible. | Component + Playwright accessibility smoke + manual |
+| AC-PCR-043 | FR-020 | Main tab, file import, tree, accordion, style, legend, and export controls are keyboard reachable, expose accessible names/states where feasible, and show a visible focus indication. | Component + Playwright accessibility smoke + manual |
+| AC-PCR-044 | FR-006, FR-009, FR-010, D036 | Box zoom mode highlights the valid plot area, lets the user drag a visible plot-area rectangle, and converts that selection to Fixed X/Y scale bounds without transforming, smoothing, cropping, or deleting the underlying curve data. The mode shows clear active/cancel/reject feedback, can be cancelled with Escape, clears hover emphasis while active, and enables Previous scale to restore the prior scale one Box zoom step at a time. Auto scale is separate and restores both axes to automatic mode while clearing Box zoom return history. Analysis XLSX stores/restores the current resulting scale bounds like any other scale setting; transient return history is browser-session state only. | Unit + component + E2E + Analysis XLSX roundtrip |
+
+## Quick Paste Import Acceptance Criteria
+
+| ID | Requirement / Decision | Acceptance Criterion | Verification |
+| --- | --- | --- | --- |
+| AC-QP-001 | FR-003, D037 | The user can paste a small table into a textarea and generate a preview without importing it immediately. | Component + E2E |
+| AC-QP-002 | FR-003, D037 | Before preview confirmation, and after an invalid preview, the active analysis dataset, selection, style, legend order, export counter, and Analysis labels are unchanged. | Unit + component |
+| AC-QP-003 | FR-003, D037 | The preview table is read-only and provides no cell editing, spreadsheet grid editing, source-data correction, smoothing, normalization, or value transformation controls. | Component + visual/manual |
+| AC-QP-004 | FR-003, IO-003 | Valid full-table pasted input is parsed using the same structure as Excel input: row 1 specimen labels, row 2 reagent labels, row 3+ fluorescence values, and generated `Cycle 1..N` X values. | Unit |
+| AC-QP-005 | FR-003, IO-003 | Missing specimen headers, missing reagent headers, empty fluorescence cells, nonnumeric fluorescence cells, duplicate curve labels, and similar specimen/reagent labels produce warnings consistent with the Excel parser policy. | Unit |
+| AC-QP-006 | FR-003, D025, D037 | Current-analysis append preserves existing selected curves, scale, style rules, individual overrides, Analysis labels, legend/export order, and export behavior. Newly appended paste curves are unselected and curve IDs do not collide. | Unit + component + E2E |
+| AC-QP-007 | FR-003, FR-018, D027, D037 | New-analysis import creates an independent analysis tab using the same default selection policy as Excel import: no selected curves and all major groups collapsed. | Unit + component + E2E |
+| AC-QP-008 | FR-003, FR-017, D026, D037 | Analysis XLSX export/import preserves the complete dataset including paste sources, unselected paste curves, warnings, selection, order, style, Analysis labels, scale, legend/export settings, analysis name, and export counter. | Unit + workbook readback |
+| AC-QP-009 | FR-003, FR-006, FR-008, FR-011, FR-012, FR-016 | Paste curves use the same chart projection, custom legend, style resolution, plotted CSV, PNG/JPEG export, clipboard export, and report legend paths as Excel-imported curves. | Unit + component + E2E + export smoke |
+| AC-QP-010 | FR-003, FR-006, D037 | Paste import applies no smoothing, normalization, baseline correction, log transform, averaging, Ct/Cq calculation, thresholding, or clinical interpretation. | Unit + code review |
+| AC-QP-011 | FR-003, FR-017, IO-003, D037 | Paste sources are distinguishable from Excel sources through `sourceKind` or equivalent metadata in hidden Analysis XLSX restore data and visible review sheets. Older Analysis XLSX files without this metadata still restore safely. | Unit + workbook readback |
+| AC-QP-012 | FR-003, D037 | Source name changes affect only display/source metadata and do not change `curveId`, selection identity, style overrides, Analysis labels, legend order, plotted CSV order, or export order. | Unit |
+| AC-QP-013 | FR-003, D037 | If the textarea source changes after preview generation, stale preview confirmation is blocked or clearly invalidated before import. | Component + E2E |
+| AC-QP-014 | FR-003, IO-003, D038 | In single-specimen mode, the supplied specimen name is required and is applied to all pasted reagent/fluorescence columns only while constructing the new paste import source. Blank specimen names block preview/import. | Unit + component |
+| AC-QP-015 | FR-003, D038 | Changing input mode or the single-specimen name after preview generation blocks or invalidates stale preview confirmation, and does not mutate already imported curves. | Component + E2E |
+| AC-QP-016 | FR-003, D037 | Tab-separated and delimiter-free single-column tables are accepted, while comma/CSV tables are rejected before analysis mutation with an actionable Tab-copy instruction. | Unit + component |
+| AC-QP-017 | FR-003, D037 | Empty or nonnumeric fluorescence values identify their source location and `null`/chart-gap outcome in preview. Every warning location remains reachable through bounded pagination, and import remains disabled until the user acknowledges that outcome. | Unit + component + E2E |
+| AC-QP-018 | FR-003, FR-018, D037 | Confirmation applies only to the analysis runtime instance and revision captured by preview. Closing, replacing, or changing the target blocks stale confirmation. | Unit + component |
+| AC-QP-019 | FR-003, FR-017, D037 | Analysis XLSX visible Settings/ImportedData and hidden restore data preserve mixed Excel/paste source type, immutable source ID, source name, source column, and paste input mode; repeated imports with identical file metadata retain distinct source-instance IDs, and legacy missing provenance migrates to Excel. | Unit + workbook readback |
+| AC-QP-020 | FR-003, FR-020, D037 | At a 375 x 812 viewport, the Quick Paste dialog remains inside the viewport, the body scrolls independently, warning pagination remains usable, and Cancel / append / new-analysis actions stay visible. | Playwright + visual/manual |
 
 ## PCR Test Phases
 
@@ -155,13 +187,14 @@ These criteria bind implementation to decisions `D010` through `D016`.
 3. Normalized PCR model: test stable curve IDs, source sheet/range, warnings, style state, selection state, and legend/export order.
 4. Selection tree and search: test reagent-first default, specimen-first toggle, grouping-aware labels, all-groups-collapsed default, tri-state checkboxes, collapse/expand, full-dataset search matching, and search bulk actions.
 5. Chart rendering: test selected-curve rendering, no implicit PCR transformations, null/missing values, clean visual theme, and over-20 readability warning without blocking preview/export.
-6. Scale preset and fixed axis: test Auto, Fixed, P1, P2, min/max validation, current Auto bound display, and persistence across redraw triggers.
+6. Scale preset and fixed axis: test Auto, Fixed, P1, P2, Box zoom rectangle-to-Fixed conversion, Previous scale stack return, Auto scale history clearing, min/max validation, current Auto bound display, and persistence across redraw triggers.
 7. Style preset and override: test style precedence, stable default colors, default no markers, individual marker overrides, built-in preset overwrite, affected-count feedback, and one-step undo.
 8. Analysis state and tabs: test serializable AnalysisState, multi-tab independence, dirty close/replace confirmation, and analysis name/source name separation.
 9. Analysis XLSX: test full-dataset export, hidden restore JSON, visible review sheets, roundtrip restore, invalid schema/chunk errors, and no native editable chart.
 10. Legend and export order: test manual order, custom legend, selected order, reagent/specimen order, preview/export parity, and state separation.
 11. PNG, JPEG, clipboard, plotted-data CSV, and export layout: test valid chart-only/plot+legend/legend-only images, report-readable legend-only images, white background, fake-date filename generation, selected-layout clipboard success/fallback, report legend PNG clipboard success/fallback, rich Excel report legend clipboard payload/fallback, simple plotted-data CSV, and disabled non-simple data export.
-12. Performance, accessibility, and release: test large datasets, virtualized tree/style/legend behavior, hover readout, keyboard navigation, browser compatibility, and GitHub Pages base path.
+12. Quick Paste Import: test full-table tab paste, single-specimen paste, simple comma paste, invalid paste, blank single-specimen name rejection, read-only preview, stale-preview blocking after textarea/mode/specimen changes, append/new-analysis import, source metadata, Analysis XLSX roundtrip, and chart/export parity.
+13. Performance, accessibility, and release: test large datasets, virtualized tree/style/legend behavior, hover readout, keyboard navigation, browser compatibility, and GitHub Pages base path.
 
 ## Manual Test Cases
 Before a user-visible MVP release:
@@ -197,6 +230,7 @@ Before a user-visible MVP release:
 29. In group style rows, confirm the color popover opens with HEX entry first and the combined line/marker popover shows all line and marker choices without horizontal scrolling, then closes after a line or marker choice.
 30. Edit an Analysis label and switch Auto compact / Full labels; confirm chart/custom legend labels, report legend PNG, Excel-cell legend copy, plotted-data CSV headers, and Analysis XLSX restore use the Analysis label while original specimen/reagent/source labels remain available for reset and traceability.
 31. Paste `Copy for Excel` output into Windows Excel from Chrome/Edge and confirm the colored style glyph sample and legend name land in separate cells with readable Malgun Gothic 9 pt formatting.
+32. Enable Box zoom, confirm the valid plot area is visibly highlighted, drag a visible region inside that highlighted plot area, and confirm X/Y modes become Fixed with populated bounds; press Previous scale and confirm the prior scale is restored. Repeat multiple Box zooms and confirm Previous scale returns one step at a time. Press Auto scale and confirm both axes return to Auto and Previous scale is disabled. Repeat a too-small or outside drag and confirm the app gives feedback without changing data or crashing.
 
 ## Browser Matrix
 Minimum manual verification candidates:

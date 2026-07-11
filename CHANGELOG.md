@@ -7,7 +7,7 @@ User visible and release relevant change history.
 Active draft
 
 ## Last Updated
-2026-07-10
+2026-07-11
 
 ## Owner
 Agent / Engineering
@@ -25,13 +25,34 @@ Update this file when user visible behavior, documentation baseline, release rea
 ## [Unreleased]
 
 ### Added
+- Implemented Quick Paste Import for small comparison datasets with full-table and single-specimen modes, tab-separated or single-column input, read-only preview, source-position warnings, warning acknowledgement, append/new-analysis actions, and no in-app cell editing.
+- Added mixed Excel/paste source provenance to Analysis XLSX hidden restore data and visible Settings/ImportedData sheets, including source type, immutable source ID, source name, source column, and paste input mode.
+- Added Quick Paste parser, UI, store, Analysis XLSX, chart, legend, and plotted-CSV regression coverage.
+- Added `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md` with phased prompts for a paste/import-only small-table input path, including full-table paste, single-specimen paste with pre-import specimen-name supply, read-only preview, warning policy, append/new-analysis flow, Analysis XLSX continuity, and no in-app source editing.
+- Added Box zoom controls for chart preview. Dragging the plot area applies the selected region as Fixed X/Y scale so preview, image export, clipboard output, and Analysis XLSX restore state remain aligned.
 - Added Analysis label editing under the Legend settings, with Auto compact / Full label modes and per-curve labels that apply consistently to chart/custom legends, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state while preserving original specimen/reagent/source labels for reset and traceability.
 - Added rich Excel-cell legend clipboard copy using an HTML table clipboard payload with Malgun Gothic 9 pt text so style samples and names can paste into separate Excel cells where supported.
 - Added purpose-grouped Export controls for Chart image, Report legend, and Data/session, with report legend image file saves moved behind a nested disclosure.
 - Added Analysis XLSX continuity regression coverage for current Analysis labels, preview legend state, label mode, image export layout, export counter, selected/unselected curves, and user order.
 - Added direct parser regression coverage for missing specimen headers, missing reagent headers, both headers missing, and uneven curve lengths.
 
+### Changed
+- Quick Paste accepts Excel-style Tab copies and unambiguous single-column input; comma/CSV tables are rejected to prevent silent delimiter corruption.
+- Analysis runtime operations now use transient instance IDs and revisions so stale paste previews and mid-save/mid-replace changes cannot overwrite or close the wrong analysis.
+- Updated functional requirements, I/O rules, test plan, and decisions D037-D040 to treat Quick Paste Import as an implemented post-MVP import path while keeping CSV file import, manual entry, and in-app editing excluded.
+- Changed Box zoom scale recovery so `Previous scale` restores the prior scale state one zoom step at a time, while `Auto scale` remains a separate full automatic reset.
+- Changed Box zoom mode to visually highlight the valid plot area before dragging, reducing ambiguous starts or releases in the axis/label margins.
+- Updated the default chart color order to the user-preferred palette: purple, blue, green, yellow, red, gray, sky blue, and pink.
+- Normalized command-button and form-control sizing across analysis tabs, import actions, selection filters, chart tools, scale presets, legend controls, and export controls while keeping status badges intentionally smaller.
+
 ### Fixed
+- Quick Paste warning details are now paginated so every source cell remains inspectable without rendering an unbounded list, and the mobile dialog keeps all import actions visible while only its body scrolls.
+- Stale Quick Paste previews can no longer create a new analysis after the captured target analysis changed, closed, or was replaced.
+- Repeated imports with identical file metadata now retain distinct immutable source-instance identities, and whitespace-only headers use positional fallback identities and readable display labels.
+- Dirty file replacement now uses a keyboard-modal native dialog with Escape and focus restoration; visible file controls show keyboard focus through their containing button labels.
+- Analysis XLSX save completion no longer marks a different tab clean or closes an analysis that changed while its snapshot was being generated.
+- Box zoom now cleans up outside-canvas mouse release states and suppresses hover/legend emphasis while the zoom tool is active.
+- Fixed nested Style popover triggers inheriting accordion summary sizing, tightened icon reset buttons, and removed an obsolete hidden legend clipboard button wrapper from Export controls.
 - Fixed the preview legend visibility label mojibake and applied Auto compact legend labels consistently to the chart preview legend and plot/legend image exports.
 - Tightened the Legend Labels reset control and stacked the Export Legend header to prevent narrow-panel text overlap.
 - Created initial documentation scaffold.

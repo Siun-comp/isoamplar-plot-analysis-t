@@ -63,8 +63,8 @@ export function DataSelectionPanel() {
   if (!dataset || !selection) {
     return (
       <div className="empty-state">
-        <strong>Excel 파일을 업로드하세요</strong>
-        <p>업로드 후 시약별 기본 보기에서 모든 대분류가 접힌 상태로 시작합니다.</p>
+        <strong>분석 데이터를 가져오세요</strong>
+        <p>Excel 또는 붙여넣기 입력 후 시약별 기본 보기에서 모든 대분류가 접힌 상태로 시작합니다.</p>
       </div>
     );
   }

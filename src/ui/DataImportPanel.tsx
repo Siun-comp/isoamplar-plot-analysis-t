@@ -1,5 +1,6 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useAppStore } from "../app/appStore";
+import { PasteImportPanel } from "./PasteImportPanel";
 
 type PendingReplaceFile = {
   file: File;
@@ -7,9 +8,11 @@ type PendingReplaceFile = {
 };
 
 export function DataImportPanel() {
-  const inputId = useId();
-  const appendInputId = useId();
   const confirmationTitleId = useId();
+  const primaryInputRef = useRef<HTMLInputElement>(null);
+  const confirmationDialogRef = useRef<HTMLDialogElement>(null);
+  const confirmationCancelRef = useRef<HTMLButtonElement>(null);
+  const restorePrimaryFocusRef = useRef(false);
   const activeAnalysisId = useAppStore((state) => state.activeAnalysisId);
   const dataset = useAppStore((state) => state.dataset);
   const dirty = useAppStore((state) => state.dirty);
@@ -25,6 +28,31 @@ export function DataImportPanel() {
     setPendingReplaceFile((pending) => (pending && pending.analysisId !== activeAnalysisId ? null : pending));
   }, [activeAnalysisId]);
 
+  useEffect(() => {
+    const dialog = confirmationDialogRef.current;
+    if (!dialog) return;
+    let focusTimer: number | undefined;
+    if (pendingReplaceFile && !dialog.open) {
+      if (typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+      focusTimer = window.setTimeout(() => {
+        if (dialog.open) confirmationCancelRef.current?.focus();
+      }, 0);
+    } else if (!pendingReplaceFile) {
+      if (dialog.open) {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+      }
+      if (restorePrimaryFocusRef.current) {
+        restorePrimaryFocusRef.current = false;
+        focusTimer = window.setTimeout(() => primaryInputRef.current?.focus(), 0);
+      }
+    }
+    return () => {
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
+    };
+  }, [pendingReplaceFile]);
+
   function handlePrimaryFile(file: File) {
     if (dirty) {
       setPendingReplaceFile({ file, analysisId: activeAnalysisId });
@@ -34,6 +62,7 @@ export function DataImportPanel() {
   }
 
   function clearPendingReplace() {
+    restorePrimaryFocusRef.current = true;
     setPendingReplaceFile(null);
   }
 
@@ -47,43 +76,44 @@ export function DataImportPanel() {
   return (
     <section className="import-panel" aria-labelledby="import-title">
       <div>
-        <h2 id="import-title">Excel 데이터</h2>
-        <p>.xls 또는 .xlsx 첫 번째 worksheet만 사용합니다.</p>
+        <h2 id="import-title">데이터 가져오기</h2>
+        <p>Excel 파일 또는 소량 표 붙여넣기를 사용합니다. Excel은 첫 번째 worksheet만 사용합니다.</p>
       </div>
       <div className="import-actions">
-        <label className="file-button" htmlFor={inputId} aria-disabled={busy}>
+        <label className={`file-button ${busy ? "is-disabled" : ""}`} aria-disabled={busy}>
           파일 선택
+          <input
+            ref={primaryInputRef}
+            className="file-input"
+            type="file"
+            disabled={busy}
+            accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file) handlePrimaryFile(file);
+              event.currentTarget.value = "";
+            }}
+          />
         </label>
-        <label className={`file-button ${!dataset || busy ? "is-disabled" : ""}`} htmlFor={!dataset || busy ? undefined : appendInputId}>
+        <label className={`file-button ${!dataset || busy ? "is-disabled" : ""}`} aria-disabled={!dataset || busy}>
           추가 선택
+          <input
+            className="file-input"
+            type="file"
+            disabled={!dataset || busy}
+            accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file) void appendFile(file);
+              event.currentTarget.value = "";
+            }}
+          />
         </label>
+        <PasteImportPanel disabled={busy} />
       </div>
-      <input
-        id={inputId}
-        className="file-input"
-        type="file"
-        accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0];
-          if (file) handlePrimaryFile(file);
-          event.currentTarget.value = "";
-        }}
-      />
-      <input
-        id={appendInputId}
-        className="file-input"
-        type="file"
-        disabled={!dataset || busy}
-        accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0];
-          if (file) void appendFile(file);
-          event.currentTarget.value = "";
-        }}
-      />
 
       <div className="import-summary" aria-live="polite">
-        {importStatus === "idle" && <span>업로드 전</span>}
+        {importStatus === "idle" && <span>가져오기 전</span>}
         {importStatus === "importing" && <span>읽는 중</span>}
         {importStatus === "error" && <span className="error-text">{importError}</span>}
         {dataset && (
@@ -93,15 +123,36 @@ export function DataImportPanel() {
         )}
         {dataset && importError && importStatus !== "error" && <span className="error-text">{importError}</span>}
       </div>
-      {pendingReplaceFile && (
-        <div className="confirmation-panel" role="alertdialog" aria-modal="true" aria-labelledby={confirmationTitleId}>
+      <dialog
+        ref={confirmationDialogRef}
+        className="confirmation-panel"
+        role="alertdialog"
+        aria-labelledby={confirmationTitleId}
+        onCancel={(event) => {
+          event.preventDefault();
+          clearPendingReplace();
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          clearPendingReplace();
+        }}
+      >
+        {pendingReplaceFile && (
+          <>
           <h3 id={confirmationTitleId}>Unsaved analysis</h3>
           <p>
             현재 분석에 저장되지 않은 변경사항이 있습니다. {pendingReplaceFile.file.name} 파일을 현재 탭에 대체하거나 새 분석
             탭으로 열 수 있습니다.
           </p>
           <div className="confirmation-actions">
-            <button type="button" aria-label="Cancel file replace" onClick={clearPendingReplace}>
+            <button
+              ref={confirmationCancelRef}
+              type="button"
+              aria-label="Cancel file replace"
+              autoFocus
+              onClick={clearPendingReplace}
+            >
               Cancel
             </button>
             <button type="button" aria-label="Replace current analysis" onClick={() => importPendingReplace("replace")}>
@@ -111,8 +162,9 @@ export function DataImportPanel() {
               새 분석으로 열기
             </button>
           </div>
-        </div>
-      )}
+          </>
+        )}
+      </dialog>
     </section>
   );
 }

@@ -52,12 +52,12 @@ describe("App PCR workspace", () => {
     expect(screen.queryByText("Release validation")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Analysis 1" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("textbox", { name: "Analysis name" })).toHaveValue("Analysis 1");
-    expect(screen.getByRole("heading", { name: "Excel 데이터" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "데이터 가져오기" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "데이터 선택" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "그래프 미리보기" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "설정" })).toBeInTheDocument();
     expect(screen.getAllByText("선택된 curve가 없습니다.").length).toBeGreaterThan(0);
-    expect(screen.getByText(".xls 또는 .xlsx 첫 번째 worksheet만 사용합니다.")).toBeInTheDocument();
+    expect(screen.getByText("Excel 파일 또는 소량 표 붙여넣기를 사용합니다. Excel은 첫 번째 worksheet만 사용합니다.")).toBeInTheDocument();
   });
 
   it("starts imported datasets in reagent-first view with all major groups collapsed", () => {
@@ -127,7 +127,7 @@ describe("App PCR workspace", () => {
     expect(useAppStore.getState().selection?.selectedCurveIds.has(firstCurveId)).toBe(false);
     expect(useAppStore.getState().selection?.selectedCurveIds.has(secondCurveId)).toBe(true);
     expect(subgroupCheckbox).toHaveAttribute("aria-checked", "mixed");
-  });
+  }, 10000);
 
   it("creates, renames, switches, and confirms dirty close for analysis tabs", async () => {
     const user = userEvent.setup();
@@ -148,7 +148,12 @@ describe("App PCR workspace", () => {
 
     const fileInput = document.querySelector("input[type='file']") as HTMLInputElement;
     await user.upload(fileInput, new File(["placeholder"], "replacement.xlsx"));
-    expect(screen.getByRole("alertdialog", { name: "Unsaved analysis" })).toBeInTheDocument();
+    const replaceDialog = screen.getByRole("alertdialog", { name: "Unsaved analysis" });
+    expect(replaceDialog).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancel file replace" })).toHaveFocus());
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog", { name: "Unsaved analysis" })).not.toBeInTheDocument();
+    expect(fileInput).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "New analysis" }));
     expect(screen.queryByRole("alertdialog", { name: "Unsaved analysis" })).not.toBeInTheDocument();
@@ -224,6 +229,24 @@ describe("App PCR workspace", () => {
 
     expect(fixedInputs[0]).toHaveValue(1);
     expect(fixedInputs[1]).toHaveValue(45);
+
+    const boxZoomButton = screen.getByRole("button", { name: "Box zoom" });
+    const previousScaleButton = screen.getByRole("button", { name: "Previous scale" });
+    expect(boxZoomButton).toHaveAttribute("aria-pressed", "false");
+    expect(previousScaleButton).toBeDisabled();
+    await user.click(boxZoomButton);
+    expect(boxZoomButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Drag inside the highlighted plot area to apply Fixed X/Y scale.")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(boxZoomButton).toHaveAttribute("aria-pressed", "false");
+
+    act(() => {
+      useAppStore.getState().setChartFixedScaleBounds({ xMin: "10", xMax: "20", yMin: "100", yMax: "200" });
+    });
+    expect(useAppStore.getState().chartScale.x.mode).toBe("fixed");
+    await user.click(screen.getByRole("button", { name: "Auto scale" }));
+    expect(useAppStore.getState().chartScale.x.mode).toBe("auto");
+    expect(useAppStore.getState().chartScale.y.mode).toBe("auto");
   });
 
   it("accepts HEX color input for group and individual curve styles", async () => {

@@ -116,6 +116,7 @@ export function parseWorkbook(workbook: XLSX.WorkBook, fileName: string, xlsx: X
       fileName,
       sheetName: firstSheetName,
       cycleCount: lastDataRow - 1,
+      sourceKind: "excel",
       warnings: [...importWarnings, ...curveWarnings]
     })
   };
@@ -197,12 +198,13 @@ function createCurveFromColumn(args: {
     specimenLabel,
     reagentLabel,
     displayLabel: formatCurveEntityPair(
-      specimenLabel || `Empty specimen ${specimenCell}`,
-      reagentLabel || `Empty reagent ${reagentCell}`
+      specimenLabel.trim() ? specimenLabel : `Empty specimen ${specimenCell}`,
+      reagentLabel.trim() ? reagentLabel : `Empty reagent ${reagentCell}`
     ),
     x,
     y,
     source: {
+      sourceKind: "excel",
       fileName,
       sheetName,
       sheetIndex: 0,

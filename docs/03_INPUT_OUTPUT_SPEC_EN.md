@@ -7,14 +7,15 @@ Define how data enters the application, how it is normalized internally, and wha
 Active draft
 
 ## Last Updated
-2026-07-09
+2026-07-11
 
 ## Owner
 Engineering / Agent
 
 ## Compression-Safe Summary
 - MVP input is Excel upload only: `.xls` and `.xlsx`, first worksheet only. Additional Excel files may be appended to the current in-browser analysis.
-- CSV, pasted table data, manual entry, and in-app data editing are deferred beyond MVP.
+- CSV file import, manual entry, and in-app data editing are deferred beyond MVP.
+- Quick Paste Import is implemented as a post-MVP paste/import path for small pasted tables using either the same two-header Excel structure or a single-specimen mode with one supplied specimen name.
 - Imported PCR data should normalize into stable specimen/reagent/curve records keyed by `curveId`; appended files must rekey curves to avoid ID collisions.
 - Parsing should preserve original values and surface warnings.
 - Output image and clipboard content should match the current rendered chart or the explicitly selected report-legend output.
@@ -33,7 +34,7 @@ Update this file when parsing rules, data types, invalid data handling, internal
 | --- | --- | --- | --- | --- |
 | IO-001 | Excel workbook | Support `.xls` and `.xlsx` upload through browser file APIs; parse only the first worksheet. The user can replace the current dataset or append another file to the current analysis. If the active analysis is dirty, replace upload requires explicit replace or new-analysis confirmation. | FR-001 | AC-001, AC-002, AC-PCR-001, AC-PCR-015, AC-PCR-016, AC-PCR-025 |
 | IO-002 | CSV file | Deferred beyond MVP. | FR-002 | TBD |
-| IO-003 | Pasted table | Deferred beyond MVP. | FR-003 | TBD |
+| IO-003 | Pasted table | Implemented post-MVP Quick Paste Import. The user pastes a small table into a textarea using either full-table mode, row 1 specimen labels / row 2 reagent labels / row 3+ fluorescence values, or single-specimen mode, one supplied specimen name / pasted row 1 reagent labels / pasted row 2+ fluorescence values. The app generates a read-only preview and source-position warnings before append/new-analysis import. No in-app cell editing or source-data correction is allowed. | FR-003 | AC-QP-001 through AC-QP-020 |
 | IO-004 | Manual entry / editing | Deferred beyond MVP. Imported data is not editable in MVP. | FR-003 | AC-PCR-017 |
 | IO-005 | Analysis XLSX restore file | Support `.xlsx` files containing the hidden IsoAmplar restore sheet. `파일 선택` restores/replaces the active analysis when safe or after explicit dirty replace confirmation; `추가 선택` opens the saved analysis as a new internal tab. | FR-017, FR-018 | AC-PCR-033, AC-PCR-034, AC-PCR-036, AC-PCR-037 |
 
@@ -76,7 +77,7 @@ Analysis XLSX is a project/session restore file for IsoAmplar Plot Analysis. It 
 Workbook shape:
 
 - `README`: human-readable explanation that this file is for restoring an IsoAmplar analysis in the web app.
-- `Settings`: human-readable analysis name, export date, app version, selected count, scale/style/legend summary, and source summary.
+- `Settings`: human-readable analysis name, export date, app version, selected count, scale/style/legend summary including current X/Y scale mode and fixed bounds, and source summary.
 - `ImportedData`: full normalized imported dataset for review, including curves that are not currently selected or plotted.
 - The visible `ImportedData` sheet shows original specimen/reagent labels, an Analysis label row, curve IDs, and raw fluorescence values so review remains traceable without mutating source labels.
 - `Warnings`: import warnings preserved from the analysis.
@@ -120,10 +121,35 @@ Report/Plotted XLSX remains deferred and is separate from Analysis XLSX.
 - Native editable Excel chart generation is excluded from the current implementation and no chart-image workbook dependency is required.
 
 ## Pasted Table Rules
-Pasted table input is not part of the MVP.
+Quick Paste Import is an implemented post-MVP input path, not an in-app spreadsheet editor.
+
+Implemented rules:
+- Input is textarea text copied from a small table.
+- Full-table mode uses the same structure as Excel import: row 1 specimen labels, row 2 reagent labels, row 3+ fluorescence values.
+- Single-specimen mode requires a separate specimen-name field and uses pasted row 1 as reagent labels and pasted row 2+ as fluorescence values.
+- In single-specimen mode, the supplied specimen name is applied only while constructing the new paste import source before preview confirmation. It is not a correction or edit of previously imported data.
+- Blank single-specimen names block preview/import with an actionable message.
+- X values are generated as `Cycle 1..N`, matching Excel import behavior.
+- Tab-separated text is the primary supported delimiter.
+- Delimiter-free single-column input is supported for one copied curve.
+- Comma-separated/CSV tables are rejected before import. Quoted CSV, escaped comma, multiline cells, thousands-separator interpretation, decimal-comma interpretation, and custom CSV dialects are not supported.
+- Repeated whitespace is not a supported delimiter because specimen/reagent labels can contain spaces.
+- The preview parser must not mutate the active analysis until the user confirms append or new-analysis import.
+- Preview output is read-only. Users correct errors by editing the textarea source, or the specimen-name field in single-specimen mode, and regenerating preview.
+- Changing the input mode, specimen-name field, or textarea after preview invalidates or blocks stale preview confirmation.
+- Source-name-only changes do not reparse fluorescence data; source metadata is updated atomically while `curveId` and the immutable source-instance ID remain unchanged.
+- Empty or nonnumeric fluorescence values become `null` only after the preview identifies the source location and the user acknowledges the resulting chart gap.
+- Source metadata should identify paste sources, preferably through `sourceKind: "paste"` or an equivalent explicit marker in restore metadata and visible review sheets.
+- `curveId` remains source-position based and is not derived from editable source names. Source name changes must not change selection, style overrides, legend order, or export order identities.
+- Current-analysis append preserves existing selected curves, scale, style rules, individual overrides, Analysis labels, legend/export order, and export counter policy. Newly appended paste curves start unselected.
+- New-analysis import creates an independent analysis tab using the same default selection policy as Excel import: no selected curves and all major groups collapsed.
+- Analysis XLSX must preserve paste sources as part of the full dataset, including unselected paste curves and their source metadata.
+- Analysis XLSX visible review sheets identify source type, source name, immutable source ID, source column, and paste input mode; hidden restore JSON is authoritative.
+- Every import instance receives an immutable source-instance ID even when the same filename and worksheet metadata are imported repeatedly.
+- Warning details use bounded pagination so every warning source location remains inspectable; the acknowledgement still applies only after the user explicitly accepts the displayed `null`/chart-gap outcome.
 
 ## Manual Entry Rules
-Manual table entry and in-app data editing are not part of the MVP. Source data corrections should be made in Excel and reuploaded.
+Manual table entry and in-app data editing are not part of the MVP or the Quick Paste Import plan. Source data corrections should be made in the source Excel file, or in the paste textarea before preview confirmation. The single-specimen Quick Paste field supplies a missing specimen header before import; it does not edit an imported dataset. Once imported, source specimen, reagent, and fluorescence values are not edited inside the app.
 
 ## PCR Header Interpretation
 MVP rules:
@@ -256,7 +282,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 
 | ID | Output | Initial Rule | Related Requirements | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
-| IO-101 | Chart preview | Reflect current dataset, filters, mappings, layout, legend, and fixed scales. | FR-006 to FR-010 | AC-004 to AC-008 |
+| IO-101 | Chart preview | Reflect current dataset, filters, mappings, layout, legend, fixed scales, and Box zoom-applied Fixed X/Y bounds. | FR-006 to FR-010 | AC-004 to AC-008, AC-PCR-044 |
 | IO-102 | Image download | Export the current chart preview as PNG or JPEG with white background. | FR-011 | AC-009, AC-PCR-010 |
 | IO-103 | Clipboard output | Copy the selected chart image layout where supported, provide report legend-only PNG clipboard copy, provide rich Excel-cell report legend clipboard copy where supported, and show fallback on failure. | FR-012, FR-019 | AC-010, AC-PCR-031, AC-PCR-041 |
 | IO-104 | Static build | Produce static assets that work on GitHub Pages. | FR-013 | AC-011 |
@@ -269,7 +295,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 - Filename convention: `YYMMDD_<sanitizedAnalysisName>_plotN.ext`, using browser-local date and the current analysis name. Example: `260709_Run_A_plot1.png`.
 - The analysis name segment is sanitized by trimming whitespace, replacing invalid filename characters and whitespace with `_`, collapsing repeated `_`, trimming surrounding `_`, and limiting the segment length. Blank or fully invalid names fall back to `analysis`.
 - Export excludes UI controls and includes only the chart output.
-- Export reflects current selected curves, scale, style, legend/order state, and selected export layout.
+- Export reflects current selected curves, scale, Box zoom-applied Fixed bounds, style, legend/order state, and selected export layout.
 - Image export layouts:
   - `plotOnly`: exports only the chart canvas with the built-in ECharts legend hidden.
   - `plotWithLegend`: exports the chart plus a custom legend area below the plot so the legend does not obscure plotted data.

@@ -24,4 +24,23 @@ describe("PCR dataset append merge", () => {
     expect(result.dataset.reagents).toHaveLength(2);
     expect(result.dataset.specimens).toHaveLength(2);
   });
+
+  it("keeps repeated imports with identical file metadata traceable as separate source instances", () => {
+    const base = createSyntheticPcrDataset({
+      fileName: "repeated.xlsx",
+      specimenLabels: ["Specimen 1"],
+      reagentLabels: ["A1"]
+    });
+    const incoming = createSyntheticPcrDataset({
+      fileName: "repeated.xlsx",
+      specimenLabels: ["Specimen 1"],
+      reagentLabels: ["A1"]
+    });
+
+    const result = appendPcrDataset(base, incoming);
+    const [firstCurve, secondCurve] = result.dataset.curves;
+
+    expect(firstCurve.source.sourceInstanceId).not.toBe(secondCurve.source.sourceInstanceId);
+    expect(firstCurve.sourceId).not.toBe(secondCurve.sourceId);
+  });
 });

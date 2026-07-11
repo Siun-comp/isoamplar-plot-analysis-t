@@ -7,10 +7,75 @@ test("renders the upload-first PCR workspace", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "IsoAmplar Plot Analysis" })).toBeVisible();
   await expect(page.getByText("Developer Jang Si Un")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Excel 데이터" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "데이터 가져오기" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "데이터 선택" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "그래프 미리보기" })).toBeVisible();
-  await expect(page.getByText(".xls 또는 .xlsx 첫 번째 worksheet만 사용합니다.")).toBeVisible();
+  await expect(page.getByText("Excel 파일 또는 소량 표 붙여넣기를 사용합니다. Excel은 첫 번째 worksheet만 사용합니다.")).toBeVisible();
+});
+
+test("previews and imports full-table and single-specimen pasted data", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "붙여넣기 입력" }).click();
+  let dialog = page.getByRole("dialog", { name: "소량 표 붙여넣기" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "표 데이터" })).toBeFocused();
+  await dialog
+    .getByRole("textbox", { name: "표 데이터" })
+    .fill("Synthetic Sample\tSynthetic Sample\nAssay 1\tAssay 2\n0.1\t0.2\n1.1\t1.2\n4.1\t4.2");
+  await dialog.getByRole("button", { name: "미리보기 생성" }).click();
+  await expect(dialog.getByText("측정 곡선 2개")).toBeVisible();
+  await expect(dialog.getByText("Cycle 3개")).toBeVisible();
+  await expect(dialog.getByRole("table")).toBeVisible();
+  await expect(page.getByText("가져오기 전")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("quick-paste-preview.png"), fullPage: false });
+  await dialog.getByRole("button", { name: "현재 분석에 추가" }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText(/Paste import 1 · 2 curves/)).toBeVisible();
+  await page.getByRole("searchbox", { name: "검색" }).fill("Assay 1");
+  await page.getByRole("button", { name: "표시 선택" }).click();
+  await expect(page.getByText("1개 curve 선택됨")).toBeVisible();
+  await expect(page.locator(".echarts-surface canvas")).toBeVisible();
+
+  await page.getByRole("button", { name: "붙여넣기 입력" }).click();
+  dialog = page.getByRole("dialog", { name: "소량 표 붙여넣기" });
+  await dialog.getByRole("radio", { name: "한 검체의 시약별 값" }).click();
+  await dialog.getByRole("textbox", { name: "검체명" }).fill("Comparison Sample");
+  await dialog.getByRole("textbox", { name: "표 데이터" }).fill("Assay 3\n0.3\n1.3");
+  await dialog.getByRole("button", { name: "미리보기 생성" }).click();
+  await expect(dialog.getByText("측정 곡선 1개")).toBeVisible();
+  await dialog.getByRole("button", { name: "새 분석으로 열기" }).click();
+
+  await expect(page.getByRole("tab", { name: "Paste import 2" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText(/Paste import 2 · 1 curves/)).toBeVisible();
+  await expect(page.getByText("선택 0")).toBeVisible();
+});
+
+test("keeps warning details and import actions reachable on a mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "붙여넣기 입력" }).click();
+  const dialog = page.getByRole("dialog", { name: "소량 표 붙여넣기" });
+  const sourceText = ["S1", "A1", ...Array.from({ length: 13 }, () => ""), "1"].join("\n");
+  await dialog.getByRole("textbox", { name: "표 데이터" }).fill(sourceText);
+  await dialog.getByRole("button", { name: "미리보기 생성" }).click();
+
+  await expect(dialog.getByText("1-12 / 13")).toBeVisible();
+  await dialog.getByRole("button", { name: "다음 경고" }).click();
+  await expect(dialog.getByText(/A15:.*빈 fluorescence/)).toBeVisible();
+
+  const dialogBox = await dialog.boundingBox();
+  const footerBox = await dialog.locator(".paste-dialog-footer").boundingBox();
+  expect(dialogBox).not.toBeNull();
+  expect(footerBox).not.toBeNull();
+  expect(dialogBox?.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBox?.y).toBeGreaterThanOrEqual(0);
+  expect((dialogBox?.x ?? 0) + (dialogBox?.width ?? 0)).toBeLessThanOrEqual(375);
+  expect((dialogBox?.y ?? 0) + (dialogBox?.height ?? 0)).toBeLessThanOrEqual(812);
+  expect((footerBox?.y ?? 0) + (footerBox?.height ?? 0)).toBeLessThanOrEqual(812);
+  await expect(dialog.getByRole("button", { name: "취소" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "현재 분석에 추가" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "새 분석으로 열기" })).toBeVisible();
 });
 
 test("uploads an xlsx workbook and keeps reagent-first collapsed selection", async ({ page }, testInfo) => {
@@ -23,6 +88,15 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await page.locator("input[type='file']").first().setInputFiles(workbookPath);
 
   await expect(page.getByText(/phase3-upload.xlsx · 2 curves/)).toBeVisible();
+  const primaryFileInput = page.locator("input[type='file']").first();
+  await primaryFileInput.setInputFiles(appendWorkbookPath);
+  const replaceDialog = page.getByRole("alertdialog", { name: "Unsaved analysis" });
+  await expect(replaceDialog).toBeVisible();
+  await expect(replaceDialog.getByRole("button", { name: "Cancel file replace" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(replaceDialog).toBeHidden();
+  await expect(primaryFileInput).toBeFocused();
+
   await expect(page.getByRole("radio", { name: "시약별" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("button", { name: /▸ A1/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /▸ A2/ })).toBeVisible();
@@ -50,6 +124,21 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
     .toBeGreaterThan(100);
   await expect(page.getByLabel("Chart point readout")).toContainText("Cycle -");
   await hoverUntilChartReadoutUpdates(page, canvas);
+  await applyBoxZoom(page, canvas);
+  await expect(page.getByRole("button", { name: "Box zoom" })).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByText("Fixed X/Y scale applied. Previous scale is available.")).toBeVisible();
+  const xAxis = page.getByRole("region", { name: "X axis" });
+  const yAxis = page.getByRole("region", { name: "Y axis" });
+  await expect(xAxis.getByRole("button", { name: "Fixed" })).toHaveClass(/is-active/);
+  await expect(yAxis.getByRole("button", { name: "Fixed" })).toHaveClass(/is-active/);
+  await expect(xAxis.getByRole("spinbutton").first()).not.toHaveValue("");
+  await expect(yAxis.getByRole("spinbutton").first()).not.toHaveValue("");
+  await expect(page.getByRole("button", { name: "Previous scale" })).toBeEnabled();
+  await page.getByRole("button", { name: "Previous scale" }).click();
+  await expect(page.getByText("Previous scale restored.")).toBeVisible();
+  await expect(xAxis.getByRole("button", { name: "Auto" })).toHaveClass(/is-active/);
+  await expect(yAxis.getByRole("button", { name: "Auto" })).toHaveClass(/is-active/);
+  await expect(page.getByRole("button", { name: "Previous scale" })).toBeDisabled();
 
   const chartWrap = page.locator(".chart-canvas-wrap");
   const before = await chartWrap.boundingBox();
@@ -178,4 +267,25 @@ async function hoverUntilChartReadoutUpdates(page: Page, canvasLocator: Locator)
   }
 
   throw new Error(`Chart hover readout did not update. Last readout: ${(await readout.textContent()) ?? ""}`);
+}
+
+async function applyBoxZoom(page: Page, canvasLocator: Locator) {
+  await canvasLocator.scrollIntoViewIfNeeded();
+  const box = await canvasLocator.boundingBox();
+  expect(box).not.toBeNull();
+
+  await page.getByRole("button", { name: "Box zoom" }).click();
+  await expect(page.getByRole("button", { name: "Box zoom" })).toHaveAttribute("aria-pressed", "true");
+  const plotArea = page.locator(".box-zoom-plot-area");
+  await expect(plotArea).toBeVisible();
+  const plotAreaBox = await plotArea.boundingBox();
+  expect(plotAreaBox).not.toBeNull();
+  expect(plotAreaBox?.x ?? 0).toBeGreaterThan((box?.x ?? 0) + 40);
+  expect(plotAreaBox?.y ?? 0).toBeGreaterThan((box?.y ?? 0) + 10);
+  expect((plotAreaBox?.x ?? 0) + (plotAreaBox?.width ?? 0)).toBeLessThanOrEqual((box?.x ?? 0) + (box?.width ?? 0) + 1);
+  expect((plotAreaBox?.y ?? 0) + (plotAreaBox?.height ?? 0)).toBeLessThanOrEqual((box?.y ?? 0) + (box?.height ?? 0) + 1);
+  await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) * 0.34, (box?.y ?? 0) + (box?.height ?? 0) * 0.22);
+  await page.mouse.down();
+  await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) * 0.72, (box?.y ?? 0) + (box?.height ?? 0) * 0.62, { steps: 8 });
+  await page.mouse.up();
 }

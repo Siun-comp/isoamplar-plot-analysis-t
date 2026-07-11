@@ -7,7 +7,7 @@ Define how data enters the application, how it is normalized internally, and wha
 Active draft
 
 ## Last Updated
-2026-07-11
+2026-07-12
 
 ## Owner
 Engineering / Agent
@@ -23,6 +23,8 @@ Engineering / Agent
 - Plotted-data CSV, when enabled, uses the matching analysis-name-based filename stem such as `YYMMDD_<sanitizedAnalysisName>_plotN_data.csv`, includes only the current plotted chart projection, and uses current Analysis labels for curve headers with duplicate disambiguation when needed.
 - Chart styling uses stable default colors by original data/group order, solid no-marker lines by default, and optional individual marker overrides.
 - Analysis XLSX is a web-app restore file containing the full imported dataset and settings, including Analysis labels and legend/export settings; it is separate from plotted-data CSV and report-style chart workbooks.
+- Selection Sets store tab-local curveId membership only and persist in Analysis XLSX schema 4.
+- Selected Data XLSX is the primary current-selection data output. It contains raw numeric/null values plus source/warning metadata and is not a valid original, append, or restore input.
 - Internal analysis tabs keep separate in-browser analysis states; user data remains browser-local unless explicitly exported.
 
 ## Update Rule
@@ -37,6 +39,7 @@ Update this file when parsing rules, data types, invalid data handling, internal
 | IO-003 | Pasted table | Implemented post-MVP Quick Paste Import. The user pastes a small table into a textarea using either full-table mode, row 1 specimen labels / row 2 reagent labels / row 3+ fluorescence values, or single-specimen mode, one supplied specimen name / pasted row 1 reagent labels / pasted row 2+ fluorescence values. The app generates a read-only preview, source-position warnings, row/column/cell/character/curve/cycle counts, and an approximate minimum working-memory estimate before append/new-analysis import. No in-app cell editing or source-data correction is allowed. | FR-003 | AC-QP-001 through AC-QP-021 |
 | IO-004 | Manual entry / editing | Deferred beyond MVP. Imported data is not editable in MVP. | FR-003 | AC-PCR-017 |
 | IO-005 | Analysis XLSX restore file | Support `.xlsx` files containing the hidden IsoAmplar restore sheet through the dedicated `저장한 분석 열기` command. A valid restore file opens as an independent clean internal analysis tab. `원본 데이터 열기` and `Excel 추가` reject Analysis XLSX with guidance instead of restoring or merging it. | FR-017, FR-018 | AC-PCR-033, AC-PCR-034, AC-PCR-036, AC-PCR-037, AC-PCR-049B |
+| IO-006 | Selected Data XLSX | This is an output-only workbook role. Original open, append, and Analysis restore commands shall detect its hidden marker before state mutation and reject it with guidance that the file is for Excel follow-up analysis only. | FR-001, FR-017, FR-021 | AC-PCR-055 |
 
 ## Excel Rules
 MVP target:
@@ -90,6 +93,7 @@ Workbook shape:
 - `ImportedData`: full normalized imported dataset for review, including curves that are not currently selected or plotted.
 - The visible `ImportedData` sheet shows original specimen/reagent labels, an Analysis label row, curve IDs, and raw fluorescence values so review remains traceable without mutating source labels.
 - `Warnings`: one visible row per warning/source reference with severity, handling, affected curves, source identity, location, raw/display value, format, formula, and cache state.
+- `SelectionSets`: one visible review row per saved set/curve membership with active state, curve ID, Analysis label, original specimen/reagent, source identity, and current global-order projection.
 - `_IsoAmplarAnalysis`: hidden worksheet containing `schemaVersion` and chunked JSON restore data. This hidden JSON is the authoritative restore source.
 - `_IsoAmplarChecksum`: optional hidden worksheet for checksum or sanity markers; not emitted by the current implementation.
 
@@ -104,6 +108,7 @@ Restore payload must include:
 - Chart scale state, including editable Fixed/P1/P2 drafts and the separate last valid applied mode/bounds used by preview and plot image export.
 - Style rules, including color/line/marker grouping rules, individual curve overrides with field-level custom/preset source metadata and Analysis labels, legend/export settings, legend label mode, export layout, and export counter.
 - Analysis name.
+- Named Selection Sets and the active Selection Set ID. Runtime-only one-step return history is excluded.
 
 Restore payload must exclude transient UI state:
 
@@ -117,13 +122,13 @@ Routing policy:
 
 - `파일 선택` + original Excel: replace active analysis when clean, or show dirty confirmation with Cancel / Replace current analysis / Open as new analysis.
 - `추가 선택` + original Excel: append to active analysis.
-- `원본 데이터 열기`: accepts ordinary `.xls/.xlsx` source data only. Analysis XLSX is rejected with guidance to use the restore command.
-- `Excel 추가`: appends ordinary Excel data only. Analysis XLSX is never merged into a current dataset.
-- `저장한 분석 열기`: accepts valid Analysis XLSX restore files only and opens each as an independent clean internal tab. Ordinary Excel is rejected with guidance to use the original-data command.
+- `원본 데이터 열기`: accepts ordinary `.xls/.xlsx` source data only. Analysis XLSX and Selected Data XLSX are rejected with purpose-specific guidance.
+- `Excel 추가`: appends ordinary Excel data only. Analysis XLSX and Selected Data XLSX are never merged into a current dataset.
+- `저장한 분석 열기`: accepts valid Analysis XLSX restore files only and opens each as an independent clean internal tab. Ordinary Excel and Selected Data XLSX are rejected with purpose-specific guidance.
 - `빠른 붙여넣기`: keeps the existing preview plus append/new-analysis confirmation flow.
 - Dirty tab close shows explicit options: Cancel, save Analysis XLSX then close, or close without saving. Dirty replacement never proceeds silently.
 
-If the hidden restore worksheet is missing, corrupt, chunk-damaged, or has an unsupported schema version, the app must show an actionable error and must not misinterpret the file as a normal PCR source workbook. Ordinary `.xlsx` source workbooks are treated as Analysis XLSX only when they contain the explicit IsoAmplar restore marker, so review-like sheet names such as `Settings` or `ImportedData` alone do not change routing. Current Analysis XLSX uses schema 3 and normalized dataset schema 2. Schema 1 is migrated by deriving explicit applied scale state and legacy source/header/warning provenance. Schema 2 keeps its explicit applied scale and migrates legacy header/warning provenance. Schema 3 requires explicit applied scale, Excel header provenance, warning handling, and source-reference arrays; missing required state is rejected as corrupt. Restore may fill only documented non-destructive legacy defaults.
+If the hidden restore worksheet is missing, corrupt, chunk-damaged, or has an unsupported schema version, the app must show an actionable error and must not misinterpret the file as a normal PCR source workbook. Ordinary `.xlsx` source workbooks are treated as Analysis XLSX only when they contain the explicit IsoAmplar restore marker, so review-like sheet names such as `Settings` or `ImportedData` alone do not change routing. Current Analysis XLSX uses schema 4 and normalized dataset schema 2. Schema 1 derives explicit applied scale state and legacy source/header/warning provenance; schema 2 migrates legacy header/warning provenance; schema 3 migrates to empty Selection Sets. Schema 4 requires valid unique Selection Set IDs/names, known non-empty curve membership, and a valid active set reference. Restore may fill only documented non-destructive legacy defaults.
 
 After migration and structural validation, restore must also verify generated `Cycle 1..N` X values, X/Y lengths, dataset maximum cycle count, recomputed min/max/missing/point statistics, specimen/reagent membership, source summary/provenance, warning references, selected/order/override IDs, collapsed group IDs, and style entity keys. Validation completes before a new analysis tab is committed. Restore JSON chunks must not split a UTF-16 surrogate pair.
 
@@ -132,7 +137,7 @@ Plotted CSV applies spreadsheet-formula neutralization only to final text header
 ## Report / Plotted XLSX Rules
 Report/Plotted XLSX remains deferred and is separate from Analysis XLSX.
 
-- Analysis XLSX is the only implemented workbook export for analysis continuation. It stores the full imported dataset and web-app settings so the user can reopen the file in IsoAmplar Plot Analysis and continue analysis.
+- Analysis XLSX is the only implemented workbook export for analysis continuation. Selected Data XLSX is a separate implemented workbook for Excel follow-up and cannot restore the app session.
 - Report/Plotted XLSX would be a future reporting output for the current plotted subset, potentially with a static chart image and plotted data sheets.
 - Report/Plotted XLSX must not be treated as a restore source unless it also contains the explicit hidden IsoAmplar restore payload.
 - Native editable Excel chart generation is excluded from the current implementation and no chart-image workbook dependency is required.
@@ -308,6 +313,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 | IO-104 | Static build | Produce static assets that work on GitHub Pages. | FR-013 | AC-011 |
 | IO-105 | Plotted data export | Export only currently plotted data when the current chart projection is simple and rectangular; otherwise disable with a clear reason. | FR-016 | AC-PCR-021, AC-PCR-022 |
 | IO-106 | Analysis XLSX export | Export a full analysis restore workbook containing the complete imported dataset and settings. | FR-017 | AC-PCR-033, AC-PCR-034, AC-PCR-037 |
+| IO-107 | Selected Data XLSX export | Export the current non-empty rectangular common-X selection in current user order as an `.xlsx` workbook with visible `PlottedData`, `CurveInfo`, `Warnings`, and `ExportInfo` sheets plus a hidden role marker. Numeric fluorescence remains numeric, null remains blank, strings remain non-formula/non-hyperlink cells, and all common-X rows are exported regardless of visible scale. | FR-021 | AC-PCR-054, AC-PCR-055 |
 
 ## Image Download Rules
 - Formats: PNG, JPEG.
@@ -320,7 +326,7 @@ This structure may be refined during implementation but must preserve curveId-ba
   - `plotOnly`: exports only the chart canvas with the built-in ECharts legend hidden.
   - `plotWithLegend`: exports the chart plus a custom legend area below the plot so the legend does not obscure plotted data.
   - `legendOnly`: exports only the custom legend image for the current selected/order/style projection.
-- PNG/JPEG download and the standard clipboard PNG action use the selected image export layout. Report legend PNG/JPEG, report legend PNG clipboard copy, and report legend rich Excel clipboard copy use the report legend projection for document assembly and do not change the selected image export layout. Plotted CSV and Analysis XLSX are unaffected by image layout selection.
+- PNG/JPEG download and the standard clipboard PNG action use the selected image export layout. Report legend PNG/JPEG, report legend PNG clipboard copy, and report legend rich Excel clipboard copy use the report legend projection for document assembly and do not change the selected image export layout. Selected Data XLSX, Plotted CSV, and Analysis XLSX are unaffected by image layout selection.
 - Export uses the same chart option projection as preview. Preview layout height is fixed in the UI, while image export keeps its chart-only export dimensions.
 - More than 20 visible curves warns but does not block export by default.
 - Supported image export layouts:
@@ -343,6 +349,16 @@ This structure may be refined during implementation but must preserve curveId-ba
 - `null` Y values export as blank CSV cells.
 - CSV values are quoted when required by commas, quotes, or line breaks.
 
+## Selected Data XLSX Rules
+- Filename convention: `YYMMDD_<sanitizedAnalysisName>_plotN_data.xlsx`.
+- It is enabled only for a non-empty selected projection whose curves share one identical X array and can be represented as a rectangular table.
+- `PlottedData` contains `Cycle` plus one numeric/blank column per selected curve in current user order. All common-X rows are exported even when Box zoom or a fixed Scale displays only part of the range.
+- `CurveInfo` preserves curve ID, Analysis label, original specimen/reagent identity, source instance/name/column, finite/null counts, and source range.
+- `Warnings` includes warning evidence related to the exported curves; `ExportInfo` records export time, analysis name, applied display Scale, and an explicit `None` data-transform statement.
+- Fluorescence values remain numbers and `null` remains blank. No smoothing, normalization, interpolation, baseline correction, thresholding, or scale-based cropping is applied.
+- User/source strings are written as literal string cells without formulas or hyperlinks. Duplicate visible labels are deterministically source-disambiguated for column identity without changing live Analysis labels.
+- A hidden `_IsoAmplarSelectedData` marker identifies the workbook as output-only. Original open, append, and saved-analysis restore reject this role before analysis mutation.
+
 ## Clipboard Rules
 - Supported chart/legend image clipboard MIME type: `image/png`.
 - Supported report legend Excel clipboard MIME types: `text/html` plus `text/plain` in the same `ClipboardItem`; the plain text exists only as a compatibility flavor, not as a user-facing TSV export.
@@ -357,9 +373,10 @@ This structure may be refined during implementation but must preserve curveId-ba
 - Browser session starts at `plot1` after a dataset import.
 - Successful PNG/JPEG download increments `plotN`.
 - Successful plotted-data CSV download increments `plotN`.
+- Successful Selected Data XLSX download increments `plotN`.
 - Failed image, clipboard, or CSV attempts do not increment `plotN`.
 - Changing the analysis name changes future filenames only; it does not reset the `plotN` or `analysisN` counter.
-- Current MVP implements image and data CSV as separate actions; combined image+CSV export remains a future candidate.
+- Image, Selected Data XLSX, and secondary data CSV are separate actions; combined multi-file export remains a future candidate.
 
 ## Future Output Candidates
 These are not confirmed:

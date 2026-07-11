@@ -79,6 +79,14 @@ describe("Analysis XLSX workbook", () => {
       exportCounter: 3,
       importFileName: dataset.sourceFileName,
       sourceFiles: [createSourceFileSummary(dataset)],
+      selectionSets: [
+        {
+          selectionSetId: "selection-set-1",
+          name: "Condition subset",
+          curveIds: [dataset.curves[0].curveId, dataset.curves[1].curveId]
+        }
+      ],
+      activeSelectionSetId: "selection-set-1",
       dirty: true
     });
 
@@ -91,6 +99,7 @@ describe("Analysis XLSX workbook", () => {
       "HeaderProvenance",
       "ImportedData",
       "Warnings",
+      "SelectionSets",
       ANALYSIS_RESTORE_SHEET_NAME
     ]);
     const hiddenSheetMeta = workbook.Workbook?.Sheets?.find((sheet) => sheet.name === ANALYSIS_RESTORE_SHEET_NAME);
@@ -109,6 +118,17 @@ describe("Analysis XLSX workbook", () => {
     expect(warningRows[0]).toContain("Handling");
     expect(warningRows[0]).toContain("Source ID");
     expect(warningRows[0]).toContain("Display value");
+    const selectionSetRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.SelectionSets, {
+      header: 1,
+      blankrows: false
+    });
+    expect(selectionSetRows[1].slice(0, 5)).toEqual([
+      "selection-set-1",
+      "Condition subset",
+      "Yes",
+      1,
+      dataset.curves[1].curveId
+    ]);
     const settingsRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.Settings, { header: 1, blankrows: false });
     expect(settingsRows).toContainEqual(["X scale draft mode", "fixed"]);
     expect(settingsRows).toContainEqual(["X fixed min", "18.5"]);
@@ -151,6 +171,8 @@ describe("Analysis XLSX workbook", () => {
       }))
     );
     expect(restored.analysis.selection.selectedCurveIds.has(dataset.curves[0].curveId)).toBe(true);
+    expect(restored.analysis.selectionSets).toEqual(state.selectionSets);
+    expect(restored.analysis.activeSelectionSetId).toBe("selection-set-1");
     expect(restored.analysis.selection.selectedCurveIds.has(dataset.curves[1].curveId)).toBe(false);
     expect(restored.analysis.selection.collapsedGroupIds.has(collapsedReagentGroupId)).toBe(true);
     expect(restored.metrics).toMatchObject({
@@ -642,12 +664,22 @@ describe("Analysis XLSX workbook", () => {
       chartScale: createDefaultChartScale(),
       styleRules: createDefaultStyleRules(),
       curveOverrides: { [curve.curveId]: { displayName: "=Condition A" } },
+      selectionSets: [
+        {
+          selectionSetId: "selection-set-formula-like",
+          name: "=Condition subset",
+          curveIds: [curve.curveId]
+        }
+      ],
       exportCounter: 1,
       importFileName: dataset.sourceFileName
     });
 
     const workbook = XLSX.read(await exportAnalysisWorkbookBuffer(state), { type: "array", raw: true });
     expect(workbook.Sheets.ImportedData.B3?.v).toBe("=Condition A");
+    expect(workbook.Sheets.ImportedData.B3?.f).toBeUndefined();
+    expect(workbook.Sheets.SelectionSets.B2?.v).toBe("=Condition subset");
+    expect(workbook.Sheets.SelectionSets.B2?.f).toBeUndefined();
   });
 
   it("measures a generated 96-curve by 100-cycle payload without applying an unresolved hard limit", async () => {

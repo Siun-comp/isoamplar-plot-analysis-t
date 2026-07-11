@@ -7,7 +7,7 @@ Define how the PCR graph web tool will be validated and how completion will be j
 Active draft
 
 ## Last Updated
-2026-07-11
+2026-07-12
 
 ## Owner
 QA / Engineering / Agent
@@ -20,7 +20,9 @@ QA / Engineering / Agent
 - Testing must cover PCR/LAMP-style import, append import, stable curve IDs, reagent-first selection, collapsed groups, search, grouping-aware labels, fixed axes, user-editable P1/P2 presets, clean chart visual style, stable colors, default no markers, style/legend behavior, PNG/JPEG export, clipboard fallback, and GitHub Pages.
 - Exported images must match the current rendered chart state, use a white background, and use analysis-name-based safe filenames.
 - Plotted-data CSV export is allowed only for a simple current chart projection.
+- Selected Data XLSX is the primary selected-curve data output and must preserve raw numeric/null values, order, source/warning traceability, and workbook-role safety.
 - Analysis XLSX export/import must preserve the full imported dataset and settings, including unselected curves.
+- Selection Sets must remain curveId-safe, tab-local, append-safe, and restorable through Analysis XLSX schema 4.
 - Internal analysis tabs must preserve independent per-tab analysis state.
 - Custom legend and export layout behavior must be tested separately from curve selection state.
 - Analysis label editing and rich Excel clipboard behavior must be tested across chart legend names, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state.
@@ -50,6 +52,8 @@ Implemented MVP plus R0-R13 refinement scope:
 - PNG and JPEG image download with white background
 - Clipboard image copy and fallback
 - Optional plotted-data CSV export for simple current chart state
+- Selected Data XLSX export for simple current chart state
+- Named Selection Sets for repeated curve-combination switching
 - Internal analysis tabs
 - Analysis XLSX export/import for full analysis restore
 - Custom legend rendering outside the plot
@@ -70,7 +74,7 @@ Deferred beyond MVP:
 - Transparent background export
 - Saved custom presets
 - Multi-chart/batch layout
-- Report/Plotted XLSX with static chart image
+- Report XLSX with static chart image
 - Native editable Excel chart generation
 
 Implemented post-MVP:
@@ -171,6 +175,9 @@ These criteria are frozen during Phase S1 as **Target / Known red**. S1 may add 
 | AC-PCR-051 | FR-016, D035, D046 | Every final plotted CSV specimen/reagent/generated/Analysis label header is spreadsheet-safe. Output escaping does not mutate source labels, Analysis labels, or Analysis XLSX values. | Passing S7A - all four prefixes, quoting, post-neutralization collision, negative fluorescence passthrough, Analysis XLSX value preservation, and isolated audit probe; final Windows Excel manual check remains release QA |
 | AC-PCR-052A | FR-008, D035, D047 | The inactive Legend Order/Labels panel is absent from display and accessibility trees while the active editor remains keyboard operable. | Passing S8 - computed display/accessibility-tree checks plus roving tab focus and Arrow/Home keyboard tests |
 | AC-PCR-052B | FR-020, D032, D047 | At user-approved desktop viewports, scrolling through settings preserves an inspectable plot bounding box without incoherent overlap or workspace horizontal overflow. | Passing S8 - 100-curve synthetic viewport measurements and screenshot at 1280x720, 1366x768, and 1920x1080; compact row and portalled popover clipping checks |
+| AC-PCR-053 | FR-017, FR-018, FR-022, D050 | A Selection Set stores non-empty unique curveId membership only. Candidate selection does not mutate analysis state until Apply; Apply replaces current selection and records active state; manual changes show Modified without silent overwrite; update/rename/delete use explicit in-app controls; one-step return restores both pre-apply selection and active ID. Append preserves sets without auto-including new curves, replace clears them, tabs remain isolated, and Analysis XLSX schema 1-3 migrate to empty sets while schema 4 roundtrips and validates all references. | Unit + store + component + workbook readback + Playwright |
+| AC-PCR-054 | FR-016, FR-021, IO-107, D050 | Selected Data XLSX is available only for a non-empty rectangular common-X projection and writes current-order `PlottedData`, `CurveInfo`, related `Warnings`, and `ExportInfo`. Fluorescence numbers remain numeric, null remains blank, all common-X rows are retained despite Box zoom/Scale, duplicate labels are deterministically source-disambiguated, and all user/source strings remain non-formula/non-hyperlink cells without changing their text. | Unit + workbook readback + component + Playwright download |
+| AC-PCR-055 | FR-001, FR-017, FR-021, IO-006, IO-107, D050 | Selected Data XLSX carries a machine-readable hidden role marker and is rejected without analysis mutation by original open, append, and Analysis restore commands with purpose-specific guidance. Successful downloads alone consume the reserved plot counter; generation/download failure and inactive/closed/replaced target races do not. | Unit + store + component + Playwright |
 | RQ-CI-001 | FR-013, D002, D003, D049 | CI verifies committed-diff whitespace, production dependency audit, deterministic fixtures, the full unit/audit suite, one Pages-base-path `dist` hash, fresh Chromium against that same artifact, byte identity after Playwright, opaque-white/nonblank raster and legend slot evidence, known static app `GET/HEAD` plus blob/data network allowlisting including same-origin write and WebSocket rejection, clipboard fallback, and Analysis XLSX browser roundtrip before Pages artifact upload. | Passing S10 implementation; local CI-equivalent evidence complete, actual GitHub workflow run and post-deploy public smoke remain S11 release evidence |
 
 ## Quick Paste Import Acceptance Criteria
@@ -340,7 +347,7 @@ Create or collect fixture datasets for:
 - Focus remains usable after file import and chart updates.
 
 ## Known Gaps
-- PCR parser, selection UI, chart preview, style controls, legend order, image export utilities, clipboard fallback, and plotted-data CSV utilities are implemented for MVP.
+- PCR parser, selection UI, Selection Sets, chart preview, style controls, legend order, image export utilities, clipboard fallback, Selected Data XLSX, and secondary plotted-data CSV utilities are implemented.
 - The selected test stack is installed and configured for unit/component/Playwright smoke tests.
 - Phase S1 synthetic-only `.xlsx`/BIFF8 `.xls` fixtures, deterministic SHA-256 manifest, normalized projections, target snapshots, generated cases, and audit evidence are committed and active. Later S2-S10 acceptance rows identify which target defects are now passing.
 - Browser checks have been performed with Playwright: upload-first smoke, generated `.xlsx` upload, appended `.xlsx` upload, collapsed reagent-first selection, internal analysis tab switching, fixed hover readout smoke, chart canvas nonblank pixel check, fixed chart viewport height after settings expansion, sticky chart panel behavior, and public URL technical smoke with generated `.xlsx` upload.
@@ -354,10 +361,10 @@ Create or collect fixture datasets for:
 - Hover readout, app-controlled curve highlight, custom-legend hover/focus highlight, marker-preserving hover behavior, and >20 visible-curve assistance are implemented; large style/legend lists use search/scroll affordances.
 - Dirty tab close/replace confirmation is implemented; internal tab count policy remains a product decision.
 
-## Current Automated Coverage - 2026-07-11
-- Vitest: parser `.xlsx` / `.xls`, first-sheet-only, invalid first sheet, blank/nonnumeric/formula cells, similar-name warnings, append merge identity, selection tree state, single-curve subgroup row simplification, multi-curve subgroup tri-state behavior, chart option theme/scale/style, tooltip/readout configuration, curveId hover payload extraction, marker-preserving app-controlled highlight, grouping-aware labels, HEX color input, stable colors, default no markers, group/individual marker mappings, style field origin/source metadata, field/curve/selected/all/group style reset behavior, style preset undo, editable P1 scale behavior, analysis-name export filename generation, image export helper validation, plotted-data CSV shape, AnalysisState serialization, Analysis XLSX workbook readback, restore migration/validation, chunk errors, ordinary workbook fallback, and tab-routing safety.
-- Testing Library: upload-first workspace, IsoAmplar title/developer credit, reagent-first collapsed default, search bulk selection across collapsed groups, >20 visible-curve helper actions, grouping-mode selection/header persistence, Fixed scale Auto-bound copy behavior, marker-basis style controls, group marker UI, individual Custom/Preset status badges, field/curve reset controls, selected-style search beyond 30 curves, custom legend rendering/order/toggle/hover highlight, export layout state selection, analysis tab controls, and Analysis XLSX export availability for full imported datasets.
-- Playwright: fresh Pages-base-path production preview, generated `.xlsx` upload/append, Quick Paste boundaries, reagent-first collapsed state, search selection, scale/Box zoom, dense Style/Legend interaction, chart hover/readout, clipboard failure guidance, opaque-white/nonblank legend raster with pixel-region style/text evidence, cross-origin fetch/XHR/image/beacon/POST/WebSocket rejection, and Analysis XLSX browser save/restore/resave with exact curve/source/X/Y/stats equality across null, negative, exponential, and large fluorescence values plus selection/scale/style/label continuity.
+## Current Automated Coverage - 2026-07-12
+- Vitest: parser `.xlsx` / `.xls`, first-sheet-only, invalid first sheet, blank/nonnumeric/formula cells, similar-name warnings, append merge identity, selection tree and Selection Set state, schema 1-4 migration/validation, tab isolation, selected-data role rejection, chart option theme/scale/style, hover behavior, style resolution, export filename generation, plotted-data CSV shape, Selected Data XLSX numeric/null/provenance/formula safety, AnalysisState serialization, Analysis XLSX workbook readback, and tab-routing safety.
+- Testing Library: upload-first workspace, reagent-first selection, search bulk selection, scale/style/legend controls, Selection Set explicit apply/manage/return behavior including a 20-set selector, selected-data export availability/counter behavior, and Analysis XLSX save availability for full imported datasets.
+- Playwright: fresh Pages-base-path production preview, generated `.xlsx` upload/append, Quick Paste boundaries, selection/search, scale/Box zoom, Style/Legend interaction, chart hover/readout, raster/clipboard/network gates, Selection Set switching and overflow, schema-4 Analysis XLSX save/restore, Selected Data XLSX workbook readback, and output-role rejection without analysis mutation.
 - Visual artifacts: `docs/gui_mockups/screenshots/phase8_mvp_desktop.png`, `docs/gui_mockups/screenshots/phase8_mvp_mobile.png`, `docs/gui_mockups/screenshots/isoamplar_refinement_desktop.png`, `docs/gui_mockups/screenshots/isoamplar_append_sticky_refinement.png`, `docs/gui_mockups/screenshots/phase-r12_hover_warning_desktop.png`, and `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`.
 
 ## Context Compression Quality Gate

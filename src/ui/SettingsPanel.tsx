@@ -21,8 +21,9 @@ import {
   exportReportLegendImageBlob
 } from "../chart/exportChart";
 import type { ImageExportType } from "../chart/exportFilenames";
-import { createImageExportFileName, createPlottedDataFileName } from "../chart/exportFilenames";
+import { createImageExportFileName, createPlottedDataFileName, createSelectedDataFileName } from "../chart/exportFilenames";
 import { createPlottedDataCsv } from "../chart/plottedDataExport";
+import { createSelectedDataWorkbook, validateSelectedDataProjection } from "../chart/selectedDataWorkbook";
 import { buildReportLegendProjection } from "../chart/reportLegend";
 import { createStyleAdvisories, normalizeHexColor, type StyleAdvisories } from "../chart/styleAdvisories";
 import { useAppStore } from "../app/appStore";
@@ -247,6 +248,7 @@ export function SettingsPanel() {
           dataset={dataset}
           analysisName={analysisName}
           selectedCurves={selectedCurves}
+          legendItems={chartProjection.legendItems}
           selectedCurveIds={selectedCurveIds}
           orderedCurveIds={orderedCurveIds}
           chartScale={chartScale}
@@ -274,6 +276,7 @@ function ExportControls({
   dataset,
   analysisName,
   selectedCurves,
+  legendItems,
   selectedCurveIds,
   orderedCurveIds,
   chartScale,
@@ -295,6 +298,7 @@ function ExportControls({
   dataset: ReturnType<typeof useAppStore.getState>["dataset"];
   analysisName: string;
   selectedCurves: Curve[];
+  legendItems: LegendItem[];
   selectedCurveIds: Set<string>;
   orderedCurveIds?: string[];
   chartScale: ReturnType<typeof useAppStore.getState>["chartScale"];
@@ -315,6 +319,7 @@ function ExportControls({
 }) {
   const busy = activeExportJob !== null;
   const csvResult = createPlottedDataCsv({ curves: selectedCurves, labelMode, styleRules, curveOverrides });
+  const selectedDataValidation = validateSelectedDataProjection(selectedCurves);
   const disabled = selectedCurves.length === 0 || busy;
   const blockingScaleIssues = scaleIssues.filter((issue) => issue.blocksPlotExport);
   const plotImageScaleBlocked = exportSettings.imageLayout !== "legendOnly" && blockingScaleIssues.length > 0;
@@ -489,6 +494,41 @@ function ExportControls({
     }
   }
 
+  async function exportSelectedDataXlsx() {
+    if (!dataset) return;
+    if (!selectedDataValidation.ok) {
+      setExportMessage(selectedDataValidation.reason);
+      return;
+    }
+    const job = beginExportJob("file", true);
+    if (!job) return;
+    try {
+      const result = await createSelectedDataWorkbook({
+        curves: selectedCurves,
+        labelsByCurveId: new Map(legendItems.map((item) => [item.curveId, item.label])),
+        analysisLabelsByCurveId: Object.fromEntries(
+          selectedCurves
+            .map((curve) => [curve.curveId, curveOverrides[curve.curveId]?.displayName] as const)
+            .filter((entry): entry is readonly [string, string] => typeof entry[1] === "string")
+        ),
+        warnings: dataset.warnings,
+        analysisName,
+        chartScale
+      });
+      if (!result.ok) throw new Error(result.reason);
+      const fileName = createSelectedDataFileName(job.reservedCounter, new Date(), analysisName);
+      downloadBlob(
+        new Blob([result.buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }),
+        fileName
+      );
+      completeExportJob(job, `Saved ${fileName}.`);
+    } catch (error) {
+      failExportJob(job, error instanceof Error ? error.message : "Selected Data XLSX export failed.");
+    }
+  }
+
   return (
     <section className="export-controls" aria-busy={busy}>
       <span className="visually-hidden" aria-live="polite">{busy ? "내보내기 작업 중" : ""}</span>
@@ -567,16 +607,31 @@ function ExportControls({
         </div>
       </section>
       <section className="export-group" aria-label="Data export">
-        <div className="export-group-header">
+        <div className="export-group-header export-group-header-stacked">
           <strong>Data</strong>
+          <span>선택 데이터 XLSX는 현재 선택 곡선의 Excel 정리용이며 분석 복원 파일이 아닙니다.</span>
         </div>
         <div className="export-button-grid">
-      <button type="button" disabled={busy || !csvResult.ok} onClick={exportCsv}>
-        Plotted CSV
-      </button>
+          <button
+            type="button"
+            aria-label="선택 데이터 XLSX 저장"
+            aria-describedby={!selectedDataValidation.ok ? "selected-data-xlsx-reason" : undefined}
+            disabled={busy || !selectedDataValidation.ok}
+            onClick={() => void exportSelectedDataXlsx()}
+          >
+            선택 데이터 XLSX
+          </button>
         </div>
+        <details className="export-more">
+          <summary>기타 형식</summary>
+          <div className="export-button-grid">
+            <button type="button" disabled={busy || !csvResult.ok} onClick={exportCsv}>
+              Plotted CSV
+            </button>
+          </div>
+        </details>
       </section>
-      {!csvResult.ok && <p>{csvResult.reason}</p>}
+      {!selectedDataValidation.ok && <p id="selected-data-xlsx-reason">{selectedDataValidation.reason}</p>}
       {exportMessage && <p className="export-message">{exportMessage}</p>}
     </section>
   );

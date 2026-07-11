@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2026-07-12 - Selection Sets and Selected Data XLSX
+
+- Added tab-local named Selection Sets with explicit apply, modified-state indication, update, rename, delete, and one-step return to the selection that existed before applying a set.
+- Preserved Selection Sets through Analysis XLSX schema 4, added a visible `SelectionSets` review sheet, and migrated schema 1-3 files to an empty-set state.
+- Added Selected Data XLSX as the primary current-selection numeric export with `PlottedData`, `CurveInfo`, `Warnings`, and `ExportInfo` sheets plus an output-only role marker.
+- Kept raw fluorescence numeric/null values unchanged, retained all common-X rows regardless of Box zoom or visible Scale, and added source/warning provenance and formula/hyperlink-safe text cells.
+- Rejected Selected Data XLSX from original-open, append, and saved-analysis restore paths before analysis mutation; retained Plotted CSV under `기타 형식` as a secondary output.
+- Updated the Korean first-user guide with synthetic-only Selection Set and Selected Data XLSX workflows and screenshots.
+- Hardened schema 4 against missing and wrong-typed Selection Set fields, reset editor intent across analysis tabs, froze rename/delete targets, distinguished active and candidate sets, showed update add/remove counts, restored focus after inline confirmations, and verified 120-character names without horizontal overflow.
+
 ## 2026-07-11 - Audit remediation S11 documentation and release preparation
 
 - Replaced the generic chart-app charter and stale release checklist with the current IsoAmplar desktop workflow, exclusions, verification gates, and rollback procedure.
@@ -65,7 +75,7 @@ User visible and release relevant change history.
 Active draft
 
 ## Last Updated
-2026-07-11
+2026-07-12
 
 ## Owner
 Agent / Engineering

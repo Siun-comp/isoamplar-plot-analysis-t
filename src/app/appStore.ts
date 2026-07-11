@@ -24,6 +24,7 @@ import type {
   PcrDataset,
   ReportLegendLabelMode,
   SelectionFilter,
+  SelectionSet,
   SelectionState,
   StyleGroupingTarget,
   StyleRules
@@ -39,6 +40,12 @@ import {
   toggleCurveSelection,
   toggleGroupCollapse
 } from "../selection/selectionState";
+import {
+  createOrderedSelectionSetCurveIds,
+  createSelectionSetId,
+  hasSameSelectionSetMembership,
+  validateSelectionSetName
+} from "../selection/selectionSets";
 
 enableMapSet();
 
@@ -69,11 +76,20 @@ type PresetUndoSnapshot = {
 
 type ChartScaleReturnSnapshot = ChartScaleState;
 
+type SelectionSetUndoSnapshot = {
+  selectedCurveIds: string[];
+  activeSelectionSetId: string | null;
+  datasetId: string;
+};
+
+export type SelectionSetMutationResult = { ok: true; selectionSetId?: string } | { ok: false; message: string };
+
 export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
   runtimeInstanceId: string;
   revision: number;
   dataset: PcrDataset | null;
   selection: SelectionState | null;
+  selectionSetUndo: SelectionSetUndoSnapshot | null;
   chartScaleReturnStack: ChartScaleReturnSnapshot[];
   lastPresetUndo: PresetUndoSnapshot | null;
   lastPresetMessage: string | null;
@@ -87,6 +103,8 @@ export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
 
 export const DIRTY_REPLACE_BLOCKED_MESSAGE =
   "저장 안 된 분석 변경사항이 있습니다. 현재 분석 교체 또는 새 분석으로 열기를 명시적으로 선택해야 합니다.";
+export const SELECTED_DATA_INPUT_REJECTED_MESSAGE =
+  "선택 데이터 XLSX는 Excel 후속 분석용이며 원본 입력 또는 분석 복원 파일이 아닙니다.";
 
 export type PastedDatasetImportResult =
   | { ok: true; analysisId: string }
@@ -179,6 +197,12 @@ type AppStore = AppState & {
   setCurvesSelected: (curveIds: Iterable<string>, selected: boolean) => void;
   toggleGroup: (groupId: string) => void;
   setAllGroupsCollapsed: (collapsed: boolean) => void;
+  createSelectionSet: (name: string) => SelectionSetMutationResult;
+  applySelectionSet: (selectionSetId: string) => SelectionSetMutationResult;
+  updateActiveSelectionSet: () => SelectionSetMutationResult;
+  renameSelectionSet: (selectionSetId: string, name: string) => SelectionSetMutationResult;
+  deleteSelectionSet: (selectionSetId: string) => SelectionSetMutationResult;
+  returnToPreviousSelection: () => SelectionSetMutationResult;
 };
 
 export const useAppStore = create<AppStore>()(
@@ -188,6 +212,9 @@ export const useAppStore = create<AppStore>()(
       set((state) => {
         state.dataset = dataset;
         state.selection = createInitialSelectionState(dataset);
+        state.selectionSets = [];
+        state.activeSelectionSetId = null;
+        state.selectionSetUndo = null;
         state.analysisName = dataset.sourceFileName || state.analysisName;
         state.searchQuery = "";
         state.selectionFilter = "all";
@@ -227,6 +254,17 @@ export const useAppStore = create<AppStore>()(
       });
 
       const analysisWorkbook = await readAnalysisWorkbookFile(file);
+      if (analysisWorkbook.kind === "selected-data" || analysisWorkbook.kind === "invalid-selected-data") {
+        set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
+          setAnalysisImportError(
+            state,
+            targetAnalysisId,
+            analysisWorkbook.kind === "selected-data" ? SELECTED_DATA_INPUT_REJECTED_MESSAGE : analysisWorkbook.message
+          );
+        });
+        return;
+      }
       if (analysisWorkbook.kind === "analysis") {
         set((state) => {
           if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
@@ -271,6 +309,17 @@ export const useAppStore = create<AppStore>()(
       }
 
       const analysisWorkbook = await readAnalysisWorkbookFile(file);
+      if (analysisWorkbook.kind === "selected-data" || analysisWorkbook.kind === "invalid-selected-data") {
+        set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
+          setAnalysisImportError(
+            state,
+            targetAnalysisId,
+            analysisWorkbook.kind === "selected-data" ? SELECTED_DATA_INPUT_REJECTED_MESSAGE : analysisWorkbook.message
+          );
+        });
+        return;
+      }
       if (analysisWorkbook.kind === "analysis") {
         set((state) => {
           if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
@@ -312,6 +361,17 @@ export const useAppStore = create<AppStore>()(
       const targetAnalysisId = get().activeAnalysisId;
       const targetRuntimeInstanceId = get().analyses[targetAnalysisId]?.runtimeInstanceId;
       const analysisWorkbook = await readAnalysisWorkbookFile(file);
+      if (analysisWorkbook.kind === "selected-data" || analysisWorkbook.kind === "invalid-selected-data") {
+        set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
+          setAnalysisImportError(
+            state,
+            targetAnalysisId,
+            analysisWorkbook.kind === "selected-data" ? SELECTED_DATA_INPUT_REJECTED_MESSAGE : analysisWorkbook.message
+          );
+        });
+        return;
+      }
       if (analysisWorkbook.kind === "analysis") {
         set((state) => {
           if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
@@ -382,6 +442,17 @@ export const useAppStore = create<AppStore>()(
       const targetAnalysisId = get().activeAnalysisId;
       const targetRuntimeInstanceId = get().analyses[targetAnalysisId]?.runtimeInstanceId;
       const analysisWorkbook = await readAnalysisWorkbookFile(file);
+      if (analysisWorkbook.kind === "selected-data" || analysisWorkbook.kind === "invalid-selected-data") {
+        set((state) => {
+          if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
+          setAnalysisImportError(
+            state,
+            targetAnalysisId,
+            analysisWorkbook.kind === "selected-data" ? SELECTED_DATA_INPUT_REJECTED_MESSAGE : analysisWorkbook.message
+          );
+        });
+        return;
+      }
       if (analysisWorkbook.kind === "analysis") {
         set((state) => {
           if (!matchesAnalysisInstance(state, targetAnalysisId, targetRuntimeInstanceId)) return;
@@ -995,6 +1066,7 @@ export const useAppStore = create<AppStore>()(
       set((state) => {
         if (!state.selection) return;
         state.selection = toggleCurveSelection(state.selection, curveId);
+        state.selectionSetUndo = null;
         markDirtyAndPersistActive(state);
       });
     },
@@ -1002,6 +1074,7 @@ export const useAppStore = create<AppStore>()(
       set((state) => {
         if (!state.selection) return;
         state.selection = setCurveSelection(state.selection, curveIds, selected);
+        state.selectionSetUndo = null;
         markDirtyAndPersistActive(state);
       });
     },
@@ -1018,6 +1091,145 @@ export const useAppStore = create<AppStore>()(
         state.selection = setAllGroupsCollapsed(state.dataset, state.selection, collapsed);
         markDirtyAndPersistActive(state);
       });
+    },
+    createSelectionSet: (name) => {
+      let result: SelectionSetMutationResult = { ok: false, message: "분석 데이터가 없습니다." };
+      set((state) => {
+        if (!state.dataset || !state.selection) return;
+        const nameResult = validateSelectionSetName(name, state.selectionSets);
+        if (!nameResult.ok) {
+          result = { ok: false, message: nameResult.reason };
+          return;
+        }
+        const curveIds = createOrderedSelectionSetCurveIds(
+          state.selection.selectedCurveIds,
+          state.selection.orderedCurveIds
+        );
+        if (curveIds.length === 0) {
+          result = { ok: false, message: "선택한 곡선이 없어 선택 세트를 저장할 수 없습니다." };
+          return;
+        }
+        const selectionSet: SelectionSet = {
+          selectionSetId: createSelectionSetId(state.selectionSets),
+          name: nameResult.name,
+          curveIds
+        };
+        state.selectionSets.push(selectionSet);
+        state.activeSelectionSetId = selectionSet.selectionSetId;
+        state.selectionSetUndo = null;
+        markDirtyAndPersistActive(state);
+        result = { ok: true, selectionSetId: selectionSet.selectionSetId };
+      });
+      return result;
+    },
+    applySelectionSet: (selectionSetId) => {
+      let result: SelectionSetMutationResult = { ok: false, message: "선택 세트를 찾을 수 없습니다." };
+      set((state) => {
+        if (!state.dataset || !state.selection) {
+          result = { ok: false, message: "분석 데이터가 없습니다." };
+          return;
+        }
+        const selectionSet = state.selectionSets.find((item) => item.selectionSetId === selectionSetId);
+        if (!selectionSet) return;
+        if (
+          state.activeSelectionSetId === selectionSetId &&
+          hasSameSelectionSetMembership(state.selection.selectedCurveIds, selectionSet.curveIds)
+        ) {
+          result = { ok: true };
+          return;
+        }
+        state.selectionSetUndo = {
+          selectedCurveIds: [...state.selection.selectedCurveIds],
+          activeSelectionSetId: state.activeSelectionSetId,
+          datasetId: state.dataset.datasetId
+        };
+        state.selection.selectedCurveIds = new Set(selectionSet.curveIds);
+        state.activeSelectionSetId = selectionSetId;
+        markDirtyAndPersistActive(state);
+        result = { ok: true };
+      });
+      return result;
+    },
+    updateActiveSelectionSet: () => {
+      let result: SelectionSetMutationResult = { ok: false, message: "적용된 선택 세트가 없습니다." };
+      set((state) => {
+        if (!state.selection || !state.activeSelectionSetId) return;
+        const selectionSet = state.selectionSets.find((item) => item.selectionSetId === state.activeSelectionSetId);
+        if (!selectionSet) return;
+        const curveIds = createOrderedSelectionSetCurveIds(
+          state.selection.selectedCurveIds,
+          state.selection.orderedCurveIds
+        );
+        if (curveIds.length === 0) {
+          result = { ok: false, message: "선택한 곡선이 없어 선택 세트를 업데이트할 수 없습니다." };
+          return;
+        }
+        if (hasSameSelectionSetMembership(curveIds, selectionSet.curveIds)) {
+          result = { ok: true };
+          return;
+        }
+        selectionSet.curveIds = curveIds;
+        state.selectionSetUndo = null;
+        markDirtyAndPersistActive(state);
+        result = { ok: true };
+      });
+      return result;
+    },
+    renameSelectionSet: (selectionSetId, name) => {
+      let result: SelectionSetMutationResult = { ok: false, message: "선택 세트를 찾을 수 없습니다." };
+      set((state) => {
+        const selectionSet = state.selectionSets.find((item) => item.selectionSetId === selectionSetId);
+        if (!selectionSet) return;
+        const nameResult = validateSelectionSetName(name, state.selectionSets, selectionSetId);
+        if (!nameResult.ok) {
+          result = { ok: false, message: nameResult.reason };
+          return;
+        }
+        if (selectionSet.name === nameResult.name) {
+          result = { ok: true };
+          return;
+        }
+        selectionSet.name = nameResult.name;
+        markDirtyAndPersistActive(state);
+        result = { ok: true };
+      });
+      return result;
+    },
+    deleteSelectionSet: (selectionSetId) => {
+      let result: SelectionSetMutationResult = { ok: false, message: "선택 세트를 찾을 수 없습니다." };
+      set((state) => {
+        const index = state.selectionSets.findIndex((item) => item.selectionSetId === selectionSetId);
+        if (index < 0) return;
+        state.selectionSets.splice(index, 1);
+        if (state.activeSelectionSetId === selectionSetId) state.activeSelectionSetId = null;
+        state.selectionSetUndo = null;
+        markDirtyAndPersistActive(state);
+        result = { ok: true };
+      });
+      return result;
+    },
+    returnToPreviousSelection: () => {
+      let result: SelectionSetMutationResult = { ok: false, message: "돌아갈 이전 선택이 없습니다." };
+      set((state) => {
+        if (!state.dataset || !state.selection || !state.selectionSetUndo) return;
+        if (state.selectionSetUndo.datasetId !== state.dataset.datasetId) {
+          state.selectionSetUndo = null;
+          return;
+        }
+        const datasetCurveIds = new Set(state.dataset.curves.map((curve) => curve.curveId));
+        state.selection.selectedCurveIds = new Set(
+          state.selectionSetUndo.selectedCurveIds.filter((curveId) => datasetCurveIds.has(curveId))
+        );
+        state.activeSelectionSetId = state.selectionSets.some(
+          (selectionSet) => selectionSet.selectionSetId === state.selectionSetUndo?.activeSelectionSetId
+        )
+          ? state.selectionSetUndo.activeSelectionSetId
+          : null;
+        state.selectionSetUndo = null;
+        markDirtyAndPersistActive(state);
+        result = { ok: true };
+      });
+      return result;
     }
   }))
 );
@@ -1041,6 +1253,9 @@ function createEmptyAnalysisTab(analysisId: string, analysisName: string): Analy
     analysisName,
     dataset: null,
     selection: null,
+    selectionSets: [],
+    activeSelectionSetId: null,
+    selectionSetUndo: null,
     searchQuery: "",
     selectionFilter: "all",
     chartScale: createDefaultChartScale(),
@@ -1131,6 +1346,9 @@ function replaceAnalysisDataset(
     analysisName: dataset.sourceFileName || previous.analysisName,
     dataset,
     selection: createInitialSelectionState(dataset),
+    selectionSets: [],
+    activeSelectionSetId: null,
+    selectionSetUndo: null,
     searchQuery: "",
     selectionFilter: "all",
     chartScale: createDefaultChartScale(),
@@ -1182,6 +1400,9 @@ function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDa
       ...cloneAnalysisTab(previous),
       dataset: appendedDataset,
       selection: createInitialSelectionState(appendedDataset),
+      selectionSets: [],
+      activeSelectionSetId: null,
+      selectionSetUndo: null,
       searchQuery: "",
       selectionFilter: "all",
       importStatus: "ready",
@@ -1230,6 +1451,7 @@ function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDa
     importFileName: `${fileName} appended`,
     sourceFiles: [...previous.sourceFiles, createSourceFileSummary(appendedDataset)],
     chartScaleReturnStack: [],
+    selectionSetUndo: null,
     lastPresetUndo: null,
     lastPresetMessage: previous.lastPresetUndo
       ? "Preset undo was cleared after appended data."
@@ -1303,6 +1525,9 @@ function createTabFromAnalysisState(analysis: AnalysisState): AnalysisTabState {
     analysisName: analysis.analysisName || "Untitled analysis",
     dataset: analysis.dataset,
     selection: cloneSelection(analysis.selection),
+    selectionSets: cloneSelectionSets(analysis.selectionSets),
+    activeSelectionSetId: analysis.activeSelectionSetId,
+    selectionSetUndo: null,
     searchQuery: analysis.searchQuery,
     selectionFilter: analysis.selectionFilter,
     chartScale: clonePlain(analysis.chartScale),
@@ -1334,6 +1559,9 @@ function snapshotAdapterAsAnalysis(state: AppState): AnalysisTabState {
     analysisName: state.analysisName,
     dataset: state.dataset,
     selection: cloneSelection(state.selection),
+    selectionSets: cloneSelectionSets(state.selectionSets),
+    activeSelectionSetId: state.activeSelectionSetId,
+    selectionSetUndo: clonePlain(state.selectionSetUndo),
     searchQuery: state.searchQuery,
     selectionFilter: state.selectionFilter,
     chartScale: clonePlain(state.chartScale),
@@ -1362,6 +1590,9 @@ function applyAnalysisToAdapter(state: AppState, analysis: AnalysisTabState) {
   state.analysisName = adapterState.analysisName;
   state.dataset = adapterState.dataset;
   state.selection = adapterState.selection;
+  state.selectionSets = adapterState.selectionSets;
+  state.activeSelectionSetId = adapterState.activeSelectionSetId;
+  state.selectionSetUndo = adapterState.selectionSetUndo;
   state.searchQuery = adapterState.searchQuery;
   state.selectionFilter = adapterState.selectionFilter;
   state.chartScale = adapterState.chartScale;
@@ -1393,6 +1624,9 @@ function analysisToAdapterState(analysis: AnalysisTabState): ActiveAnalysisAdapt
     analysisName: analysis.analysisName,
     dataset: analysis.dataset,
     selection: cloneSelection(analysis.selection),
+    selectionSets: cloneSelectionSets(analysis.selectionSets),
+    activeSelectionSetId: analysis.activeSelectionSetId,
+    selectionSetUndo: clonePlain(analysis.selectionSetUndo),
     searchQuery: analysis.searchQuery,
     selectionFilter: analysis.selectionFilter,
     chartScale: clonePlain(analysis.chartScale),
@@ -1451,6 +1685,10 @@ function cloneSelection(selection: SelectionState | null): SelectionState | null
 
 function cloneSourceFiles(sourceFiles: SourceFileSummary[]) {
   return sourceFiles.map((sourceFile) => ({ ...sourceFile }));
+}
+
+function cloneSelectionSets(selectionSets: SelectionSet[]) {
+  return selectionSets.map((selectionSet) => ({ ...selectionSet, curveIds: [...selectionSet.curveIds] }));
 }
 
 function createOverrideFieldSources(override: CurveStyleOverride, source: CurveStyleOverrideSource) {

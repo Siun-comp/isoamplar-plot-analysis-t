@@ -13,14 +13,16 @@ import type {
   PcrEntity,
   PcrWarning,
   SelectionFilter,
+  SelectionSet,
   SelectionState,
   StyleRules
 } from "../data/types";
 import { inferWarningHandling } from "../data/warningProvenance";
 
-export const ANALYSIS_STATE_SCHEMA_VERSION = 3;
+export const ANALYSIS_STATE_SCHEMA_VERSION = 4;
 const LEGACY_ANALYSIS_STATE_SCHEMA_VERSION = 1;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION = 2;
+const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 = 3;
 
 export type SourceFileSummary = {
   sourceKind?: DatasetSourceKind;
@@ -37,6 +39,8 @@ export type AnalysisState = {
   analysisName: string;
   dataset: PcrDataset;
   selection: SelectionState;
+  selectionSets: SelectionSet[];
+  activeSelectionSetId: string | null;
   searchQuery: string;
   selectionFilter: SelectionFilter;
   chartScale: ChartScaleState;
@@ -67,9 +71,14 @@ export type SerializedAnalysisState = Omit<
   exportSettings?: ExportSettings;
 };
 
-export type CreateAnalysisStateInput = Omit<AnalysisState, "sourceFiles" | "dirty" | "legendSettings" | "exportSettings"> & {
+export type CreateAnalysisStateInput = Omit<
+  AnalysisState,
+  "sourceFiles" | "dirty" | "legendSettings" | "exportSettings" | "selectionSets" | "activeSelectionSetId"
+> & {
   legendSettings?: LegendSettings;
   exportSettings?: ExportSettings;
+  selectionSets?: SelectionSet[];
+  activeSelectionSetId?: string | null;
   sourceFiles?: SourceFileSummary[];
   dirty?: boolean;
 };
@@ -101,6 +110,8 @@ export function createAnalysisState(input: CreateAnalysisStateInput): AnalysisSt
   const curveOverrides = promoteReportNamesToAnalysisLabels(input.curveOverrides, legendSettings);
   return {
     ...input,
+    selectionSets: input.selectionSets ?? [],
+    activeSelectionSetId: input.activeSelectionSetId ?? null,
     curveOverrides,
     legendSettings: {
       ...legendSettings,
@@ -163,6 +174,8 @@ export function serializeAnalysisState(state: AnalysisState): SerializedAnalysis
     analysisName: state.analysisName,
     dataset: state.dataset,
     selection: serializeSelectionState(state.selection),
+    selectionSets: state.selectionSets.map((selectionSet) => ({ ...selectionSet, curveIds: [...selectionSet.curveIds] })),
+    activeSelectionSetId: state.activeSelectionSetId,
     searchQuery: state.searchQuery,
     selectionFilter: state.selectionFilter,
     chartScale: state.chartScale,
@@ -187,6 +200,8 @@ export function deserializeAnalysisState(
     analysisName: serialized.analysisName,
     dataset: serialized.dataset,
     selection: deserializeSelectionState(serialized.selection),
+    selectionSets: serialized.selectionSets.map((selectionSet) => ({ ...selectionSet, curveIds: [...selectionSet.curveIds] })),
+    activeSelectionSetId: serialized.activeSelectionSetId,
     searchQuery: serialized.searchQuery,
     selectionFilter: serialized.selectionFilter,
     chartScale: serialized.chartScale,
@@ -239,6 +254,7 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
   if (
     payload.schemaVersion !== LEGACY_ANALYSIS_STATE_SCHEMA_VERSION &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION &&
+    payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 &&
     payload.schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
   ) {
     throw new Error("Unsupported Analysis XLSX schema version.");
@@ -264,6 +280,14 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
     }
   });
 
+  if (payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION) {
+    ["selectionSets", "activeSelectionSetId"].forEach((key) => {
+      if (!(key in payload)) {
+        throw new Error(`Analysis state restore data is missing ${key}.`);
+      }
+    });
+  }
+
   const migratedPayload = migrateSerializedAnalysisPayload(payload);
 
   assertString(migratedPayload.analysisName, "analysisName");
@@ -277,6 +301,11 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
   const datasetCurveIds = new Set(dataset.curves.map((curve) => curve.curveId));
 
   validateSelection(migratedPayload.selection, datasetCurveIds);
+  validateSelectionSets(
+    migratedPayload.selectionSets,
+    migratedPayload.activeSelectionSetId,
+    datasetCurveIds
+  );
   validateChartScale(migratedPayload.chartScale);
   validateStyleRules(migratedPayload.styleRules);
   validateCurveOverrides(migratedPayload.curveOverrides, datasetCurveIds);
@@ -284,7 +313,11 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
   validateExportSettings(migratedPayload.exportSettings);
   validateSourceFiles(migratedPayload.sourceFiles);
   validateDatasetRelationships(dataset);
-  validateSourceFileRelationships(dataset, migratedPayload.sourceFiles as SourceFileSummary[], payload.schemaVersion === 3);
+  validateSourceFileRelationships(
+    dataset,
+    migratedPayload.sourceFiles as SourceFileSummary[],
+    payload.schemaVersion === PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 || payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION
+  );
   validatePersistedReferences(
     dataset,
     migratedPayload.selection as SerializedSelectionState,
@@ -296,7 +329,10 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
 
 function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Record<string, unknown> {
   const isLegacySchema = payload.schemaVersion === LEGACY_ANALYSIS_STATE_SCHEMA_VERSION;
-  const needsProvenanceMigration = payload.schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION;
+  const hasSelectionSetSchema = payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION;
+  const needsProvenanceMigration =
+    payload.schemaVersion === LEGACY_ANALYSIS_STATE_SCHEMA_VERSION ||
+    payload.schemaVersion === PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION;
   const styleRules = isRecord(payload.styleRules)
     ? {
         ...payload.styleRules,
@@ -317,6 +353,8 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
     dataset,
     sourceFiles,
     styleRules,
+    selectionSets: hasSelectionSetSchema ? payload.selectionSets : [],
+    activeSelectionSetId: hasSelectionSetSchema ? payload.activeSelectionSetId : null,
     legendSettings:
       "legendSettings" in payload && isRecord(payload.legendSettings)
         ? {
@@ -747,6 +785,42 @@ function validateSelection(value: unknown, datasetCurveIds: Set<string>): assert
       throw new Error("selection.selectedCurveIds contains an unknown curveId.");
     }
   });
+}
+
+function validateSelectionSets(
+  value: unknown,
+  activeSelectionSetId: unknown,
+  datasetCurveIds: Set<string>
+): asserts value is SelectionSet[] {
+  if (!Array.isArray(value)) throw new Error("selectionSets must be an array.");
+
+  const selectionSetIds = new Set<string>();
+  const normalizedNames = new Set<string>();
+  value.forEach((selectionSet, index) => {
+    const path = `selectionSets[${index}]`;
+    if (!isRecord(selectionSet)) throw new Error(`${path} is invalid.`);
+    assertNonBlankString(selectionSet.selectionSetId, `${path}.selectionSetId`);
+    assertNonBlankString(selectionSet.name, `${path}.name`);
+    assertUniqueStringArray(selectionSet.curveIds, `${path}.curveIds`);
+    if (selectionSet.curveIds.length === 0) throw new Error(`${path}.curveIds must not be empty.`);
+    if (selectionSetIds.has(selectionSet.selectionSetId)) throw new Error("selectionSets contains duplicate IDs.");
+    selectionSetIds.add(selectionSet.selectionSetId);
+
+    const normalizedName = selectionSet.name.trim().toLocaleLowerCase();
+    if (normalizedNames.has(normalizedName)) throw new Error("selectionSets contains duplicate names.");
+    normalizedNames.add(normalizedName);
+
+    selectionSet.curveIds.forEach((curveId) => {
+      if (!datasetCurveIds.has(curveId)) throw new Error(`${path}.curveIds contains an unknown curveId.`);
+    });
+  });
+
+  if (activeSelectionSetId !== null && typeof activeSelectionSetId !== "string") {
+    throw new Error("activeSelectionSetId must be a string or null.");
+  }
+  if (typeof activeSelectionSetId === "string" && !selectionSetIds.has(activeSelectionSetId)) {
+    throw new Error("activeSelectionSetId references an unknown selection set.");
+  }
 }
 
 function validateChartScale(value: unknown): asserts value is ChartScaleState {

@@ -241,3 +241,9 @@ export type SelectionState = {
   collapsedGroupIds: Set<string>;
   orderedCurveIds: string[];
 };
+
+export type SelectionSet = {
+  selectionSetId: string;
+  name: string;
+  curveIds: string[];
+};

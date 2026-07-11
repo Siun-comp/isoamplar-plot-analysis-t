@@ -53,6 +53,10 @@ function createTestAnalysisState(): AnalysisState {
     exportCounter: 7,
     importFileName: dataset.sourceFileName,
     sourceFiles: [createSourceFileSummary(dataset)],
+    selectionSets: [
+      { selectionSetId: "selection-set-1", name: "Condition A", curveIds: [firstCurveId, secondCurveId] }
+    ],
+    activeSelectionSetId: "selection-set-1",
     dirty: true
   });
 }
@@ -74,6 +78,8 @@ describe("analysis state serialization", () => {
     expect([...restored.selection.selectedCurveIds]).toEqual([...state.selection.selectedCurveIds]);
     expect([...restored.selection.collapsedGroupIds]).toEqual([...state.selection.collapsedGroupIds]);
     expect(restored.selection.orderedCurveIds).toEqual(state.selection.orderedCurveIds);
+    expect(restored.selectionSets).toEqual(state.selectionSets);
+    expect(restored.activeSelectionSetId).toBe("selection-set-1");
     expect(restored.chartScale.y.preset1?.label).toBe("P1 narrow");
     expect(restored.styleRules.markerBy).toBe("reagent");
     expect(restored.styleRules.reagentMarkerTypes[state.dataset.curves[0].reagentId]).toBe("circle");
@@ -93,6 +99,52 @@ describe("analysis state serialization", () => {
       sheetName: state.dataset.sheetName,
       curveCount: state.dataset.curves.length
     });
+  });
+
+  it("migrates schema 3 restore data to empty selection sets", () => {
+    const serialized = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
+    serialized.schemaVersion = 3;
+    serialized.selectionSets = [{ selectionSetId: "legacy-injected", name: "Ignore", curveIds: ["unknown"] }];
+    serialized.activeSelectionSetId = "legacy-injected";
+
+    const restored = deserializeAnalysisState(serialized);
+
+    expect(restored.selectionSets).toEqual([]);
+    expect(restored.activeSelectionSetId).toBeNull();
+  });
+
+  it("rejects schema 4 restore data with missing selection set fields", () => {
+    const missingSets = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
+    delete missingSets.selectionSets;
+    expect(() => deserializeAnalysisState(missingSets)).toThrow("missing selectionSets");
+
+    const missingActiveId = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
+    delete missingActiveId.activeSelectionSetId;
+    expect(() => deserializeAnalysisState(missingActiveId)).toThrow("missing activeSelectionSetId");
+  });
+
+  it("rejects schema 4 restore data with invalid selection set field types", () => {
+    const serialized = serializeAnalysisState(createTestAnalysisState());
+    expect(() => deserializeAnalysisState({ ...serialized, selectionSets: null })).toThrow(
+      "selectionSets must be an array"
+    );
+    expect(() => deserializeAnalysisState({ ...serialized, activeSelectionSetId: 123 })).toThrow(
+      "activeSelectionSetId must be a string or null"
+    );
+  });
+
+  it("rejects selection sets with unknown curve references or active IDs", () => {
+    const serialized = serializeAnalysisState(createTestAnalysisState());
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        selectionSets: [{ selectionSetId: "bad", name: "Bad", curveIds: ["unknown"] }],
+        activeSelectionSetId: "bad"
+      })
+    ).toThrow("unknown curveId");
+    expect(() => deserializeAnalysisState({ ...serialized, activeSelectionSetId: "missing" })).toThrow(
+      "unknown selection set"
+    );
   });
 
   it("does not serialize transient UI fields even if present on the input object", () => {

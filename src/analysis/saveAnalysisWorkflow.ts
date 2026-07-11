@@ -24,6 +24,8 @@ export async function saveActiveAnalysis(): Promise<SaveActiveAnalysisResult> {
     analysisName: snapshot.analysisName,
     dataset: snapshot.dataset,
     selection: snapshot.selection,
+    selectionSets: snapshot.selectionSets,
+    activeSelectionSetId: snapshot.activeSelectionSetId,
     searchQuery: snapshot.searchQuery,
     selectionFilter: snapshot.selectionFilter,
     chartScale: snapshot.chartScale,

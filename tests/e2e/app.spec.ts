@@ -697,7 +697,7 @@ test("preserves formatted Excel identity and exposes actionable warning provenan
   const exportedWorkbook = XLSX.read(readFileSync(downloadPath as string), { type: "buffer", raw: true });
   expect(exportedWorkbook.SheetNames).toContain("HeaderProvenance");
   expect(exportedWorkbook.SheetNames).toContain("Warnings");
-  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(3);
+  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(4);
   const warningRows = XLSX.utils.sheet_to_json<unknown[]>(exportedWorkbook.Sheets.Warnings, { header: 1, blankrows: false });
   expect(warningRows[0]).toEqual(expect.arrayContaining(["Handling", "Source ID", "Display value", "Formula cache"]));
 });
@@ -792,6 +792,87 @@ test("roundtrips dataset selection scale style and labels through Analysis XLSX"
   expect(restoredValues.some((value) => typeof value === "number" && value < 0)).toBe(true);
   expect(restoredValues.some((value) => typeof value === "number" && value > 0 && value < 1e-6)).toBe(true);
   expect(restoredValues.some((value) => typeof value === "number" && value > 1e8)).toBe(true);
+});
+
+test("switches named Selection Sets and exports role-safe Selected Data XLSX", async ({ page }, testInfo) => {
+  const sourcePath = testInfo.outputPath("selection-sets-source.xlsx");
+  const analysisPath = testInfo.outputPath("selection-sets-analysis.xlsx");
+  const selectedDataPath = testInfo.outputPath("selection-sets-selected-data.xlsx");
+  writeDenseWorkbookFixture(sourcePath, 5, 12);
+
+  await page.goto("./");
+  await page.getByTestId("original-data-input").setInputFiles(sourcePath);
+  const search = page.getByRole("searchbox", { name: "검색" });
+
+  await search.fill("Assay 01");
+  await page.getByRole("button", { name: "표시 선택" }).click();
+  await page.getByRole("button", { name: "현재 선택을 새 세트로 저장" }).click();
+  await page.getByLabel("새 세트 이름").fill("조건 비교 1");
+  await page.getByRole("button", { name: "확인" }).click();
+
+  await page.getByRole("button", { name: "표시 해제" }).click();
+  await search.fill("Assay 02");
+  await page.getByRole("button", { name: "표시 선택" }).click();
+  await page.getByRole("button", { name: "새 세트" }).click();
+  await page.getByLabel("새 세트 이름").fill("조건 비교 2");
+  await page.getByRole("button", { name: "확인" }).click();
+
+  const setSelect = page.getByRole("combobox", { name: "적용할 선택 세트" });
+  await page.getByRole("button", { name: "새 세트" }).click();
+  await page.getByLabel("새 세트 이름").fill("L".repeat(120));
+  await page.getByRole("button", { name: "확인" }).click();
+  await page.getByText("관리", { exact: true }).click();
+  await page.getByRole("button", { name: "삭제" }).click();
+  const longNameConfirmation = page.getByRole("group", { name: "선택 세트 삭제 확인" });
+  expect(await longNameConfirmation.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await longNameConfirmation.getByRole("button", { name: "취소" }).click();
+  await page.getByText("관리", { exact: true }).click();
+
+  await setSelect.selectOption({ label: "조건 비교 1 (1)" });
+  await page.getByRole("button", { name: "적용", exact: true }).click();
+  await expect(page.locator(".selection-meta span").nth(1)).toHaveText(/1$/u);
+  const selectionSetPanel = page.locator(".selection-set-panel");
+  expect(await selectionSetPanel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await selectionSetPanel.screenshot({ path: testInfo.outputPath("selection-set-panel.png"), animations: "disabled" });
+
+  const savePromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "분석 저장" }).click();
+  const analysisDownload = await savePromise;
+  await analysisDownload.saveAs(analysisPath);
+  const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(4);
+  expect(analysisWorkbook.SheetNames).toContain("SelectionSets");
+
+  await page.getByTestId("analysis-restore-input").setInputFiles(analysisPath);
+  await expect(page.locator(".analysis-tab-button")).toHaveCount(2);
+  await expect(page.getByRole("option", { name: "조건 비교 1 (1)" })).toBeAttached();
+  await expect(page.locator(".selection-set-heading span")).toContainText("조건 비교 1");
+
+  const exportSummary = page.locator(".settings-accordion > details > summary", { hasText: "Export" });
+  if ((await exportSummary.locator("..").getAttribute("open")) === null) await exportSummary.click();
+  await page.locator(".settings-panel").screenshot({
+    path: testInfo.outputPath("selected-data-export-panel.png"),
+    animations: "disabled"
+  });
+  const selectedDataPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "선택 데이터 XLSX 저장" }).click();
+  const selectedDataDownload = await selectedDataPromise;
+  await selectedDataDownload.saveAs(selectedDataPath);
+  expect(selectedDataDownload.suggestedFilename()).toMatch(/_plot\d+_data\.xlsx$/u);
+
+  const selectedWorkbook = XLSX.read(readFileSync(selectedDataPath), { type: "buffer", raw: true });
+  expect(selectedWorkbook.SheetNames).toEqual([
+    "PlottedData",
+    "CurveInfo",
+    "Warnings",
+    "ExportInfo",
+    "_IsoAmplarSelectedData"
+  ]);
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.A1?.v).toBe("IsoAmplarSelectedData");
+  expect(selectedWorkbook.Sheets.PlottedData["!ref"]).toBe("A1:B13");
+
+  await page.getByTestId("append-excel-input").setInputFiles(selectedDataPath);
+  await expect(page.getByText("선택 데이터 XLSX는 Excel 후속 분석용이며 원본 입력 또는 분석 복원 파일이 아닙니다.")).toBeVisible();
 });
 
 test("creates and switches internal analysis tabs", async ({ page }, testInfo) => {

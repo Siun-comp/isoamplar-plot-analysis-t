@@ -8,6 +8,7 @@ import { buildSelectionTree } from "../selection/buildTrees";
 import { getFilteredCurveIds, getMatchedCurveIds } from "../selection/searchCurves";
 import { IndeterminateCheckbox } from "./IndeterminateCheckbox";
 import { SegmentedControl } from "./SegmentedControl";
+import { SelectionSetPanel } from "./SelectionSetPanel";
 import { useWarningNavigation } from "./WarningNavigationContext";
 
 const groupingOptions: Array<{ value: GroupingMode; label: string }> = [
@@ -135,6 +136,8 @@ export function DataSelectionPanel() {
         <span>표시 {filteredCurveIds.size}</span>
         <span>선택 {selectedCount}</span>
       </div>
+
+      <SelectionSetPanel key={activeAnalysisId} />
 
       <div className="selection-actions">
         <button type="button" onClick={() => setCurvesSelected(filteredCurveIds, true)} disabled={filteredCurveIds.size === 0}>

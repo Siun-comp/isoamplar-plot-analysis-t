@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   copyPngBlobToClipboard,
   copyReportLegendExcelTableToClipboard,
+  downloadBlob,
   exportChartLayoutImageBlob,
   exportReportLegendImageBlob
 } from "../chart/exportChart";
@@ -78,6 +79,7 @@ describe("App PCR workspace", () => {
     vi.mocked(exportChartLayoutImageBlob).mockClear();
     vi.mocked(exportReportLegendImageBlob).mockClear();
     vi.mocked(copyReportLegendExcelTableToClipboard).mockClear();
+    vi.mocked(downloadBlob).mockClear();
     vi.mocked(copyPngBlobToClipboard).mockClear();
     vi.mocked(exportAnalysisWorkbookBlob).mockClear();
   });
@@ -399,7 +401,7 @@ describe("App PCR workspace", () => {
     expect(screen.getByRole("button", { name: "Copy selected layout PNG to clipboard" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save report legend PNG" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "분석 저장" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Plotted CSV" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "선택 데이터 XLSX 저장" })).toBeEnabled();
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Image export layout" }), "legendOnly");
     expect(screen.getByRole("button", { name: "Save PNG" })).toBeEnabled();
@@ -430,6 +432,23 @@ describe("App PCR workspace", () => {
     }
     expect(vi.mocked(exportChartLayoutImageBlob).mock.calls.map(([args]) => args.type)).toEqual(["png", "jpeg", "png"]);
     expect(copyPngBlobToClipboard).toHaveBeenCalledTimes(1);
+  });
+
+  it("exports current selected values as the primary Selected Data XLSX output", async () => {
+    const user = userEvent.setup();
+    const dataset = createOneSpecimenEightReagentDataset();
+    act(() => {
+      useAppStore.getState().loadDataset(dataset);
+      useAppStore.getState().setCurvesSelected([dataset.curves[0].curveId], true);
+    });
+    render(<App />);
+    await user.click(getSettingsSummary("Export"));
+
+    await user.click(screen.getByRole("button", { name: "선택 데이터 XLSX 저장" }));
+
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(downloadBlob).mock.calls[0]?.[1]).toMatch(/_plot1_data\.xlsx$/u);
+    expect(useAppStore.getState().exportCounter).toBe(2);
   });
 
   it("keeps a deferred clipboard failure on the analysis where it started after switching tabs", async () => {
@@ -893,7 +912,7 @@ describe("App PCR workspace", () => {
     render(<App />);
 
     expect(screen.getAllByRole("button", { name: /PNG/ })[0]).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Plotted CSV" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "선택 데이터 XLSX 저장" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "분석 저장" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "분석 저장" }));
     await waitFor(() => expect(useAppStore.getState().dirty).toBe(false));

@@ -20,6 +20,10 @@ export function createPlottedDataFileName(plotNumber: number, date = new Date(),
   return `${createFileNameStem("plot", plotNumber, date, analysisName)}_data.csv`;
 }
 
+export function createSelectedDataFileName(plotNumber: number, date = new Date(), analysisName?: string) {
+  return `${createFileNameStem("plot", plotNumber, date, analysisName)}_data.xlsx`;
+}
+
 export function createFileNameStem(kind: "plot" | "analysis", number: number, date = new Date(), analysisName?: string) {
   const nameSegment = analysisName === undefined ? "" : `${sanitizeFileNamePart(analysisName) || "analysis"}_`;
   return `${createDateStamp(date)}_${nameSegment}${kind}${number}`;

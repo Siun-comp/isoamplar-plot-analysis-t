@@ -230,7 +230,7 @@ def image_flowable(markdown_path: Path, alt: str, source: str, styles: dict[str,
     width, height = reader.getSize()
     max_width = A4[0] - 32 * mm
     max_height = 118 * mm if width >= height else 150 * mm
-    scale = min(max_width / width, max_height / height)
+    scale = min(1.0, max_width / width, max_height / height)
     image = Image(str(image_path), width=width * scale, height=height * scale)
     image.hAlign = "CENTER"
     return KeepTogether([image, Paragraph(inline_markup(alt), styles["caption"])])

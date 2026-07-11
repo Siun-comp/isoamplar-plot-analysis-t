@@ -8,6 +8,7 @@ import {
 } from "./analysisState";
 import type { Curve, PcrWarning } from "../data/types";
 import { createFileNameStem, sanitizeFileNamePart } from "../chart/exportFilenames";
+import { inspectSelectedDataWorkbookRole } from "../chart/selectedDataWorkbook";
 
 type XlsxModule = typeof import("xlsx");
 
@@ -18,6 +19,7 @@ const SETTINGS_SHEET_NAME = "Settings";
 const HEADER_PROVENANCE_SHEET_NAME = "HeaderProvenance";
 const IMPORTED_DATA_SHEET_NAME = "ImportedData";
 const WARNINGS_SHEET_NAME = "Warnings";
+const SELECTION_SETS_SHEET_NAME = "SelectionSets";
 const CHUNK_SIZE = 30000;
 
 export type AnalysisWorkbookMetrics = {
@@ -33,7 +35,9 @@ export type AnalysisWorkbookMetrics = {
 
 export type AnalysisWorkbookReadResult =
   | { kind: "analysis"; analysis: AnalysisState; metrics: AnalysisWorkbookMetrics }
+  | { kind: "selected-data" }
   | { kind: "not-analysis" }
+  | { kind: "invalid-selected-data"; message: string }
   | { kind: "invalid-analysis"; message: string };
 
 let xlsxModulePromise: Promise<XlsxModule> | null = null;
@@ -53,6 +57,7 @@ export async function exportAnalysisWorkbookBufferWithMetrics(state: AnalysisSta
   appendSheet(xlsx, workbook, HEADER_PROVENANCE_SHEET_NAME, createHeaderProvenanceRows(state.dataset.curves));
   appendSheet(xlsx, workbook, IMPORTED_DATA_SHEET_NAME, createImportedDataRows(state.dataset.curves, state.curveOverrides));
   appendSheet(xlsx, workbook, WARNINGS_SHEET_NAME, createWarningsRows(state.dataset.warnings));
+  appendSheet(xlsx, workbook, SELECTION_SETS_SHEET_NAME, createSelectionSetRows(state));
   appendSheet(xlsx, workbook, ANALYSIS_RESTORE_SHEET_NAME, createRestoreRows(prepared));
   hideSheet(workbook, ANALYSIS_RESTORE_SHEET_NAME);
 
@@ -97,6 +102,11 @@ export async function readAnalysisWorkbookBuffer(buffer: ArrayBuffer | Uint8Arra
 }
 
 export function readAnalysisWorkbook(workbook: XLSX.WorkBook, xlsx: XlsxModule): AnalysisWorkbookReadResult {
+  const selectedDataRole = inspectSelectedDataWorkbookRole(workbook);
+  if (selectedDataRole.kind === "selected-data") return { kind: "selected-data" };
+  if (selectedDataRole.kind === "invalid-selected-data") {
+    return { kind: "invalid-selected-data", message: selectedDataRole.message };
+  }
   const restoreSheet = workbook.Sheets[ANALYSIS_RESTORE_SHEET_NAME];
   if (!restoreSheet) {
     return hasIsoAmplarAnalysisMarker(workbook)
@@ -224,6 +234,50 @@ function createImportedDataRows(curves: Curve[], curveOverrides: AnalysisState["
     const row: unknown[] = [curves[0]?.x[index] ?? index + 1];
     for (const curve of curves) row.push(curve.y[index] ?? "");
     rows.push(row);
+  }
+  return rows;
+}
+
+function createSelectionSetRows(state: AnalysisState) {
+  const curveById = new Map(state.dataset.curves.map((curve) => [curve.curveId, curve]));
+  const orderByCurveId = new Map(state.selection.orderedCurveIds.map((curveId, index) => [curveId, index + 1]));
+  const rows: unknown[][] = [
+    [
+      "Selection set ID",
+      "Selection set name",
+      "Active",
+      "Display order",
+      "Curve ID",
+      "Analysis label",
+      "Specimen",
+      "Reagent",
+      "Source ID",
+      "Source name",
+      "Source column"
+    ]
+  ];
+
+  for (const selectionSet of state.selectionSets) {
+    const orderedCurveIds = [...selectionSet.curveIds].sort(
+      (first, second) => (orderByCurveId.get(first) ?? Number.MAX_SAFE_INTEGER) - (orderByCurveId.get(second) ?? Number.MAX_SAFE_INTEGER)
+    );
+    for (const curveId of orderedCurveIds) {
+      const curve = curveById.get(curveId);
+      if (!curve) continue;
+      rows.push([
+        selectionSet.selectionSetId,
+        selectionSet.name,
+        state.activeSelectionSetId === selectionSet.selectionSetId ? "Yes" : "No",
+        orderByCurveId.get(curveId) ?? "",
+        curveId,
+        state.curveOverrides[curveId]?.displayName ?? "",
+        curve.specimenLabel,
+        curve.reagentLabel,
+        curve.source.sourceInstanceId ?? "",
+        curve.source.fileName,
+        curve.source.columnLetter
+      ]);
+    }
   }
   return rows;
 }
@@ -377,7 +431,7 @@ function readSerializedAnalysisState(worksheet: XLSX.WorkSheet, xlsx: XlsxModule
   }
 
   const schemaVersion = rows.find((row) => row[0] === "schemaVersion")?.[1];
-  if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION) {
+  if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== 3 && schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION) {
     throw new Error("Unsupported Analysis XLSX schema version.");
   }
 

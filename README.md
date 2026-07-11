@@ -13,8 +13,9 @@ This tool is for research and kit-development visualization. It does not perform
 - ECharts plot preview with Auto, Fixed, P1/P2, Box zoom, Previous scale, and raw point readout.
 - Specimen/reagent group styles, per-curve overrides, HEX colors, line types, and markers.
 - User-controlled legend order, Analysis labels, Auto compact labels, and separate plot/legend outputs.
-- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, and conditional plotted-data CSV.
-- Multiple analysis tabs and Analysis XLSX save/restore containing the complete imported dataset and settings.
+- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, Selected Data XLSX, and secondary conditional plotted-data CSV.
+- Named Selection Sets for switching recurring curve combinations without changing scale, style, labels, or order.
+- Multiple analysis tabs and Analysis XLSX schema 4 save/restore containing the complete imported dataset, settings, and Selection Sets.
 
 The app does not smooth, normalize, baseline-correct, log-transform, average, interpolate, or calculate threshold/Ct/Cq from fluorescence data.
 

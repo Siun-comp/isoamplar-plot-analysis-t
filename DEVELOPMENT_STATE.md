@@ -7,11 +7,12 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-07-11
+2026-07-12
 
 ## CURRENT TRUTH
 
 - Active branch: `codex/audit-remediation`; it does not trigger the Pages deploy workflow.
+- Current working extension: Selection Sets and Selected Data XLSX are implemented and locally release-verified from `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md`; commit, main promotion, and Pages verification remain.
 - Current published product artifact source: `eae3281fb8f9bbbd900fab528be3e094b93b555a`, tag `release-20260711-audit-remediation-r1`. Evidence-only commits may follow it on `main` without changing the verified dist hash.
 - Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
@@ -44,7 +45,8 @@ Active
 - Chart preview uses ECharts with white background, sparse major grid, no minor grid, animation off, `connectNulls: false`, and a fixed preview viewport height that does not stretch with side-panel expansion. On desktop the chart panel is sticky while the page scrolls.
 - X/Y Auto, Fixed, and user-editable P1/P2 scale presets are implemented. P1/P2 have no invented default min/max values and become selectable only after valid numeric bounds are entered.
 - Style controls include specimen/reagent group color with picker and HEX input, line type, group marker state model, stable default colors based on original data/group order, individual curve overrides, marker options, built-in presets, one-step preset undo, and user legend/export order.
-- Export supports PNG/JPEG downloads, PNG clipboard copy with fallback message, and plotted-data CSV only for current rectangular common-X chart projections.
+- Export supports PNG/JPEG downloads, PNG clipboard copy with fallback, Selected Data XLSX for current rectangular common-X selections, and plotted-data CSV as a secondary format.
+- Named Selection Sets switch recurring curve combinations within one analysis tab without changing scale, style, Analysis labels, legend/export order, search, or collapse state. They persist through Analysis XLSX schema 4.
 - GitHub Pages asset base is configured as `./` by default. The public GitHub Pages deployment is active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
 - Browser tab/bookmark/PWA icon assets use the selected Option A amplification-curve icon.
 - The current implementation plan is `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`. Phases R0 through R13 are complete.
@@ -60,15 +62,26 @@ Active
 - The audit remediation plan in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md` is implemented through S11 and the release is active on GitHub Pages.
 
 ## Current Goal
-Commit and push the completed S11 deployment evidence, then hand the released build to the user for domain-specific manual acceptance.
+Commit, promote, deploy, and publicly verify the locally approved Selection Sets and Selected Data XLSX release candidate.
 
 ## Current Milestone
-M9 - Release validation and real-data hardening.
+M10 - Repeated-selection workflow and Excel follow-up export.
 
 ## Last Completed Step
-Deployed S11 corrected candidate `eae3281fb8f9bbbd900fab528be3e094b93b555a` after successful branch CI and Pages workflow. Public-origin asset, import, chart, scale, legend style identity, PNG, Analysis XLSX, network, console, and desktop visual smoke passed. Deployment evidence and rollback history are recorded in `docs/15_RELEASE_CANDIDATE_KR.md`; product/domain, data/privacy, desktop UX/accessibility, and QA/release final reviews are GO.
+Implemented and locally release-verified Selection Sets, Analysis XLSX schema 4 continuity, Selected Data XLSX, output-role rejection, compact desktop controls, and synthetic guide screenshots. Final gates passed Vitest 37 files / 293 tests, audit 1/1, production build, fresh Chromium 12/12 with fail-on-flaky enabled, dependency audit with 0 vulnerabilities, PDF render review, and diff whitespace check. Independent state/data, XLSX, and desktop UX re-audits all returned GO after their findings were fixed.
 
 ## Latest Changed Files
+- `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md`
+- `src/selection/selectionSets.ts`
+- `src/ui/SelectionSetPanel.tsx`
+- `src/chart/selectedDataWorkbook.ts`
+- `src/analysis/analysisState.ts`
+- `src/analysis/analysisWorkbook.ts`
+- `src/app/appStore.ts`
+- `src/ui/SettingsPanel.tsx`
+- `tests/e2e/app.spec.ts`
+- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.md`
+- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
 - `.github/workflows/pages.yml`
 - `.github/workflows/s1-ci.yml`
 - `AGENTS.md`
@@ -604,6 +617,8 @@ Deployed S11 corrected candidate `eae3281fb8f9bbbd900fab528be3e094b93b555a` afte
   - `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
 
 ## Known Gaps
+- Selection Sets intentionally store curve membership only; full Named Views containing scale/style/labels/order remain a future decision.
+- Selected Data XLSX currently requires a common-X rectangular projection and is output-only. Non-common-X workbook layouts and native editable Excel charts remain excluded.
 - Phases S0-S11 are implemented, deployed, and independently reviewed with no automated release blocker.
 - S2-S7A resolve invalid Fixed-scale fallback, accepted-envelope large-array hazards, exported-legend identity loss, Excel formatted-header identity, actionable source-aware warnings, localized containment, browser refresh/close protection, captured-tab async output routing, contradictory Analysis XLSX restoration, non-BMP restore chunk damage, and plotted CSV formula-like headers.
 - S8 resolves the inactive Legend panel, laptop-height chart availability, compact individual-style identity, and clipped style-popover defects without introducing a new editor workflow or mobile redesign.
@@ -630,6 +645,7 @@ Deployed S11 corrected candidate `eae3281fb8f9bbbd900fab528be3e094b93b555a` afte
 - GPT-5.6 project audit: `docs/11_GPT56_PROJECT_AUDIT_KR.md`
 - Audit remediation implementation plan: `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`
 - Audit remediation traceability: `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
+- Selection Sets and Selected Data XLSX plan: `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md`
 - Release candidate evidence: `docs/15_RELEASE_CANDIDATE_KR.md`
 - Synthetic fixture contract: `docs/07_FIXTURE_SNAPSHOT_PLAN_KR.md`
 - First-user guide PDF: `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
@@ -637,6 +653,6 @@ Deployed S11 corrected candidate `eae3281fb8f9bbbd900fab528be3e094b93b555a` afte
 - Local production preview: `http://127.0.0.1:4173/`
 
 ## Next 3 Tasks
-1. User manually verifies representative workbooks, intended P1/P2/style choices, report readability, and Windows Chrome/Edge-to-Excel clipboard fidelity.
-2. Record any domain-specific issue with source location, expected curve/scale/style, and exported evidence before changing parser or chart policy.
-3. Decide only when needed on official payload limits, internal tab cap, hosting access control, and GitHub action-major migration.
+1. Commit and push the verified extension on `codex/audit-remediation`.
+2. Promote it to `main`, verify GitHub Actions/Pages, and run public synthetic smoke.
+3. User manually checks Selection Set switching and Selected Data XLSX usability with representative non-sensitive workbooks.

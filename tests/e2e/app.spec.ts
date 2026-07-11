@@ -871,6 +871,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
   ]);
   expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.A1?.v).toBe("IsoAmplarSelectedData");
   expect(selectedWorkbook.Sheets.PlottedData["!ref"]).toBe("A1:B13");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.getByTestId("append-excel-input").setInputFiles(selectedDataPath);
   await expect(page.getByText("선택 데이터 XLSX는 Excel 후속 분석용이며 원본 입력 또는 분석 복원 파일이 아닙니다.")).toBeVisible();

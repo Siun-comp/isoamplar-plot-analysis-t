@@ -42,7 +42,7 @@ Update this file when parsing rules, data types, invalid data handling, internal
 MVP target:
 
 - File extension: `.xls`, `.xlsx`
-- Source: browser file picker or drag and drop
+- Source: browser file picker. Drag and drop is not implemented.
 - Processing location: browser
 - Worksheet behavior: parse worksheet index 0 only.
 - If worksheet index 0 is invalid, import fails even if later worksheets are valid.

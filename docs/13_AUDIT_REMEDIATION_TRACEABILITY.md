@@ -30,7 +30,7 @@
 | U-P2-01 inactive Legend panel visible | FR-008, D035, D047 | AC-PCR-052A | Synthetic selected curves with Legend Order/Labels tabs | Frontend QA: `src/app/App.test.tsx`, `tests/e2e/app.spec.ts` | Accessibility QA: computed display, accessibility tree, roving focus, Arrow/Home keys | Passing S8 | S8 |
 | U-P2-03 sticky plot unavailable at desktop height | FR-020, D032, D047 | AC-PCR-052B | Generated 100-curve long-label workspace | Frontend QA: `tests/e2e/app.spec.ts` at 1280x720, 1366x768, 1920x1080 | Desktop QA: plot bounding box, fixed canvas height, horizontal overflow, compact rows and portalled popovers | Passing S8; official minimum resolution remains UD-08 | S8 |
 | C-P2-04 dense hover/editor work | FR-020, D030, D031, D048 | AC-PCR-038, AC-PCR-039, AC-PCR-040 | Generated 20x100 reference and 100x100 stress workbooks | Chart QA: `src/chart/ChartView.test.ts`, `src/app/App.test.tsx`; browser QA and reusable JSON output: `tests/e2e/app.spec.ts` | Evidence: `docs/14_S9_PERFORMANCE_EVIDENCE.md`; representative user-file budget remains undecided | Passing S9 implementation: RAF coalescing, 32 px X-window candidates with deterministic >=5x work reduction, real ECharts patch fidelity, stale-work invalidation, measured Style and Legend retained without new virtualization | S9 |
-| CI/release drift | FR-013, D002, D003, D049 | RQ-CI-001 | Fixed fixture manifest, exact built `dist`, generated browser workbooks, PNG evidence | Release QA: `.github/workflows/s1-ci.yml`, `.github/workflows/pages.yml`, `scripts/dist-integrity.mjs`, `tests/audit/auditEvidence.todo.test.ts`, `tests/e2e/app.spec.ts` | Release owner: actual workflow run, candidate hash, post-deploy Pages smoke in S11 | Passing S10 implementation: fresh dedicated preview, real repository base path, committed-diff/audit gates, exact-dist before/after equality, exact expected network/WebSocket probe evidence, opaque raster/text/style bounds, clipboard fallback, Analysis XLSX save/restore/resave with exact curve/source/X/Y/stats equality, least deploy permissions | S10 |
+| CI/release drift | FR-013, D002, D003, D049 | RQ-CI-001 | Fixed fixture manifest, exact built `dist`, generated browser workbooks, PNG evidence | Release QA: `.github/workflows/s1-ci.yml`, `.github/workflows/pages.yml`, `scripts/dist-integrity.mjs`, `tests/audit/releaseEvidence.test.ts`, `tests/e2e/app.spec.ts` | Release owner: actual workflow run, candidate hash, post-deploy Pages smoke in S11 | Passing S10 implementation: fresh dedicated preview, real repository base path, committed-diff/audit gates, exact-dist before/after equality, exact expected network/WebSocket probe evidence, opaque raster/text/style bounds, clipboard fallback, Analysis XLSX save/restore/resave with exact curve/source/X/Y/stats equality, least deploy permissions | S10 |
 | C-P1-06 accepted Quick Paste stack overflow | FR-003, D037, D041, D044 | AC-QP-021 | Exact 250,000 x 1, 3 x 83,333, 500 x 500 empty-heavy, 2,000,000-character inputs; exact over-limit rejection | Parser/UI QA: `tests/fixtures/generatedCases.test.ts`, `src/data/parsePastedTable.test.ts`, `src/ui/PasteImportPanel.test.tsx`, localized boundary tests | Desktop QA: fresh Chromium and in-app production preview summary/overflow/log inspection | Passing S5: accepted envelope previews, out-of-envelope/parser/import/render failures remain controlled, current analysis and app shell are preserved | S2/S5 |
 
 ## Fixed Evidence Files
@@ -41,7 +41,7 @@
 - Binary sources: `tests/fixtures/source/`
 - Passing fixture tests: `tests/data/parseExcel.fixture.test.ts`
 - Isolated known-red probes: `tests/audit/knownRed.audit.ts`
-- S10 release contract tests: `tests/audit/auditEvidence.todo.test.ts` (historical filename retained; contains passing dist/workflow gates)
+- S10 release contract tests: `tests/audit/releaseEvidence.test.ts`
 - Raster evidence helper: `tests/e2e/helpers/rasterEvidence.ts`
 
 ## S1 Exit Rule
@@ -119,3 +119,37 @@ S1 completes when fixed hashes, passing baseline tests, isolated known-red probe
 - Import intent: original Excel open, Excel append, saved Analysis XLSX restore, and Quick Paste are separate commands with store-level role validation.
 - Desktop UX: dirty close uses a native modal dialog with initial focus, Escape cancel, and focus restoration. Existing top bands were compacted without changing the fixed chart canvas height.
 - Final gates: standard Vitest passed 30 files / 240 tests with 4 later-phase TODOs; the isolated S7 known-red probe remained; production build passed; fresh CI-mode Chromium passed 7/7 with fail-on-flaky enabled; dependency audit reported 0 vulnerabilities. Independent code and desktop-UX re-audits returned GO.
+
+## S7A Local Verification Evidence
+
+- Restore semantics: migrated Analysis XLSX state is rejected before tab creation when cycle numbering, X/Y length, longest-cycle count, statistics, specimen/reagent membership, source summary/provenance, warnings, collapsed groups, style keys, or curve references contradict one another.
+- Continuity: generated 96-curve by 100-cycle workbooks round-trip the complete imported dataset and settings; visible Settings review data records source-specific cycle counts and payload measurements. No hard browser-memory limit is claimed while UD-02 remains open.
+- Text safety: restore JSON chunks preserve non-BMP characters across chunk boundaries. Plotted CSV headers beginning with `=`, `+`, `-`, or `@` are neutralized only in the CSV output; source labels, Analysis labels, fluorescence values, and Analysis XLSX content remain unchanged.
+- Automated evidence: focused state/workbook/store/CSV tests and the full suite passed before commit `0d35ccf`; the final known-red CSV signature was removed after its accepted regression passed. Independent semantic and performance/security reviews returned GO.
+
+## S8 Local Verification Evidence
+
+- Desktop workflow: the inactive Legend panel was removed, top/import bands were compacted, and Style/Legend controls expose full group identity with compact color and combined line/marker editors without changing the fixed chart viewport.
+- Dense editing: selected/all/group reset scope, field origin, style collision advisories, and the >20-curve helper are explicit. Automatic palette reassignment and a new bulk editor were not introduced.
+- Browser evidence: 1280/1366/1920 desktop layouts, keyboard legend order, style popover bounds, and dense selected-curve rows were covered by component and Chromium checks. Commit `37c4d96` passed full automated, build, browser, and independent code/UX GO gates.
+
+## S9 Local Verification Evidence
+
+- Interaction model: pointer sampling and visual emphasis are separated from persistent curve style. Hover work is requestAnimationFrame-coalesced, nearest-point lookup is bounded, and marker/line settings are not mutated by emphasis.
+- Accessibility and cleanup: chart and custom-legend pointer/focus exit clear transient emphasis and readout; Box zoom suppresses hover state while active. Component regressions cover stale highlight, marker preservation, tooltip/readout, and cleanup.
+- Performance evidence: deterministic work-unit measurements, a reusable no-retry browser measurement, and fresh Chromium checks are recorded in `docs/14_S9_PERFORMANCE_EVIDENCE.md`. Full unit/build/browser/dependency gates and independent code/UX reviews passed before commit `5ef12ec`.
+
+## S10 Local Verification Evidence
+
+- Fresh artifact: Playwright uses a dedicated non-reused port 4174 production preview and the real `/isoamplar-plot-analysis/` base path. CI records the complete `dist` tree before Chromium and rejects any added, removed, or changed file afterward.
+- Runtime boundary: browser tests allow only known static app `GET/HEAD` requests and local `blob:`/`data:` output; same-origin writes, unexpected cross-origin transport, and WebSockets fail with exact negative probes.
+- Export/restore evidence: raster checks cover nonblank output, opaque white perimeter, legend text/style slots, and clipboard fallback. Analysis XLSX browser save/restore/resave compares curve identity, source, X/Y, statistics, null, negative, exponential, and large values exactly.
+- Release gate: the final S10 run passed 32 files / 265 Vitest tests, one isolated audit probe, zero high/critical production dependency vulnerabilities, Pages-base build, and fresh Chromium 11/11 with fail-on-flaky. The complete dist tree SHA-256 `d4818b8cdfe826c374dd9ca4f5145f2119f2418b7a5859eb8849813161f85706` was unchanged before/after browser tests. Release/security and browser/data-integrity reviews returned GO before commit `f505ab6`.
+
+## S11 Release Evidence
+
+- Current release evidence, candidate identity, public-origin smoke, rollback decision, and remaining manual checks are maintained in `docs/15_RELEASE_CANDIDATE_KR.md` and `docs/08_RELEASE_CHECKLIST_KR.md`.
+- The 16-page Korean first-user guide uses synthetic-only examples and screenshots and has passed PDF text extraction, sensitive-term/path scanning, Poppler rendering, and page-level visual review.
+- Final pre-commit gates passed 32 files / 265 Vitest tests, one audit probe, zero high/critical production dependency vulnerabilities, Pages-base build, and fresh Chromium 11/11. The complete candidate dist tree SHA-256 `1012572727dd66d74763775f828fef165baa24012c61c770db6617e90d6cce46` was byte-identical before/after Playwright.
+- A representative workbook stored outside the repository passed local-only import, all-curve selection, nonblank canvas, P1/P2 applied-state labels, and browser-error checks; no real label, value, workbook path, screenshot, or exported artifact entered repository evidence.
+- S11 completes only after final unit/audit/build/fresh Chromium/exact-dist gates, four-role independent GO review, branch CI, candidate tag, Pages deployment, and public HTTP/import/render/export/browser-local-network smoke are recorded.

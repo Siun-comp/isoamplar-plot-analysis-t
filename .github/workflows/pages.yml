@@ -58,7 +58,7 @@ jobs:
         run: |
           mkdir -p evidence
           npm run test
-          npm run test:audit:red
+          npm run test:audit
 
       - name: Build
         run: npm run build

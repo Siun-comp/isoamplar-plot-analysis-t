@@ -23,10 +23,12 @@ Active
 - Phase S7A Analysis XLSX semantic validation, payload measurement, surrogate-safe restore chunks, and formula-safe plotted CSV headers are committed as `0d35ccf` after final independent semantic and performance/security GO verdicts.
 - Phase S8 desktop UI and density remediation is complete on the active branch after full verification and final independent code/UX GO verdicts.
 - Phase S9 hover/editor performance remediation is committed as `5ef12ec` after deterministic work-unit, full unit, production build, reusable no-retry measurement, fresh Chromium, in-app desktop, dependency, and final independent code/UX GO gates.
-- Phase S10 fresh CI, exact-dist, network, raster, clipboard-fallback, Analysis XLSX exact browser roundtrip, Pages base-path, and least-permission promotion gates are complete after final independent release/security and browser/data-integrity GO verdicts.
+- Phase S10 fresh CI, exact-dist, network, raster, clipboard-fallback, Analysis XLSX exact browser roundtrip, Pages base-path, and least-permission promotion gates are committed as `f505ab6` after final independent release/security and browser/data-integrity GO verdicts.
+- Phase S11 documentation synchronization and release preparation are in progress under the user's standing commit/push/deploy approval.
 - S1 adds synthetic-only fixed `.xlsx`/BIFF8 `.xls` fixtures, SHA-256 manifest, normalized/target snapshots, raster evidence helper, Target/Known-red acceptance criteria, traceability, and a read-only non-deploying CI workflow.
 - Product runtime behavior is unchanged by S1. No parser, chart, state, export, UI, dependency, or Pages deployment behavior was modified.
 - Latest S10 verification: the standard suite passed 32 files / 265 tests with no TODO; isolated audit probe passed; production dependency audit found 0 vulnerabilities; Pages-base build and fresh Chromium passed 11/11 with fail-on-flaky enabled. Complete dist tree hash `d4818b8cdfe826c374dd9ca4f5145f2119f2418b7a5859eb8849813161f85706` was byte-identical before and after Playwright. The 1366x768 in-app Pages-path preview had no horizontal overflow or console warning/error.
+- Latest S11 pre-commit verification: the standard suite passed 32 files / 265 tests; isolated audit probe passed 1/1; production dependency audit found 0 vulnerabilities; Pages-base build and fresh Chromium passed 11/11 with fail-on-flaky. Complete dist tree hash `1012572727dd66d74763775f828fef165baa24012c61c770db6617e90d6cce46` was byte-identical before and after Playwright. A representative workbook outside the repository passed local-only import, all-curve selection, nonblank canvas, P1/P2 application, and browser-error checks without copying labels, values, or paths into evidence.
 - User data remains browser-local. No real workbook, patient/specimen record, or actual fluorescence dataset is checked into S1 fixtures.
 - The user has granted standing approval for subsequent remediation phase commits. Continue phases sequentially, but do not push or deploy until the plan reaches the corresponding release phase.
 
@@ -47,29 +49,49 @@ Active
 - The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, balanced Y-axis spacing, dedicated legend-only clipboard PNG copy, compact group style controls, and native style popover closing.
 - The current pre-use refinement adds slash-safe ` │ ` curve labels, report-readable legend PNG/JPEG/clipboard export, Analysis label editing, rich Excel-cell legend clipboard copy with Malgun Gothic 9 pt formatting, Export control grouping, dirty close/replace confirmation flows, Style-panel preset shortcut removal, line/marker popover auto-close after selection, report legend image text alignment fixes, Excel-friendly colored glyph legend clipboard samples, and raw-point/no-smoothing regression coverage.
 - The latest patch fixes the preview legend visibility Korean label and the pre-import Legend empty-state Korean mojibake, applies Auto compact labels to the chart preview/custom legend and plot/legend image exports, changes the Labels reset control back to an icon-sized button, stacks the Export Legend header to avoid text overlap, adds current Analysis XLSX continuity and parser edge-case regression coverage, removes unused legacy Legend/Report editor code that still referenced the old report-name override model, and changes the app header status badge from internal phase wording to `Browser-local analysis`.
-- A first-user Korean PDF guide has been generated under `output/pdf/`, covering Excel input format, core workflows, export options, Analysis XLSX continuity, parser edge cases, and troubleshooting. The guide examples use only synthetic `Sample` / `Assay` labels and generated fluorescence values; do not use real user-provided labels or disease/test names in guide examples.
-- The latest uncommitted app change updates the default chart palette order to `#7030A0`, `#0926FB`, `#00B050`, `#FFC000`, `#FF0000`, `#767171`, `#4ACCE6`, `#EB45BC`.
-- The latest uncommitted app change also adds explicit Box zoom: the user enables Box zoom, the valid plot area is highlighted, the user drags a visible plot-area rectangle, and the app writes the selected data-space region into Fixed X/Y scale bounds. `Previous scale` restores the prior scale one Box zoom step at a time from a per-analysis browser-session return stack, while `Auto scale` is a separate full automatic reset that clears return history. It does not use wheel zoom, does not crop the dataset, and does not transform fluorescence data.
+- A 16-page first-user Korean PDF guide is generated under `output/pdf/`, covering Excel/Quick Paste input, desktop workflow, export, exact Analysis XLSX continuity, privacy, parser edge cases, and troubleshooting. The guide examples and screenshots use only synthetic labels/values; do not use real user-provided labels or disease/test names in guide examples.
+- The default chart palette order is `#7030A0`, `#0926FB`, `#00B050`, `#FFC000`, `#FF0000`, `#767171`, `#4ACCE6`, `#EB45BC`.
+- Explicit Box zoom highlights the valid plot area and writes a dragged data-space region into Fixed X/Y scale bounds. `Previous scale` restores prior scale snapshots one step at a time, while `Auto scale` resets both axes and clears return history. It never crops or transforms fluorescence data.
 - The latest UI consistency pass normalizes button/form-control sizing across top tabs, import actions, selection controls, chart tools, scale controls, legend controls, and export controls; status badges remain intentionally smaller. It also scopes settings accordion summary styling so nested Style color/line popover triggers stay compact, tightens reset-icon button padding, and removes an obsolete hidden Export legend button wrapper.
 - Quick Paste Import Phases Q0-Q6 are implemented from `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`. It supports full-table and single-specimen input, tab-separated and single-column text, read-only preview, paginated source-position warnings with acknowledgement, stale/target revision guards for append and new-analysis actions, per-import source identity, mixed-source Analysis XLSX continuity, and the existing chart/export pipeline. Comma/CSV tables are rejected to prevent silent delimiter corruption.
 - A 2026-07-11 code/data-integrity/desktop-UX audit is complete in `docs/11_GPT56_PROJECT_AUDIT_KR.md`. Mobile was explicitly excluded. No P0 issue was identified; Stabilization A prioritizes invalid Fixed-scale export fallback, exported-legend identity truncation, Excel formatted-header identity, actionable Excel warnings, browser refresh/close protection, and accepted-size Quick Paste crash prevention. The audit also records P2 state/export/performance risks, documentation drift, and workflow candidates such as Warning Center, explicit save commands, Named Views, and optional export preflight.
-- The audit remediation plan is active in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`. Phases S0-S9 are committed; S10 is complete and ready to commit. S11 remains pending.
+- The audit remediation plan is active in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`. Phases S0-S10 are committed; S11 documentation synchronization and release preparation are in progress.
 
 ## Current Goal
-Commit the verified S10 release gates without deployment, then execute S11 documentation synchronization, final multi-role audit, release-candidate preparation, approved push, and post-deploy verification.
+Synchronize all current documentation and the synthetic user guide, complete the final four-role audit, then create and deploy the release candidate under standing approval and record post-deploy/rollback evidence.
 
 ## Current Milestone
 M9 - Release validation and real-data hardening.
 
 ## Last Completed Step
-Completed S10 local verification: Playwright uses a dedicated non-reused port and the real repository path; context-wide routing permits only known static app `GET/HEAD` paths plus blob/data and blocks same-origin writes, cross-origin image/fetch/XHR/beacon/POST, and WebSocket with exact expected-probe evidence retained separately from unexpected violations. PNG evidence verifies exact size, no transparency, fully white perimeter, bounded nonwhite content, and expected text/style pixels. Chromium proves clipboard failure guidance and Analysis XLSX save/restore/resave with exact curve/source/X/Y/stats equality across null, negative, exponential, and large fluorescence values plus selection/scale/style/label continuity. Branch CI and Pages build hash one dist before/after fresh Chromium and Pages uploads those same bytes; only deploy receives Pages/OIDC write permission. Final independent release/security and browser/data-integrity verdicts are GO.
+Completed S11 local release-candidate preparation. README, charter, I/O, acceptance, plans, traceability, release checklist, and the 16-page synthetic-only guide now describe the current desktop workflow and clinical-use boundary. The guide passed ReportLab generation, Poppler page rendering, visual inspection, text extraction, and sensitive-term/path scans. Domain and data/privacy reviews are GO; QA found no code/workflow blocker and is waiting only for candidate SHA, branch CI, Pages deployment, and public-smoke evidence. Final local unit/audit/dependency/build/fresh Chromium/exact-dist and representative-workbook technical checks passed.
 
 ## Latest Changed Files
 - `.github/workflows/pages.yml`
 - `.github/workflows/s1-ci.yml`
+- `AGENTS.md`
+- `CHANGELOG.md`
+- `README.md`
+- `package.json`
+- `docs/01_PROJECT_CHARTER_KR.md`
+- `docs/03_INPUT_OUTPUT_SPEC_EN.md`
+- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
+- `docs/08_RELEASE_CHECKLIST_KR.md`
+- `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`
+- `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`
+- `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
+- `docs/15_RELEASE_CANDIDATE_KR.md`
+- `DEVELOPMENT_STATE.md`
+- `tests/audit/releaseEvidence.test.ts`
+- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.md`
+- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
+
+## Previous Phase S10 Changed Files
+- `.github/workflows/pages.yml`
+- `.github/workflows/s1-ci.yml`
 - `scripts/dist-integrity.mjs`
 - `playwright.config.ts`
-- `tests/audit/auditEvidence.todo.test.ts`
+- `tests/audit/releaseEvidence.test.ts`
 - `tests/e2e/app.spec.ts`
 - `tests/e2e/helpers/rasterEvidence.ts`
 - `src/analysis/analysisWorkbook.test.ts`
@@ -566,7 +588,7 @@ Completed S10 local verification: Playwright uses a dedicated non-reused port an
 - Phase S1 final local verification: deterministic fixture regeneration changed 0 of 14 generated source/snapshot files and left `tests/fixtures/manifest.json` byte-identical; `npm run test` passed 22 files / 172 tests with 7 explicit Target TODOs; `npm run test:audit:red` passed 5 exact defect-signature probes; `npm run build` passed; `$env:CI='1'; npm run test:e2e -- --project=chromium --fail-on-flaky-tests --reporter=line` passed 5 tests from a fresh 4173 preview server; complete pre/post manifests for all 25 files in the tested `dist` were byte-identical. A negative-control check added a temporary 26th file and confirmed the complete-tree comparison failed, then removed it and reconfirmed 25-file equality. `npm audit --omit=dev` found 0 vulnerabilities. The first build attempt generated all assets but ended with a non-reproducible Node 24.14.1 Windows `libuv` shutdown assertion; an immediate clean rerun exited 0 and the same output hashes were verified. The synthetic FX-002 desktop evidence screenshot is `docs/gui_mockups/screenshots/s1_fixture_import.png`; it rendered two curves at 1920x1080 with no console/page errors or horizontal overflow.
 - Phase S2 final local verification: `npm run test` passed 24 files / 190 tests with 7 explicit Target TODOs; `npm run test:audit:red` passed the 3 remaining exact defect-signature probes; `npm run build` passed; fresh CI-mode Chromium E2E passed 15/15 across three repetitions and a final post-hardening 5/5 run; `npm audit --omit=dev` found 0 vulnerabilities. Focused scale/state/workbook/export tests passed 6 files / 93 tests after adding active invalid P1/P2, equal-bound, Box zoom adjacent-bound, schema-2 corruption rejection, and full schema-1 workbook migration coverage. The synthetic FX-002 screenshot `docs/gui_mockups/screenshots/s2_scale_draft_applied.png` confirms an invalid Y draft retains the last valid applied Fixed scale, disables plot-bearing image output, and keeps Analysis XLSX available at 1920x1080 with zero console/page errors and no horizontal overflow.
 - Phase S3 final local verification: `npm run test` passed 26 files / 199 tests with 7 Target TODOs; `npm run test:audit:red` passed the 2 remaining non-S3 defect signatures; `npm run build` passed; fresh CI-mode Chromium passed 6/6. Focused regressions include measured long report titles, Plot-only collision bypass, standard/report suffix preservation and collision rejection, fixed bounds, and synchronized FX-006/FX-007 fixture status. The S3 browser test downloaded a 2400px-wide 2x legend PNG and verified white corners, nonblank pixels, dashed/dotted run separation, and circle/rect pixel-area separation. Local in-app browser inspection at `http://127.0.0.1:4173/` found zero console warnings/errors, no horizontal overflow, and no replacement-character mojibake. Visual evidence uses only generated synthetic labels in `docs/gui_mockups/screenshots/s3_legend_identity_desktop.png` and `docs/gui_mockups/screenshots/s3_legend_export.png`.
-- First-user PDF guide synthetic-data regeneration: passed. The guide was rebuilt from local-app screenshots using generated synthetic labels/data only, output as a 15-page PDF, checked with `pypdf` for page count/metadata/text extraction, searched for user-like sensitive labels (`RSV`, date-like labels, `_old`, `_new`), rendered through Poppler to PNG pages, and visually reviewed for layout, Korean text rendering, tables, screenshots, and troubleshooting pages.
+- First-user PDF guide synthetic-data regeneration: passed. The current guide is a 16-page PDF built from synthetic local-app screenshots and generated labels/data only, checked with `pypdf`, scanned for sensitive prior labels/paths, rendered through Poppler, and visually reviewed for layout, Korean text, tables, screenshots, privacy, Analysis XLSX continuity, and troubleshooting pages.
 - Phase S5 final local verification: exact accepted tall `250,000 x 1`, wide `3 x 83,333`, empty-heavy `500 x 500`, and 2,000,000-character Quick Paste cases completed through the parser, and all three cell-shape boundaries completed both React and Chromium read-only previews; exact cell/character overflow rejected before mutation. After the initial expert NO-GO exposed parallel-suite resource contention, Vitest file execution was made deterministic and `npm run test` passed twice consecutively at 30 files / 231 tests with 6 later-phase TODOs. `npm run test:audit:red` retained only the scheduled S7 CSV-safety probe; `npm run build` passed; fresh CI-mode Chromium passed 7/7. The in-app production preview displayed row/column/cell/character/curve/cycle/memory/warning diagnostics without horizontal overflow or console warnings/errors. Recovery integration tests execute Analysis XLSX save and tab switching, and preserve non-default single-specimen mode, specimen name, source text, and revision. Final independent data/performance and desktop-UX verdicts: GO.
 - Phase S6 final local verification: `npm run test` passed 30 files / 240 tests with 4 later-phase TODOs; `npm run test:audit:red` retained the scheduled S7 CSV-safety probe; production build passed; fresh CI-mode Chromium passed 7/7 with `--fail-on-flaky-tests`; `npm audit --omit=dev` found 0 vulnerabilities. Tests cover captured-runtime completion, inactive-dirty beforeunload, save-while-modified, counter retry, deferred clipboard rejection after tab switch, stale new-tab parse failure after runtime recreation, and Escape lock during deferred save-and-close. In-app 1366x768 measurement had no horizontal overflow or replacement characters; analysis/import bands measured 99.19/60px and workspace began at 303.19px while the user-required fixed 560px chart height was retained. Final independent code and desktop-UX verdicts: GO.
 - GitHub Pages deployment: active at `https://siun-comp.github.io/isoamplar-plot-analysis/`.
@@ -580,7 +602,7 @@ Completed S10 local verification: Playwright uses a dedicated non-reused port an
   - `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
 
 ## Known Gaps
-- Phases S0-S9 are committed; S10 is complete and ready to commit; S11 remains pending.
+- Phases S0-S10 are committed; S11 local candidate preparation is complete, while candidate commit/tag, branch CI, Pages deployment, post-deploy smoke, and final release-evidence closeout remain in progress.
 - S2-S7A resolve invalid Fixed-scale fallback, accepted-envelope large-array hazards, exported-legend identity loss, Excel formatted-header identity, actionable source-aware warnings, localized containment, browser refresh/close protection, captured-tab async output routing, contradictory Analysis XLSX restoration, non-BMP restore chunk damage, and plotted CSV formula-like headers.
 - S8 resolves the inactive Legend panel, laptop-height chart availability, compact individual-style identity, and clipped style-popover defects without introducing a new editor workflow or mobile redesign.
 - Clipboard image copy and rich Excel-cell legend paste have not been manually verified in Chrome/Edge on the final deployment origin.
@@ -605,12 +627,13 @@ Completed S10 local verification: Playwright uses a dedicated non-reused port an
 - GPT-5.6 project audit: `docs/11_GPT56_PROJECT_AUDIT_KR.md`
 - Audit remediation implementation plan: `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`
 - Audit remediation traceability: `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
+- Release candidate evidence: `docs/15_RELEASE_CANDIDATE_KR.md`
 - Synthetic fixture contract: `docs/07_FIXTURE_SNAPSHOT_PLAN_KR.md`
 - First-user guide PDF: `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
 - Local dev server: `http://127.0.0.1:5173/`
 - Local production preview: `http://127.0.0.1:4173/`
 
 ## Next 3 Tasks
-1. Commit the verified S10 changes without push or deployment.
-2. Execute S11 documentation synchronization and four-role final audit against current implementation and synthetic evidence.
-3. Prepare candidate SHA/tag and artifact hash, push/deploy under standing approval, run public Pages smoke, and record rollback evidence.
+1. Receive the final desktop-UX verdict, stage the verified S11 tree, and create the release-candidate commit.
+2. Push `codex/audit-remediation`, verify branch CI, tag the candidate, and fast-forward it to `main`.
+3. Verify the Pages workflow and public-origin import/render/export/browser-local smoke, then record SHA/run/tag/rollback evidence and close the final QA review.

@@ -64,12 +64,12 @@ jobs:
             --reporter=junit \
             --outputFile.junit=evidence/vitest-junit.xml
 
-      - name: Record known-red audit evidence
+      - name: Run audit evidence
         shell: bash
         run: |
           set -euo pipefail
-          npm run test:audit:red 2>&1 \
-            | tee evidence/known-red-audit.txt
+          npm run test:audit 2>&1 \
+            | tee evidence/audit-evidence.txt
 
       - name: Build dist once
         run: npm run build

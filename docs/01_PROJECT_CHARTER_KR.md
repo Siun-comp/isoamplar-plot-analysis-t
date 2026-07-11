@@ -1,117 +1,69 @@
 # 01 프로젝트 차터
 
-## Purpose
-이 문서는 그래프 작성 웹페이지를 왜 만들고, 누구를 위해 만들며, 초기 범위와 성공 기준을 어떻게 볼 것인지 정의한다.
+## 상태
+Implemented baseline - release validation and real-data hardening
 
-## Status
-Active draft
+## 최종 갱신
+2026-07-11
 
-## Last Updated
-2026-07-07
+## 목적
+IsoAmplar 장비 및 LAMP 개발 과정에서 얻은 증폭형광 데이터를 데스크톱 브라우저에서 선택, 비교, 시각화하고 보고용 결과로 정리한다. 주 사용자는 프로그래머가 아닌 분자진단 키트 개발자다.
 
-## Owner
-Product / Agent
+이 도구는 원본 수치를 자동 해석하거나 임상 판독하는 프로그램이 아니다. 여러 검체, 시약, 개발 조건의 곡선을 필요한 수준으로 선별하고 동일한 축과 스타일로 비교하는 분석 보조 도구다.
 
-## Compression-Safe Summary
-- 목표는 Excel/CSV/직접입력 데이터를 브라우저에서 그래프로 만들고 내보내는 웹앱이다.
-- 초기 배포 목표는 GitHub Pages에서 동작하는 정적 웹앱이다.
-- 서버 저장, 로그인, 백엔드 업로드는 초기 비범위로 본다.
-- 핵심 기능은 헤더 필터, 그래프 설정, 범례, X/Y scale 고정, 다운로드, 클립보드 복사다.
-- 상세 MVP 범위는 다음 사용자 논의에서 확정해야 한다.
+## 핵심 사용자 흐름
+1. `.xls` 또는 `.xlsx` 원본을 열거나 소량 비교 데이터를 Quick Paste로 미리보기 한다.
+2. warning과 source 위치를 확인한다.
+3. 시약별 또는 검체별 보기에서 필요한 curve만 선택한다.
+4. X/Y scale, Box zoom, 색상, 선, 마커, 순서, Analysis label을 조정한다.
+5. plot, legend, CSV를 목적에 맞게 내보낸다.
+6. 분석을 이어갈 경우 전체 imported dataset과 설정을 Analysis XLSX로 저장한다.
 
-## Update Rule
-제품 목표, 대상 사용자, 범위, 비범위, 성공 기준, 핵심 리스크가 바뀔 때 갱신한다. 세부 UI 구현 내용은 요구사항 문서에 기록한다.
+## 현재 범위
+- Excel `.xls` / `.xlsx`, 첫 worksheet만 사용
+- 현재 분석에 추가 Excel import
+- Tab 구분 또는 단일 열 Quick Paste Import와 읽기 전용 preview
+- 시약별 기본 선택 보기와 검체별 대체 보기
+- `curveId` 기반 선택, 순서, style, label 연결
+- Auto/Fixed/P1/P2/Box zoom scale
+- 그룹 및 개별 color/line/marker 설정
+- custom legend, Analysis label, plot/legend 분리 출력
+- PNG/JPEG, PNG clipboard, rich Excel legend clipboard, 조건부 plotted CSV
+- 내부 analysis tabs와 전체 dataset 기반 Analysis XLSX save/restore
+- 정적 GitHub Pages 배포와 브라우저 내부 데이터 처리
 
-## 문제 정의
-비개발자 또는 데이터 분석 업무 사용자가 표 형식 데이터를 빠르게 그래프로 만들고, 축 범위와 범례를 맞춘 뒤 이미지로 공유하는 과정은 반복적이고 번거롭다. Excel 자체 기능만으로는 재현 가능한 설정, 웹 기반 공유, 빠른 이미지 복사 흐름이 제한적일 수 있다.
+## 과학·데이터 무결성 원칙
+- fluorescence 숫자를 smoothing, normalization, baseline correction, log 변환, 평균 또는 보간하지 않는다.
+- 빈 값과 비숫자 값은 warning과 `null` gap으로 처리한다.
+- formula를 재계산하지 않으며 finite cached numeric value만 warning과 함께 사용한다.
+- 원본 specimen/reagent/source label과 사용자가 작성한 Analysis label을 분리한다.
+- preview와 plot image export는 같은 선택, 순서, 적용 scale, style projection을 사용한다.
+- Analysis XLSX는 선택하지 않은 curve도 포함한 전체 imported dataset을 저장한다.
 
-## 제품 목표
-사용자가 Excel, CSV, 붙여넣기, 또는 직접 입력한 표 데이터를 기반으로 웹 브라우저에서 그래프를 만들고 조정한 뒤 이미지 파일 또는 클립보드로 내보낼 수 있는 웹페이지를 구축한다.
+## 비목표
+- CSV file import 또는 comma/quoted CSV 자동 추측
+- 앱 안의 원본 cell 편집, 검체/시약/fluorescence 수정
+- worksheet picker 또는 custom X/cycle 입력
+- threshold, Ct/Cq, 양성/음성, 임상 판독 계산
+- native editable Excel chart
+- 서버 저장, 계정, 공동 편집, 실시간 협업
+- 모바일 분석 UI, multi-plot dashboard
 
-초기 목표는 GitHub Pages에 배포 가능한 정적 웹앱이다. 서버, 데이터베이스, 로그인 없이도 핵심 그래프 작성 흐름이 동작하도록 설계한다.
+## 배포·보안 경계
+- 서버와 데이터베이스 없이 GitHub Pages에서 동작한다.
+- 앱 runtime은 알려진 정적 asset `GET/HEAD` 외의 same-origin write, cross-origin request, WebSocket을 필요로 하지 않는다.
+- 민감 데이터는 사용자가 명시적으로 파일/clipboard로 내보낼 때만 브라우저 밖으로 이동한다.
+- 조직 접근제어가 필요하면 별도의 hosting 정책 결정이 필요하다.
 
-## 대상 사용자
-- 연구자, 학생, 분석가
-- PM, 운영 담당자, 품질 담당자
-- 반복적인 그래프 출력 형식을 맞춰야 하는 사용자
-- 보고서, 문서, 프레젠테이션, 메신저에 그래프 이미지를 붙여 넣는 사용자
-- 개발 환경 없이 브라우저에서 데이터 시각화를 수행하려는 사용자
+## 완료 기준
+- 지원 입력이 source와 warning provenance를 유지한다.
+- 데이터 선택과 설정이 curve identity를 잃지 않는다.
+- preview/export/Analysis XLSX가 수치와 설정을 조용히 바꾸지 않는다.
+- 자동 테스트, fresh Chromium, exact-dist, dependency audit, Pages smoke가 릴리스 전에 통과한다.
+- 현재 진실과 미결정 항목이 `DEVELOPMENT_STATE.md`, `DECISIONS.md`, 요구사항·테스트 문서에 남는다.
 
-## 핵심 사용 시나리오
-1. 사용자가 Excel 또는 CSV 파일을 업로드한다.
-2. 앱이 헤더와 데이터 타입을 표시한다.
-3. 사용자가 X축, Y축, 시리즈, 필터를 지정한다.
-4. 사용자가 범례, 제목, 라벨, 크기, X/Y scale 고정을 설정한다.
-5. 그래프 미리보기가 갱신된다.
-6. 사용자가 그래프를 이미지로 다운로드하거나 클립보드로 복사한다.
-
-## 성공 기준
-- 사용자가 CSV/Excel/직접입력 중 하나로 데이터를 넣고 그래프를 생성할 수 있다.
-- 헤더를 기준으로 X축, Y축, 그룹, 필터를 지정할 수 있다.
-- 헤더 필터로 표시 데이터를 좁힐 수 있다.
-- 범례, 축 범위, 제목, 라벨, 크기 등 주요 표시 옵션을 조정할 수 있다.
-- X/Y scale 고정으로 비교 가능한 그래프를 만들 수 있다.
-- 고정 X/Y scale이 필터 변경이나 재렌더링 이후에도 유지된다.
-- 그래프 이미지를 다운로드하거나 지원 브라우저에서 클립보드에 복사할 수 있다.
-- GitHub Pages에서 백엔드 없이 동작한다.
-- 구현 상태와 결정사항이 문서에 남아 컨텍스트 압축 이후에도 이어서 개발할 수 있다.
-
-## 초기 범위
-- Excel `.xlsx` 파일 입력
-- CSV 파일 입력
-- 표 데이터 붙여넣기 또는 직접 입력
-- 헤더 자동 인식 및 컬럼 선택
-- 헤더 기반 필터링
-- 기본 그래프 생성
-- X/Y 축 자동 및 수동 범위 설정
-- 범례 표시 및 위치 설정
-- 그래프 크기와 레이아웃 조정
-- 그래프 이미지 다운로드
-- 클립보드 이미지 복사
-- GitHub Pages 배포 가능 구조
-
-## 초기 비범위
-아래 항목은 추후 논의 후 포함 여부를 결정한다.
-
-- 사용자 계정
-- 서버 저장소
-- 백엔드 파일 업로드 처리
-- 공동 편집
-- 대용량 파일 서버 처리
-- 데이터베이스 연동
-- 실시간 협업
-- 고급 통계 분석
-- PDF 보고서 자동 생성
-
-## 제약 조건
-- GitHub Pages는 정적 파일 호스팅만 지원한다.
-- 브라우저에서 파일을 읽고 처리하므로 파일 크기와 메모리 제한이 있다.
-- 클립보드 이미지 복사는 브라우저와 보안 컨텍스트에 따라 제한될 수 있다.
-- Excel 날짜, 빈 셀, 병합 셀, 다중 시트 처리 방식은 명확한 규칙이 필요하다.
-- 다운로드 결과는 화면의 그래프 설정과 일치해야 한다.
-
-## 주요 리스크
-- 대용량 Excel 파일 처리 시 브라우저 성능 저하
-- 브라우저별 Clipboard API 차이
-- 축 고정과 필터 변경의 상호작용 정의 부족
-- 사용자가 기대하는 "배치"의 의미가 아직 모호함
-- 차트 라이브러리 선택에 따른 export 품질 차이
-
-## 핵심 논의 주제
-다음 단계에서 사용자와 결정해야 한다.
-
-- MVP에 포함할 그래프 종류
-- "배치"의 정확한 의미: 여러 그래프 배치, 반복 생성, 일괄 내보내기, 또는 조합
-- 지원할 데이터 형식과 파일 크기 제한
-- 헤더 필터의 정확한 동작
-- 축 고정의 UI와 예외 처리
-- 범례, 색상, 레이아웃 조정 범위
-- 다운로드 형식
-- 클립보드 복사 실패 시 대체 흐름
-- UI 언어와 디자인 방향
-
-## 품질 원칙
-- 기능보다 먼저 데이터 흐름과 예외 처리를 명확히 한다.
-- 사용자의 원본 데이터는 기본적으로 브라우저 밖으로 전송하지 않는다.
-- 그래프 출력 결과는 화면 표시와 다운로드 결과가 일치해야 한다.
-- 모든 확정 요구사항은 요구사항 문서와 테스트 문서에 함께 반영한다.
+## 남은 사용자 결정
+- 공식 최대 파일/curve/cycle/browser-memory 지원 한계
+- 내부 analysis tab 경고 또는 hard cap
+- 공개 Pages 유지 또는 조직 접근제어 hosting 이전
+- 후속 Named View, Export Preflight, multi-step settings undo 도입 여부

@@ -1,5 +1,15 @@
 # CHANGELOG.md
 
+## 2026-07-11 - Audit remediation S11 documentation and release preparation
+
+- Replaced the generic chart-app charter and stale release checklist with the current IsoAmplar desktop workflow, exclusions, verification gates, and rollback procedure.
+- Updated README, I/O, acceptance, plan status, and traceability documents to distinguish Excel/Quick Paste support from deferred CSV, drag/drop, manual editing, mobile analysis, and multi-plot scope.
+- Expanded and regenerated the Korean first-user PDF guide to 16 pages with exact Analysis XLSX continuity, privacy/network boundaries, current import commands, and synthetic-only screenshots/examples.
+- Added a release-candidate evidence document with automated, manual, post-deploy, unresolved-decision, and rollback checklists.
+- Renamed the completed S10 release contract test and audit command so passing evidence is no longer presented as an open TODO/known-red item.
+- Clarified the public and in-app research/kit-development boundary, aligned the saved-analysis control name, replaced overstated per-file Analysis XLSX verification language, and added a Korean workflow glossary for implementation terms still visible in the UI.
+- Displayed the user-defined P1/P2 label in the applied-scale status instead of the internal `PRESET1`/`PRESET2` state key.
+
 ## 2026-07-11 - Audit remediation S10 release verification
 
 - Added fresh GitHub Pages base-path Chromium verification on a dedicated non-reused preview server.

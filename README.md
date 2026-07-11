@@ -1,24 +1,36 @@
 # IsoAmplar Plot Analysis
 
-Browser-based amplification fluorescence plot analysis tool for IsoAmplar/LAMP result review.
+Desktop browser tool for reviewing and exporting IsoAmplar/LAMP amplification fluorescence plots. It is a static React application deployed on GitHub Pages; imported data is processed in the browser.
 
-## Features
+This tool is for research and kit-development visualization. It does not perform clinical interpretation, positive/negative classification, or Ct/Cq calculation.
 
-- `.xls` and `.xlsx` Excel upload, first worksheet only.
-- Optional append upload for adding another workbook to the current analysis.
-- Reagent-first and specimen-first curve selection views.
-- Stable curve selection by `curveId`.
-- Clean ECharts line plot preview with fixed/sticky desktop chart panel.
-- Auto, Fixed, and user-defined P1/P2 X/Y scale modes.
-- Group and individual curve style controls with color picker and HEX input.
-- Optional individual markers: none, circle, triangle, rect.
-- User-controlled legend/export order.
-- PNG/JPEG export, PNG clipboard copy, and conditional plotted-data CSV export.
-- Browser tab, bookmark, Apple touch, and PWA/taskbar icons.
+## Current Capabilities
+
+- Open `.xls` / `.xlsx` files and use the first worksheet only.
+- Append another Excel workbook without changing existing selection or settings.
+- Quick Paste Import for tab-separated or single-column comparison data, with read-only preview and warnings.
+- Reagent-first or specimen-first selection, full-dataset search, and stable `curveId` identity.
+- ECharts plot preview with Auto, Fixed, P1/P2, Box zoom, Previous scale, and raw point readout.
+- Specimen/reagent group styles, per-curve overrides, HEX colors, line types, and markers.
+- User-controlled legend order, Analysis labels, Auto compact labels, and separate plot/legend outputs.
+- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, and conditional plotted-data CSV.
+- Multiple analysis tabs and Analysis XLSX save/restore containing the complete imported dataset and settings.
+
+The app does not smooth, normalize, baseline-correct, log-transform, average, interpolate, or calculate threshold/Ct/Cq from fluorescence data.
+
+## Input Contract
+
+Excel columns represent curves:
+
+1. Row 1: specimen or experimental condition
+2. Row 2: reagent or assay/channel
+3. Row 3 onward: fluorescence values in cycle order
+
+Quick Paste accepts Excel-style tab-separated ranges and delimiter-free single columns. CSV files, comma-separated tables, in-app source editing, custom X/cycle columns, and worksheet selection are not supported.
 
 ## Privacy
 
-Uploaded Excel data is processed in the browser. The app does not require a backend and does not upload workbook contents to a server.
+The production app has no backend requirement. Release browser tests allow only known static app `GET/HEAD` requests plus local `blob:` / `data:` output and fail on same-origin writes, cross-origin requests, or WebSockets. Exported files remain under the user's control.
 
 ## Development
 
@@ -27,16 +39,25 @@ npm ci
 npm run dev
 ```
 
+Local development: `http://127.0.0.1:5173/`
+
 ## Verification
 
 ```bash
+npm run check:diff
 npm run test
+npm run test:audit
+npm audit --omit=dev --audit-level=high
 npm run build
 npm run test:e2e
 ```
 
+Playwright starts a fresh production preview on port `4174` and never reuses an existing server. CI builds once for `/isoamplar-plot-analysis/`, records the complete `dist` SHA-256 manifest, runs fresh Chromium, and rejects any pre/post-test byte difference.
+
 ## Deployment
 
-The repository includes a GitHub Actions workflow that builds the app and deploys `dist/` to GitHub Pages on pushes to `main`.
+Pushes to `main` and manual workflow dispatch run the verified GitHub Pages workflow. The build job is read-only; only the deploy job receives Pages/OIDC write permissions.
 
 Public app: https://siun-comp.github.io/isoamplar-plot-analysis/
+
+Developer: Jang Si Un

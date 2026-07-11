@@ -32,6 +32,7 @@ export function App() {
         <div>
           <p className="eyebrow">LAMP plot analysis web app</p>
           <h1 id="app-title">IsoAmplar Plot Analysis</h1>
+          <p className="analysis-scope">연구·개발용 시각화 · 임상 판독 기능 없음</p>
           <p className="developer-credit">Developer Jang Si Un</p>
         </div>
         <span className="phase-badge">Browser-local analysis</span>

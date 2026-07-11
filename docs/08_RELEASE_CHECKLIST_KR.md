@@ -1,70 +1,69 @@
 # 08 릴리스 체크리스트
 
-## 목적
-IsoAmplar Plot Analysis를 GitHub Pages 또는 동등한 정적 호스팅에 배포/갱신하기 전 확인해야 할 항목을 정리한다.
+## 상태
+Active release gate
 
-## 현재 구현 범위
-- `.xls` / `.xlsx` Excel 업로드, 첫 번째 worksheet만 사용.
-- 현재 분석 데이터에 `.xls` / `.xlsx` 추가 선택으로 append.
-- Row 1 검체, Row 2 시약, Row 3 이후 fluorescence 데이터 파싱.
-- 원본 fluorescence 값 자동 보정/변환 없음.
-- 시약별 기본 선택 보기, 검체별 보기 전환.
-- 선택 보기 기준에 따른 라벨 순서 전환: 시약별은 `시약 │ 검체`, 검체별은 `검체 │ 시약`.
-- import 직후 모든 대분류 그룹 접힘.
-- 좌측 1차/2차 분류 행 배경색으로 구분.
-- 검색/표시필터 기반 일괄 선택/해제.
-- ECharts 기반 amplification line chart preview.
-- Side panel 확장과 무관하게 고정 높이를 유지하는 plot preview.
-- Desktop scroll에서 sticky로 따라오는 plot preview.
-- Plot을 가리지 않는 고정 hover readout.
-- 20개 초과 표시 curve 경고와 검색 결과만 유지/전체 선택 해제/구분 프리셋 보조 액션.
-- Custom preview legend 표시/숨김과 plot-only, plot+legend, legend-only image export layout.
-- X/Y auto/fixed scale, 사용자 입력형 P1/P2 scale preset.
-- Fixed scale 편집 보조용 현재 Auto range 표시와 Auto값 적용 버튼.
-- 검체/시약 그룹 스타일, 개별 curve 스타일 override.
-- 그룹/개별 색상은 color picker와 HEX 코드 입력 모두 지원.
-- 기본 실선/no marker, 개별 marker 없음/원형/세모/네모 옵션.
-- 원본 데이터/그룹 순서 기반 안정적 기본 색상.
-- 내장 style preset, 적용된 개별 override 덮어쓰기, 직전 적용 1회 undo.
-- 사용자 순서 기반 legend/export order.
-- PNG/JPEG download, PNG clipboard copy, plotted-data CSV 조건부 export.
-- GitHub Pages용 상대 asset path 기본값.
+## 최종 갱신
+2026-07-11
 
-## 자동 검증
-- `npm run test`
-- `npm run build`
-- `npm run test:e2e`
-- `npm audit --omit=dev`
-- Note: GitHub Actions Pages deploy currently gates `npm run test` and `npm run build`; `test:e2e` and `npm audit --omit=dev` are local release checks unless the workflow is later expanded.
+## 자동 게이트
+- [x] `git diff --check`
+- [x] `npm run test`: 32 files / 265 tests
+- [x] `npm run test:audit`: 1 audit probe
+- [x] `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities
+- [x] GitHub Pages base-path production build
+- [x] fresh Chromium `11/11` with `--fail-on-flaky-tests`
+- [x] exact `dist` pre/post Playwright equality
+- [x] local dist tree SHA-256: `1012572727dd66d74763775f828fef165baa24012c61c770db6617e90d6cce46`
+- [x] 1366x768 in-app Pages-path preview: no horizontal overflow, no console warning/error
+- [x] independent release/security and browser/data-integrity GO
+- [x] repository 밖 representative workbook의 local-only import, 전체 선택, nonblank canvas, P1/P2 적용, browser error 0
 
-## 현재 검증 결과
-- Vitest: 97 tests passed.
-- Playwright Chromium: 3 tests passed.
-- Production build: passed.
-- Production build emits lazy chunks for SheetJS and ECharts/export code.
-- Production dependency audit: 0 vulnerabilities.
-- `git diff --check`: passed, with CRLF replacement warnings only.
-- GitHub Actions Pages deploy: passed for the R13 pushed `main` build. Actions gate covers `npm run test` and `npm run build`.
-- Public URL technical smoke: passed at `https://siun-comp.github.io/isoamplar-plot-analysis/` for HTTP 200, app icon assets, generated `.xlsx` Excel upload, chart render, custom legend, and Export controls.
-- Desktop screenshot: `docs/gui_mockups/screenshots/phase8_mvp_desktop.png`
-- Mobile screenshot: `docs/gui_mockups/screenshots/phase8_mvp_mobile.png`
-- Refinement screenshot: `docs/gui_mockups/screenshots/isoamplar_refinement_desktop.png`
-- Append/sticky refinement screenshot: `docs/gui_mockups/screenshots/isoamplar_append_sticky_refinement.png`
-- R12 hover/warning desktop screenshot: `docs/gui_mockups/screenshots/phase-r12_hover_warning_desktop.png`
-- R12 hover/warning mobile screenshot: `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
+## 자동 브라우저 범위
+- Excel `.xlsx`, append, Quick Paste 경계 입력
+- reagent-first collapsed selection, search bulk selection
+- Auto/Fixed/P1/P2/Box zoom/Previous scale
+- dense Style/Legend, hover/readout, custom legend
+- clipboard image failure와 download fallback 안내
+- legend PNG의 exact size, 불투명 흰 배경/외곽선, text/style pixel slot
+- 알려진 정적 app `GET/HEAD`와 blob/data 이외의 request/WebSocket 차단
+- Analysis XLSX save/restore/resave 및 curve/source/X/Y/stats exact equality
+- null, 음수, 지수값, 큰 fluorescence 값 보존
 
-## 수동 확인 필요
-- 실제 `graph_TEST.xlsx` 업로드 후 검체/시약 라벨과 curve 수가 예상과 맞는지 확인. 생성 fixture 기반 공개 URL 기술 smoke는 완료되었지만, 실제 분석 파일의 도메인 판단은 별도 수동 확인이 필요하다.
-- 추가 파일 append 후 기존 선택/scale/style/order가 유지되는지 확인.
-- Chrome 또는 Edge에서 PNG clipboard copy가 동작하는지 확인.
-- PNG/JPEG 다운로드 이미지가 preview와 같은 scale/style/order를 반영하는지 확인.
-- P1/P2 scale preset을 실제 분석 범위로 입력했을 때 원하는 비교 흐름에 맞는지 확인.
-- Marker 옵션이 필요한 실제 curve만 표시하도록 분석 관점에서 확인.
-- GitHub Pages 실제 URL에서 asset 경로는 기술 smoke로 확인됨. 사용자 환경에서 캐시/브라우저별 표시 이상이 있으면 별도 확인한다.
-- 큰 파일의 체감 성능 확인.
+## GitHub Pages workflow
+- [x] `main` push와 `workflow_dispatch` trigger 유지
+- [x] build job은 `contents: read`만 사용
+- [x] deploy job만 `pages: write`, `id-token: write` 사용
+- [x] Pages artifact upload 전 unit/audit/dependency/Chromium/dist equality 통과
+- [x] screenshot, trace, browser console, network evidence failure artifact 보존
+- [ ] release candidate push workflow run 성공
+- [ ] 공개 Pages URL에서 post-deploy smoke 성공
 
-## 사용자 결정 대기
-- 최대 파일 크기, 최대 row 수, 최대 검체/curve 수의 목표 기준.
-- 저장형 custom preset 또는 chart configuration JSON 필요 여부.
-- P1/P2 scale preset과 style 설정을 앱 reload 이후에도 저장할 필요가 있는지 여부.
-- batch/multi-chart layout의 다음 버전 포함 여부.
+## 사용자 수동 확인
+- [ ] 실제 업무 Excel에서 검체/시약 label, curve 수, warning이 의도와 일치하는지 확인
+- [ ] 실제 분석 범위의 P1/P2와 style이 비교 목적에 맞는지 확인
+- [ ] Windows Chrome/Edge에서 PNG clipboard와 rich Excel legend paste 확인
+- [ ] 보고서/문서에 붙인 PNG/JPEG/legend의 가독성 확인
+- [ ] 큰 실제 파일에서 체감 성능과 브라우저 메모리 확인
+
+## 미결정 항목
+- 공식 최대 file/curve/cycle 수치
+- internal analysis tab warning/hard cap
+- public Pages 또는 조직 접근제어 hosting
+- Named View, optional Export Preflight, multi-step settings undo
+
+## 롤백 trigger
+- 지원 Excel/Quick Paste import 실패
+- 선택 후 canvas가 비어 있음
+- Fixed/P1/P2/Box zoom 또는 preview/export scale 불일치
+- legend identity/style가 preview와 export에서 다름
+- Analysis XLSX restore가 dataset/settings를 정확히 복원하지 못함
+- 예상하지 않은 runtime network request 또는 심각한 browser error
+
+## 롤백 절차
+1. 마지막 정상 SHA와 실패 candidate SHA를 기록한다.
+2. `main`을 강제 재작성하지 않는다.
+3. 실패 commit을 `git revert`하는 새 commit을 만들거나 마지막 정상 SHA의 tree를 복구 commit으로 만든다.
+4. 같은 Pages workflow로 재배포한다.
+5. 공개 URL에서 import, nonblank chart, scale/export, Analysis XLSX smoke를 다시 수행한다.
+6. rollback SHA, workflow run, 공개 smoke 결과를 `DEVELOPMENT_STATE.md`에 기록한다.

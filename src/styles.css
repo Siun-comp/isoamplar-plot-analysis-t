@@ -56,6 +56,13 @@ textarea {
   font-weight: 700;
 }
 
+.analysis-scope {
+  margin: 4px 0 0;
+  color: #3f4d60;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 h1,
 h2,
 p {

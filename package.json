@@ -12,7 +12,8 @@
     "check:dist:after": "node scripts/dist-integrity.mjs snapshot evidence/dist-files-after-playwright.sha256 evidence/dist-tree-after-playwright.sha256",
     "check:dist:unchanged": "node scripts/dist-integrity.mjs compare evidence/dist-files.sha256 evidence/dist-files-after-playwright.sha256 evidence/dist-verification.txt",
     "test": "vitest run",
-    "test:audit:red": "vitest run --config vitest.audit.config.ts",
+    "test:audit": "vitest run --config vitest.audit.config.ts",
+    "test:audit:red": "npm run test:audit",
     "test:e2e:s9-performance": "playwright test tests/e2e/app.spec.ts --project=chromium --grep \"S9 reference\"",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

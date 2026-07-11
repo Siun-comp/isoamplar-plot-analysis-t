@@ -4,7 +4,7 @@
 IsoAmplar Plot Analysis의 MVP 이후 보완 요청을 단계적으로 구현하기 위한 실행 계획이다. 이번 범위는 데이터 선택 가독성, 범례 제어, 스타일 기준/개별 override 명확화, 마커 그룹 스타일, export 확장, 성능/접근성 보강을 포함한다.
 
 ## 상태
-Draft for implementation
+Implemented - Phases R0 through R13
 
 ## Last Updated
 2026-07-08

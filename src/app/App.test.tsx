@@ -86,6 +86,7 @@ describe("App PCR workspace", () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "IsoAmplar Plot Analysis" })).toBeInTheDocument();
+    expect(screen.getByText("연구·개발용 시각화 · 임상 판독 기능 없음")).toBeInTheDocument();
     expect(screen.getByText("Developer Jang Si Un")).toBeInTheDocument();
     expect(screen.getByText("Browser-local analysis")).toBeInTheDocument();
     expect(screen.queryByText("MVP implementation")).not.toBeInTheDocument();
@@ -362,6 +363,15 @@ describe("App PCR workspace", () => {
       useAppStore.getState().setChartFixedScaleBounds({ xMin: "10", xMax: "20", yMin: "100", yMax: "200" });
     });
     expect(useAppStore.getState().chartScale.x.mode).toBe("fixed");
+
+    act(() => {
+      useAppStore.getState().setAxisPresetValue("x", "preset1", "label", "Review range");
+      useAppStore.getState().setAxisPresetValue("x", "preset1", "min", "1");
+      useAppStore.getState().setAxisPresetValue("x", "preset1", "max", "45");
+      useAppStore.getState().setAxisScaleMode("x", "preset1");
+    });
+    expect(within(xAxis).getByText("Applied: Review range 1 - 45")).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: "Auto scale" }));
     expect(useAppStore.getState().chartScale.x.mode).toBe("auto");
     expect(useAppStore.getState().chartScale.y.mode).toBe("auto");

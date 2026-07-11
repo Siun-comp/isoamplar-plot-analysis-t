@@ -14,7 +14,7 @@ Agent / Engineering
 
 ## Compression-Safe Summary
 - Build a static GitHub Pages compatible chart creation web app.
-- Inputs are expected to include Excel, CSV, pasted table data, and manual entry.
+- Supported inputs are `.xls/.xlsx` Excel and post-MVP Quick Paste for tab-separated or single-column data. CSV file/comma-table parsing, manual entry, and source editing are excluded.
 - Core chart controls include header filters, layout/batch arrangement, legends, fixed X/Y scales, download, and clipboard copy.
 - User data should stay in the browser by default unless a later decision changes this.
 - Current truth lives in `DEVELOPMENT_STATE.md`; product scope in `docs/`; rationale in `DECISIONS.md`.
@@ -23,7 +23,7 @@ Agent / Engineering
 Update this file only when agent workflow, project operating rules, quality gates, or collaboration rules change. Do not use it as a task log.
 
 ## Project Summary
-Build a browser based chart authoring page that can be deployed from a GitHub account through GitHub Pages. The application should let users import or enter tabular data, map headers to chart fields, filter data, configure chart appearance, lock axis scales, and export the rendered result.
+Build a desktop-browser IsoAmplar/LAMP amplification fluorescence analysis page deployed through GitHub Pages. The application imports the fixed two-header PCR/LAMP table shape, lets users select curves, configure scales/styles/labels, and export or save a complete Analysis XLSX continuation file.
 
 Detailed feature discussions are intentionally pending. Do not treat any chart library, UI architecture, or MVP scope as final unless it is recorded in `DECISIONS.md`.
 
@@ -85,7 +85,7 @@ Use these prefixes consistently:
 Every Must requirement should have at least one linked acceptance criterion before implementation is considered complete.
 
 ## Project Vocabulary
-- Dataset: in-memory tabular data after import or manual entry.
+- Dataset: normalized in-memory curve data after Excel or Quick Paste import.
 - Header: a column name from the dataset.
 - Series: one plotted data group.
 - Chart configuration: graph type, data mapping, axes, legend, layout, colors, and export options.

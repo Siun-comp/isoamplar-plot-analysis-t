@@ -1620,7 +1620,7 @@ function ScaleAxisControl({
       <p className="scale-auto-domain">
         Selected raw data range: {autoDomain ? `${autoMin} - ${autoMax}` : "선택된 데이터 없음"}
       </p>
-      <p className="scale-applied-status">Applied: {formatAppliedScale(resolution)}</p>
+      <p className="scale-applied-status">Applied: {formatAppliedScale(resolution, state)}</p>
       <div className="scale-mode-grid" role="radiogroup" aria-label={`${label} scale mode`}>
         <ScaleModeButton label="Auto" active={state.mode === "auto"} onClick={() => onModeChange(axis, "auto")} />
         <ScaleModeButton label="Fixed" active={state.mode === "fixed"} onClick={() => onModeChange(axis, "fixed")} />
@@ -1765,8 +1765,12 @@ function formatDomainValue(value: number) {
   return value.toExponential(3);
 }
 
-function formatAppliedScale(resolution: AxisScaleResolution) {
+function formatAppliedScale(resolution: AxisScaleResolution, state: AxisScaleState) {
   if (resolution.applied.mode === "auto") return "Auto";
-  const mode = resolution.applied.mode === "fixed" ? "Fixed" : resolution.applied.mode.toUpperCase();
+  const mode = resolution.applied.mode === "fixed"
+    ? "Fixed"
+    : resolution.applied.mode === "preset1"
+      ? state.preset1?.label?.trim() || "P1"
+      : state.preset2?.label?.trim() || "P2";
   return `${mode} ${formatDomainValue(resolution.applied.min!)} - ${formatDomainValue(resolution.applied.max!)}`;
 }

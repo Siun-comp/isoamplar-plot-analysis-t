@@ -19,6 +19,8 @@ export type ChartProjection = {
 export type LegendItem = {
   curveId: string;
   label: string;
+  sourceSuffix?: string;
+  sourceIdentity?: string;
   color: string;
   lineType: ResolvedCurveStyle["lineType"];
   markerType: ResolvedCurveStyle["markerType"];
@@ -105,6 +107,13 @@ function createLegendItems(curves: Curve[], resolvedStyles: Map<string, Resolved
     return {
       curveId: curve.curveId,
       label: chartNames.get(curve.curveId) ?? curve.displayLabel,
+      sourceSuffix: formatCurveSourceSuffix(curve),
+      sourceIdentity: [
+        curve.source.fileName,
+        curve.source.sheetName,
+        curve.source.columnLetter,
+        curve.source.sourceInstanceId
+      ].filter(Boolean).join(" / "),
       color: resolvedStyle?.color ?? defaultChartColors[index % defaultChartColors.length],
       lineType: resolvedStyle?.lineType ?? "solid",
       markerType: resolvedStyle?.markerType ?? "none",

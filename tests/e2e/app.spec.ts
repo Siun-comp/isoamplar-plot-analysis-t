@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import * as XLSX from "xlsx";
+import { inspectRasterDataUrl } from "./helpers/rasterEvidence";
 
 test("renders the upload-first PCR workspace", async ({ page }) => {
   await page.goto("/");
@@ -195,6 +196,50 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
     .toBeLessThan(36);
 });
 
+test("preserves long legend identity and distinguishable line-marker raster samples", async ({ page }, testInfo) => {
+  const workbookPath = testInfo.outputPath("s3-legend-identity.xlsx");
+  writeLegendIdentityWorkbook(workbookPath);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.locator("input[type='file']").first().setInputFiles(workbookPath);
+  await page.getByRole("button", { name: "표시 선택" }).click();
+
+  const lotALabel = "Assay concentration profile with distinguishing Lot A";
+  const lotBLabel = "Assay concentration profile with distinguishing Lot B";
+  const legend = page.getByRole("region", { name: "Custom legend" });
+  await expect(legend.getByText(/Lot A/u)).toBeVisible();
+  await expect(legend.getByText(/Lot B/u)).toBeVisible();
+  await expect(legend.getByRole("alert")).toHaveCount(0);
+
+  await page.locator(".settings-accordion > details > summary", { hasText: "Style" }).click();
+  await page.getByLabel("선 기준").selectOption("reagent");
+  await setGroupLineMarker(page, lotALabel, "dashed", "circle");
+  await setGroupLineMarker(page, lotBLabel, "dotted", "rect");
+  await expect(legend.locator('[data-line-type="dashed"][data-marker-type="circle"]')).toHaveCount(1);
+  await expect(legend.locator('[data-line-type="dotted"][data-marker-type="rect"]')).toHaveCount(1);
+  await page.screenshot({ path: testInfo.outputPath("s3-legend-preview.png"), fullPage: false });
+
+  const exportSummary = page.locator(".settings-accordion > details > summary", { hasText: "Export" });
+  const exportDetails = exportSummary.locator("..");
+  if ((await exportDetails.getAttribute("open")) === null) await exportSummary.click();
+  await page.getByLabel("Image export layout").selectOption("legendOnly");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save PNG" }).click();
+  const download = await downloadPromise;
+  const downloadedPath = testInfo.outputPath("s3-legend-only.png");
+  await download.saveAs(downloadedPath);
+  const dataUrl = `data:image/png;base64,${readFileSync(downloadedPath).toString("base64")}`;
+  const raster = await inspectRasterDataUrl(page, dataUrl);
+  const samples = await inspectLegendStyleSamples(page, dataUrl);
+
+  expect(raster.width).toBe(2400);
+  expect(raster.whiteCornerPixels).toBe(4);
+  expect(raster.nonWhitePixels).toBeGreaterThan(300);
+  expect(samples.dashedRuns).toBeGreaterThanOrEqual(4);
+  expect(samples.dottedRuns).toBeGreaterThan(samples.dashedRuns);
+  expect(samples.rectPixels).toBeGreaterThan(samples.circlePixels);
+});
+
 test("creates and switches internal analysis tabs", async ({ page }, testInfo) => {
   const workbookPath = testInfo.outputPath("phase-r3-tabs.xlsx");
   writeWorkbookFixture(workbookPath, "Tab sample");
@@ -238,6 +283,73 @@ function writeWorkbookFixture(filePath: string, specimenLabel: string) {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
   writeFileSync(filePath, buffer);
+}
+
+function writeLegendIdentityWorkbook(filePath: string) {
+  const workbook = XLSX.utils.book_new();
+  const rows: Array<Array<string | number>> = [
+    ["Synthetic Condition / Temperature 55C", "Synthetic Condition / Temperature 60C"],
+    [
+      "Assay concentration profile with distinguishing Lot A",
+      "Assay concentration profile with distinguishing Lot B"
+    ]
+  ];
+  for (let cycle = 1; cycle <= 45; cycle += 1) {
+    rows.push([createAmplificationValue(cycle, 20, 700_000), createAmplificationValue(cycle, 25, 900_000)]);
+  }
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "SyntheticData");
+  writeFileSync(filePath, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer);
+}
+
+async function setGroupLineMarker(page: Page, label: string, lineType: "solid" | "dashed" | "dotted", markerType: "none" | "circle" | "triangle" | "rect") {
+  const editor = page.getByLabel(`${label} line and marker editor`);
+  await editor.click();
+  await page.getByRole("button", { name: `${label} line ${lineType}` }).click();
+  await editor.click();
+  await page.getByRole("button", { name: `${label} marker ${markerType}` }).click();
+}
+
+async function inspectLegendStyleSamples(page: Page, dataUrl: string) {
+  return page.evaluate(async (source) => {
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("Canvas 2D context is unavailable.");
+    context.drawImage(image, 0, 0);
+    const isColored = (x: number, y: number) => {
+      const pixel = context.getImageData(x, y, 1, 1).data;
+      return pixel[0] < 245 || pixel[1] < 245 || pixel[2] < 245;
+    };
+    const countRuns = (startX: number, endX: number, y: number) => {
+      let runs = 0;
+      let previous = false;
+      for (let x = startX; x <= endX; x += 1) {
+        const current = isColored(x, y);
+        if (current && !previous) runs += 1;
+        previous = current;
+      }
+      return runs;
+    };
+    const countBox = (centerX: number, centerY: number) => {
+      let count = 0;
+      for (let y = centerY - 11; y <= centerY + 11; y += 1) {
+        for (let x = centerX - 11; x <= centerX + 11; x += 1) {
+          if (isColored(x, y)) count += 1;
+        }
+      }
+      return count;
+    };
+    return {
+      dashedRuns: countRuns(48, 176, 140),
+      dottedRuns: countRuns(624, 752, 140),
+      circlePixels: countBox(112, 140),
+      rectPixels: countBox(688, 140)
+    };
+  }, dataUrl);
 }
 
 function createAmplificationValue(cycle: number, midpoint: number, max: number) {

@@ -25,6 +25,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 ## [Unreleased]
 
 ### Added
+- Added curveId/source-aware legend identity validation, measured two-line preview/raster layout, and actionable collision warnings that leave Plot-only output available.
+- Added synthetic desktop/raster evidence for shared-prefix Lot A/B labels and distinguishable dashed/dotted plus circle/rect legend samples.
 - Added explicit Applied scale status and actionable invalid-draft feedback for X/Y Fixed and P1/P2 controls.
 - Added Analysis XLSX schema 2 scale continuity with automatic schema 1 migration.
 - Implemented Quick Paste Import for small comparison datasets with full-table and single-specimen modes, tab-separated or single-column input, read-only preview, source-position warnings, warning acknowledgement, append/new-analysis actions, and no in-app cell editing.
@@ -39,6 +41,8 @@ Update this file when user visible behavior, documentation baseline, release rea
 - Added direct parser regression coverage for missing specimen headers, missing reagent headers, both headers missing, and uneven curve lengths.
 
 ### Changed
+- Preview, standard legend, report legend, and rich Excel legend paths now retain one ordered curveId/style projection; raster labels preserve both leading context and distinguishing endings with explicit ellipsis.
+- Legend raster exports keep the requested width/height and reject layouts that cannot fit safely instead of silently clipping or enlarging the canvas.
 - Scale editing now preserves the last valid applied bounds while an active draft is incomplete or reversed. Plot-bearing PNG/JPEG/clipboard output is blocked until corrected, while Legend-only, report legends, plotted CSV, and Analysis XLSX remain available.
 - Box zoom bounds now preserve size-aware significant digits instead of fixed 2/3-decimal rounding.
 - Replaced accepted-size min/max and row-width argument spreads with iterative reductions in Quick Paste, Excel parsing, curve statistics, chart domains, dataset append, plotted CSV, and Analysis XLSX review generation.

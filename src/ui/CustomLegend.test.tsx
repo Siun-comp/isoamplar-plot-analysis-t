@@ -49,7 +49,7 @@ describe("CustomLegend", () => {
     const items: LegendItem[] = [
       {
         curveId: "curve-a",
-        label: "A1 │ S1",
+        label: "Assay 1 │ Synthetic Sample 1",
         color: "#0b6fa4",
         lineType: "solid",
         markerType: "none",
@@ -59,7 +59,7 @@ describe("CustomLegend", () => {
 
     render(<CustomLegend items={items} highlightedCurveId="curve-a" onHoverCurve={(curveId) => hoveredCurveIds.push(curveId)} />);
 
-    const item = screen.getByText("A1 │ S1").closest("li");
+    const item = screen.getByTitle("Assay 1 │ Synthetic Sample 1").closest("li");
     expect(item).toHaveClass("custom-legend-item-active");
     await user.hover(item!);
     await user.unhover(item!);
@@ -67,5 +67,37 @@ describe("CustomLegend", () => {
     item?.blur();
 
     expect(hoveredCurveIds).toEqual(["curve-a", null, "curve-a", null]);
+  });
+
+  it("preserves distinguishing suffixes and warns with source evidence when labels still collide", () => {
+    const items: LegendItem[] = [
+      {
+        curveId: "curve-a",
+        label: "Condition Alpha concentration with distinguishing Lot A",
+        sourceIdentity: "source-1 / Sheet1 / A",
+        color: "#7030a0",
+        lineType: "dashed",
+        markerType: "circle",
+        lineWidth: 2.25
+      },
+      {
+        curveId: "curve-b",
+        label: "Condition Alpha concentration with distinguishing Lot B",
+        sourceIdentity: "source-2 / Sheet1 / B",
+        color: "#0926fb",
+        lineType: "dotted",
+        markerType: "rect",
+        lineWidth: 2.25
+      }
+    ];
+    const { rerender } = render(<CustomLegend items={items} />);
+
+    expect(screen.getByText(/Lot A/u)).toBeVisible();
+    expect(screen.getByText(/Lot B/u)).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    rerender(<CustomLegend items={items.map((item) => ({ ...item, label: "Condition Shared Final Label" }))} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("source-1 / Sheet1 / A");
+    expect(screen.getByRole("alert")).toHaveTextContent("source-2 / Sheet1 / B");
   });
 });

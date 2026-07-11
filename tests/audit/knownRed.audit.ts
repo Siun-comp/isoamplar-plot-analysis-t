@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createLegendSvg } from "../../src/chart/exportChart";
 import { createPlottedDataCsv } from "../../src/chart/plottedDataExport";
 import { createOneSpecimenEightReagentDataset } from "../../src/data/sampleData";
 import { parseExcelWorkbook } from "../../src/data/parseExcel";
-import { legendIdentityCases } from "../fixtures/generatedCases";
 
 const fixtureRoot = join(process.cwd(), "tests", "fixtures");
 
@@ -49,17 +47,6 @@ describe("isolated known-red audit probes", () => {
     ]);
   });
 
-  it("records the AC-PCR-046 missing-suffix signature in legend SVG", () => {
-    const svg = createLegendSvg(
-      legendIdentityCases.uniqueSuffixes.map((item) => legendItem(item.curveId, item.label)),
-      520,
-      120
-    );
-    expect(svg).not.toContain("Lot A");
-    expect(svg).not.toContain("Lot B");
-    expect(svg).toContain("...");
-  });
-
   it("records the AC-PCR-051 formula-like CSV header signature", () => {
     const dataset = createOneSpecimenEightReagentDataset();
     const curve = dataset.curves[0];
@@ -72,14 +59,3 @@ describe("isolated known-red audit probes", () => {
     expect(result.csv.split("\r\n")[0]).toContain(",=");
   });
 });
-
-function legendItem(curveId: string, label: string) {
-  return {
-    curveId,
-    label,
-    color: "#0926fb",
-    lineType: "solid" as const,
-    markerType: "none" as const,
-    lineWidth: 2
-  };
-}

@@ -72,4 +72,34 @@ describe("report legend projection", () => {
 
     expect(projection.items[0].label).toBe("Analysis A1");
   });
+
+  it("keeps user order and resolved style attached to the same curveId", () => {
+    const dataset = createSyntheticPcrDataset({ specimenLabels: ["S1", "S2"], reagentLabels: ["A1", "A2"] });
+    const curves = [dataset.curves[3], dataset.curves[0]];
+    const legendItems: LegendItem[] = [
+      {
+        ...createLegendItems([curves[0].curveId], ["Condition B"])[0],
+        color: "#7030a0",
+        lineType: "dashed",
+        markerType: "circle"
+      },
+      {
+        ...createLegendItems([curves[1].curveId], ["Condition A"])[0],
+        color: "#0926fb",
+        lineType: "dotted",
+        markerType: "rect"
+      }
+    ];
+    const projection = buildReportLegendProjection({
+      curves,
+      legendItems,
+      labelMode: "reagent",
+      legendSettings: { previewVisible: true, reportLabelMode: "full", reportNameOverrides: {} }
+    });
+
+    expect(projection.items.map(({ curveId, color, lineType, markerType }) => ({ curveId, color, lineType, markerType }))).toEqual([
+      { curveId: curves[0].curveId, color: "#7030a0", lineType: "dashed", markerType: "circle" },
+      { curveId: curves[1].curveId, color: "#0926fb", lineType: "dotted", markerType: "rect" }
+    ]);
+  });
 });

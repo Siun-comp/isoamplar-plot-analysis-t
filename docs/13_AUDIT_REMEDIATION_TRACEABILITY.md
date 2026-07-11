@@ -2,7 +2,7 @@
 
 ## Status
 
-- Phase: S2 scale and numeric safety complete on active remediation branch
+- Phase: S3 legend identity and raster fidelity complete; final independent expert verdict GO
 - Updated: 2026-07-11
 - Product acceptance state: Target / Known red unless explicitly marked passing baseline
 - Data policy: synthetic-only fixtures and generated values
@@ -20,7 +20,7 @@
 | Audit finding | FR / IO / Decision | Target | Fixture / evidence input | Automated owner and path | Manual owner / evidence | Current status | Remediation Phase |
 |---|---|---|---|---|---|---|---|
 | C-P1-01 invalid active scale and tiny Box zoom precision | FR-006, FR-009, FR-010, D036, D041 | AC-PCR-045 | FX-007; generated invalid Fixed/P1/P2/exponent cases | Chart QA: `src/chart/chartScale.test.ts`, `src/chart/chartConfig.test.ts`, `src/app/App.test.tsx`, `src/analysis/analysisState.test.ts`, `src/analysis/analysisWorkbook.test.ts` | Desktop QA: `docs/gui_mockups/screenshots/s2_scale_draft_applied.png`; fresh Chromium invalid-draft/export flow | Passing S2; valid non-overlap remains warning-only pending UD-15 | S2 |
-| C-P1-02 and U-P2-06 shared-prefix legend identity loss | FR-008, FR-011, FR-012, FR-019, D028, D035 | AC-PCR-046 | FX-006; generated unique suffix and final-string collision | Export QA: `tests/audit/knownRed.audit.ts`; raster helper `tests/e2e/helpers/rasterEvidence.ts` | Desktop QA: all raster variants, not required for S1 exit | Partial known red: standard SVG suffix loss executed; full raster/collision outcomes open | S3 |
+| C-P1-02 and U-P2-06 shared-prefix legend identity loss | FR-008, FR-011, FR-012, FR-019, D028, D035, D042 | AC-PCR-046 | FX-006; generated unique suffix and final-string collision | Export QA: `src/chart/legendLayout.test.ts`, `src/chart/chartProjection.test.ts`, `src/chart/exportChart.test.ts`, `src/ui/CustomLegend.test.tsx`, `tests/e2e/app.spec.ts`; raster helper `tests/e2e/helpers/rasterEvidence.ts` | Desktop QA: `docs/gui_mockups/screenshots/s3_legend_identity_desktop.png`, `docs/gui_mockups/screenshots/s3_legend_export.png`; Windows Excel appearance remains manual | Passing S3: measured suffix-preserving layout, collision/source evidence, style/bounds matrix, and downloaded PNG pixel checks | S3 |
 | C-P1-03 Excel formatted header identity | FR-001, IO-001, D014 | AC-PCR-047 | FX-001 full header target; FX-002/003 container parity | Parser QA: `tests/data/parseExcel.fixture.test.ts`, `tests/audit/knownRed.audit.ts` | Data QA: Excel/app provenance comparison, not required for S1 exit | Manifest/parity passing; partial known red for `.xlsx` display labels; provenance/BIFF target open | S4 |
 | C-P1-04 warning source and handling traceability | FR-001, FR-020, IO-001, D014, D039 | AC-PCR-048 | FX-004 warning corpus; future same-name multi-source append | Data QA: fixed code/location/Y-gap test; `tests/audit/auditEvidence.todo.test.ts` | Desktop QA: navigate source/group without selection/order/style/dirty mutation | Partial baseline passing; target TODO | S4 |
 | C-P1-05 browser refresh/close loss | FR-017, FR-018, D026, D027 | AC-PCR-049A | Generated all-clean/dirty multi-tab workspace | Store/UI QA: `tests/audit/auditEvidence.todo.test.ts` | Desktop QA: F5, browser tab close, window close | Target TODO | S6 |
@@ -71,3 +71,17 @@ S1 completes when fixed hashes, passing baseline tests, isolated known-red probe
 - Automated regression: `npm run test` passed 24 files / 190 tests with 7 Target TODOs; `npm run test:audit:red` now contains 3 remaining exact defect signatures.
 - Production/browser: `npm run build` passed; fresh CI-mode Chromium passed 15/15 tests across three repetitions, including invalid draft, applied-range retention, plot-image blocking, Analysis XLSX availability, Legend-only image allowance, and deterministic Export disclosure handling.
 - Desktop visual: `docs/gui_mockups/screenshots/s2_scale_draft_applied.png` uses FX-002 synthetic data at 1920x1080 with no console/page errors or horizontal overflow.
+
+## S3 Local Verification Evidence
+
+- Projection: preview, standard/report raster, and rich Excel clipboard retain the same user order and resolved line/marker style by `curveId`; report projection is produced once per chart build.
+- Identity layout: browser `measureText` drives bounded maximum-two-line rendering. Semantic label segments use explicit middle ellipsis that keeps the leading context plus lot/concentration/temperature-style endings.
+- Auto-compact title: long shared specimen/reagent identity in a report legend title uses the same measured, bounded, end-preserving two-line rule and exposes title bounds for regression checks.
+- Collision handling: unresolved full or rendered-label collisions include curveId and immutable source evidence. Legend-bearing SVG/PNG/JPEG/Excel output rejects the collision; Plot-only bypass remains unchanged.
+- Bounds and style automation: SVG evidence covers no out-of-canvas text/sample bounds and all 12 solid/dashed/dotted x none/circle/triangle/rect combinations without changing requested dimensions.
+- Browser raster: the generated synthetic `s3-legend-identity.xlsx` flow verifies visible Lot A/B endings, dashed/dotted run-count separation, circle/rect pixel-area separation, a 2400-pixel PNG width at 2x export ratio, white corners, and nonblank content.
+- Automated regression: `npm run test` passed 26 files / 199 tests with 7 Target TODOs; `npm run test:audit:red` now contains 2 remaining non-S3 defect signatures; `npm run build` passed; fresh CI-mode Chromium passed 6/6.
+- Desktop browser: the local production preview returned HTTP 200 and showed no horizontal overflow, replacement characters, console warnings, or page errors.
+- Desktop visuals: `docs/gui_mockups/screenshots/s3_legend_identity_desktop.png` and `docs/gui_mockups/screenshots/s3_legend_export.png` contain only synthetic condition/assay labels.
+- Manual boundary: rich Excel clipboard cell values/order/font/style payload are automated; final Chrome/Edge to Windows Excel visual fidelity remains a documented manual check.
+- Fixture status: FX-006 is active/passing for S3 and FX-007 is active/passing for S2 across the generator, expected targets, manifest, and fixture plan.

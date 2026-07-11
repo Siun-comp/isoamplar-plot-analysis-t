@@ -204,7 +204,7 @@ function writeSharedPrefixFixture() {
   writeJson(join(fixtureRoot, expected), {
     schemaVersion: 1,
     fixtureId: "FX-006",
-    result: "target-known-red",
+    result: "ok",
     uniqueLabels: [
       "Assay Shared Prefix Lot A │ Condition Alpha concentration 01",
       "Assay Shared Prefix Lot B │ Condition Alpha concentration 02"
@@ -222,7 +222,7 @@ function writeSharedPrefixFixture() {
     extension: ".xlsx",
     sheetNames: ["Data"],
     expected,
-    status: "known-red",
+    status: "active",
     covers: ["AC-PCR-046", "C-P1-02"],
     purpose: "Legend identity where distinguishing information is in the suffix."
   };
@@ -247,7 +247,7 @@ function writeSmallYFixture() {
   writeJson(join(fixtureRoot, expected), {
     schemaVersion: 1,
     fixtureId: "FX-007",
-    result: "target-known-red",
+    result: "ok",
     x: [1, 2, 3],
     y: [0.00001, 0.00002, -0.00001],
     activeScaleCases: [
@@ -264,7 +264,7 @@ function writeSmallYFixture() {
     extension: ".xlsx",
     sheetNames: ["Data"],
     expected,
-    status: "known-red",
+    status: "active",
     covers: ["AC-PCR-045", "C-P1-01"],
     purpose: "Scale and Box zoom precision near zero."
   };

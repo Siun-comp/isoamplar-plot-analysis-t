@@ -27,10 +27,10 @@
 | FX-003 | BIFF8 `.xls` | FX-002와 같은 normalized 결과 및 실제 compound signature | Passing |
 | FX-004 | OOXML `.xlsx` | 빈 header, nonnumeric, no-cache formula, merged header의 code/location/null gap | Partial passing; provenance target은 S4 |
 | FX-005 | OOXML `.xlsx` | first worksheet only와 ignored worksheet warning | Passing |
-| FX-006 | OOXML `.xlsx` | suffix만 다른 shared-prefix legend identity | Known red - S3 |
-| FX-007 | OOXML `.xlsx` | 0 근처 tiny/negative fluorescence scale precision | Known red - S2 |
+| FX-006 | OOXML `.xlsx` | suffix만 다른 shared-prefix legend identity | Passing - S3 |
+| FX-007 | OOXML `.xlsx` | 0 근처 tiny/negative fluorescence scale precision | Passing - S2 |
 
-FX-006과 FX-007은 Excel container 자체가 핵심은 아니므로 S3/S2 구현 시 code-generated normalized fixture로 이동할 수 있다. 이동 전 manifest와 traceability link를 함께 갱신한다.
+FX-006과 FX-007의 Excel container 및 generated cases는 각각 S3/S2 회귀 근거로 유지한다. 상태 변경 시 manifest, expected target, generator와 traceability link를 함께 갱신한다.
 
 ## 2. Manifest 계약
 

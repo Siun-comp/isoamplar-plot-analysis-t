@@ -427,13 +427,7 @@ function ExportControls({
         curveOverrides,
         legendSettings
       });
-      const reportLegend = buildReportLegendProjection({
-        curves: chart.visibleCurves,
-        legendItems: chart.legendItems,
-        labelMode,
-        legendSettings,
-        curveOverrides
-      });
+      const reportLegend = chart.legendProjection;
       const blob = await exportReportLegendImageBlob({
         items: reportLegend.items,
         type,
@@ -464,13 +458,7 @@ function ExportControls({
         curveOverrides,
         legendSettings
       });
-      const reportLegend = buildReportLegendProjection({
-        curves: chart.visibleCurves,
-        legendItems: chart.legendItems,
-        labelMode,
-        legendSettings,
-        curveOverrides
-      });
+      const reportLegend = chart.legendProjection;
       const blob = await exportReportLegendImageBlob({
         items: reportLegend.items,
         type: "png",
@@ -500,13 +488,7 @@ function ExportControls({
         curveOverrides,
         legendSettings
       });
-      const reportLegend = buildReportLegendProjection({
-        curves: chart.visibleCurves,
-        legendItems: chart.legendItems,
-        labelMode,
-        legendSettings,
-        curveOverrides
-      });
+      const reportLegend = chart.legendProjection;
       await copyReportLegendExcelTableToClipboard({
         title: reportLegend.title,
         items: reportLegend.items

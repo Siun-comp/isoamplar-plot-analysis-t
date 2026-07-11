@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "fixtureId": "FX-007",
-  "result": "target-known-red",
+  "result": "ok",
   "x": [
     1,
     2,

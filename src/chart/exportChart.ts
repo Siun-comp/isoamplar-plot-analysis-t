@@ -2,12 +2,31 @@ import type { EChartsCoreOption } from "echarts/core";
 import type { ImageExportType } from "./exportFilenames";
 import type { LegendItem } from "./chartProjection";
 import type { ImageExportLayout } from "../data/types";
+import {
+  assertLegendIdentity,
+  assertLegendLabelsUnique,
+  createLegendTextMeasurer,
+  layoutLegendLabel,
+  layoutLegendItems,
+  type LaidOutLegendItem
+} from "./legendLayout";
 
 type EchartsCoreModule = typeof import("echarts/core");
 
 const EXPORT_PIXEL_RATIO = 2;
 let echartsPromise: Promise<EchartsCoreModule> | null = null;
 type LegendImageVariant = "standard" | "report";
+type LegendGeometry = {
+  columns: number;
+  columnWidth: number;
+  startX: number;
+  firstRowY: number;
+  rowHeight: number;
+  headerHeight: number;
+  sampleLength: number;
+  textOffset: number;
+  maxTextWidth: number;
+};
 
 export async function exportChartImageBlob(args: {
   option: EChartsCoreOption;
@@ -34,6 +53,7 @@ export async function exportChartLayoutImageBlob(args: {
     return exportChartImageBlob({ option: args.option, type: args.type, width, height: chartHeight });
   }
 
+  validateLegendLayoutForImageExport({ layout: args.layout, items: args.legendItems, width });
   const legendSize = calculateLegendImageSize(args.legendItems, width);
   if (args.layout === "legendOnly") {
     return exportLegendImageBlob({ items: args.legendItems, type: args.type, width });
@@ -54,6 +74,17 @@ export async function exportChartLayoutImageBlob(args: {
   context.drawImage(chartImage, 0, 0, outputWidth, outputChartHeight);
   context.drawImage(legendImage, 0, outputChartHeight, outputWidth, outputLegendHeight);
   return canvasToBlob(canvas, args.type);
+}
+
+export function validateLegendLayoutForImageExport(args: {
+  layout: ImageExportLayout;
+  items: LegendItem[];
+  width?: number;
+}) {
+  if (args.layout === "plotOnly") return;
+  const width = args.width ?? 1200;
+  const size = calculateLegendImageSize(args.items, width);
+  createLegendSvg(args.items, size.width, size.height);
 }
 
 export async function exportLegendImageBlob(args: {
@@ -104,14 +135,12 @@ export async function exportLegendImageDataUrl(args: {
 }
 
 export function calculateLegendImageSize(items: LegendItem[], width = 1200, variant: LegendImageVariant = "standard") {
-  const horizontalPadding = variant === "report" ? 56 : 48;
-  const minColumnWidth = variant === "report" ? 360 : 260;
-  const maxColumns = variant === "report" ? 2 : 4;
-  const columns = Math.max(1, Math.min(maxColumns, Math.floor((width - horizontalPadding) / minColumnWidth)));
+  const geometry = getLegendGeometry(width, variant);
+  const columns = geometry.columns;
   const rows = Math.max(1, Math.ceil(Math.max(items.length, 1) / columns));
   return {
     width,
-    height: variant === "report" ? 96 + rows * 58 : 58 + rows * 30
+    height: geometry.headerHeight + rows * geometry.rowHeight
   };
 }
 
@@ -122,31 +151,44 @@ export function createLegendSvg(
   variant: LegendImageVariant = "standard",
   title = "Legend"
 ) {
-  const horizontalPadding = variant === "report" ? 56 : 48;
-  const minColumnWidth = variant === "report" ? 360 : 260;
-  const maxColumns = variant === "report" ? 2 : 4;
-  const columns = Math.max(1, Math.min(maxColumns, Math.floor((width - horizontalPadding) / minColumnWidth)));
-  const columnWidth = (width - horizontalPadding) / columns;
-  const escapedItems = items.length > 0 ? items : [];
-  const startX = variant === "report" ? 28 : 24;
-  const firstRowY = variant === "report" ? 82 : 44;
-  const rowHeight = variant === "report" ? 58 : 30;
-  const rows = escapedItems
-    .map((item, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      const x = startX + column * columnWidth;
-      const y = firstRowY + row * rowHeight;
-      return createLegendSvgItem(item, x, y, columnWidth, variant);
+  const geometry = getLegendGeometry(width, variant);
+  const requiredHeight = calculateLegendImageSize(items, width, variant).height;
+  if (height < requiredHeight) {
+    throw new Error("Legend rows cannot fit inside the requested output height. Use Plot only or a taller legend output.");
+  }
+  if (geometry.maxTextWidth < 24) {
+    throw new Error("Legend labels cannot fit inside the requested output width. Use Plot only or a wider legend output.");
+  }
+  const font = variant === "report" ? "700 22px Arial, sans-serif" : "13px Arial, sans-serif";
+  const layout = layoutLegendItems({ items, maxTextWidth: geometry.maxTextWidth, font });
+  assertLegendIdentity(layout);
+  const rows = layout.items
+    .map((entry, index) => {
+      const column = index % geometry.columns;
+      const row = Math.floor(index / geometry.columns);
+      const x = geometry.startX + column * geometry.columnWidth;
+      const y = geometry.firstRowY + row * geometry.rowHeight;
+      return createLegendSvgItem(entry, x, y, geometry, variant);
     })
     .join("");
   const titleX = variant === "report" ? 28 : 24;
-  const titleY = variant === "report" ? 32 : 24;
   const titleSize = variant === "report" ? 22 : 15;
+  const titleWeight = variant === "report" ? 700 : 700;
+  const titleFont = `${titleWeight} ${titleSize}px Arial, sans-serif`;
+  const titleLayout = layoutLegendLabel(
+    title,
+    Math.max(24, width - titleX * 2),
+    createLegendTextMeasurer(titleFont)
+  );
+  const titleLineHeight = variant === "report" ? 26 : 18;
+  const titleFirstBaseline = variant === "report" ? 32 : 24;
+  const titleText = titleLayout.lines
+    .map((line, index) => `<tspan x="${titleX}" y="${titleFirstBaseline + index * titleLineHeight}">${escapeHtml(line)}</tspan>`)
+    .join("");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <rect width="100%" height="100%" fill="#ffffff"/>
-  <text x="${titleX}" y="${titleY}" fill="#263448" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="700">${escapeHtml(title)}</text>
+  <text fill="#263448" font-family="Arial, sans-serif" font-size="${titleSize}" font-weight="${titleWeight}" data-title-truncated="${titleLayout.truncated}" data-title-left="${titleX}" data-title-right="${width - titleX}" data-title-top="${titleFirstBaseline - titleSize}" data-title-bottom="${titleFirstBaseline + (titleLayout.lines.length - 1) * titleLineHeight + 4}">${titleText}</text>
   ${rows}
 </svg>`;
 }
@@ -207,6 +249,7 @@ export async function copyReportLegendExcelTableToClipboard(args: { title: strin
 }
 
 export function createReportLegendExcelClipboardPayload(args: { title: string; items: LegendItem[] }) {
+  assertLegendLabelsUnique(args.items);
   const rows = args.items
     .map(
       (item) => `<tr>
@@ -290,29 +333,49 @@ export function dataUrlToBlob(dataUrl: string) {
 }
 
 function createLegendSvgItem(
-  item: LegendItem,
+  entry: LaidOutLegendItem,
   x: number,
   y: number,
-  columnWidth: number,
+  geometry: LegendGeometry,
   variant: LegendImageVariant = "standard"
 ) {
+  const item = entry.item;
   const safeColor = escapeHtml(item.color);
-  const sampleLength = variant === "report" ? 98 : 64;
+  const sampleLength = geometry.sampleLength;
   const markerX = x + sampleLength / 2;
-  const textX = x + (variant === "report" ? 120 : 72);
-  const maxTextWidth = Math.max(120, columnWidth - (variant === "report" ? 136 : 84));
+  const textX = x + geometry.textOffset;
   const marker = createLegendSvgMarker(item, markerX, y, variant === "report" ? 7 : 4.5);
   const strokeWidth = variant === "report" ? Math.max(3.5, item.lineWidth * 1.35) : Math.max(2, item.lineWidth);
-  const text =
-    variant === "report"
-      ? createReportLegendText(item.label, textX, y, maxTextWidth)
-      : `<text x="${textX}" y="${y + 4}" fill="#263448" font-family="Arial, sans-serif" font-size="13">${escapeHtml(truncateLabel(item.label, Math.floor(maxTextWidth / 7.2)))}</text>`;
+  const text = createMeasuredLegendText(entry, textX, y, variant);
 
-  return `<g data-curve-id="${escapeHtml(item.curveId)}">
+  return `<g data-curve-id="${escapeHtml(item.curveId)}" data-rendered-label="${escapeHtml(entry.renderedLabel)}" data-truncated="${entry.truncated}" data-sample-left="${x}" data-sample-right="${x + sampleLength}" data-text-left="${textX}" data-text-right="${textX + geometry.maxTextWidth}" data-row-top="${y - geometry.rowHeight / 2}" data-row-bottom="${y + geometry.rowHeight / 2}">
     <line x1="${x}" y1="${y}" x2="${x + sampleLength}" y2="${y}" stroke="${safeColor}" stroke-width="${strokeWidth}" stroke-linecap="${item.lineType === "dotted" ? "round" : "butt"}" stroke-dasharray="${getStrokeDashArray(item.lineType)}"/>
     ${marker}
     ${text}
   </g>`;
+}
+
+function getLegendGeometry(width: number, variant: LegendImageVariant): LegendGeometry {
+  const horizontalPadding = variant === "report" ? 56 : 48;
+  const minColumnWidth = variant === "report" ? 360 : 260;
+  const maxColumns = variant === "report" ? 2 : 4;
+  const contentWidth = Math.max(1, width - horizontalPadding);
+  const columns = Math.max(1, Math.min(maxColumns, Math.floor(contentWidth / minColumnWidth)));
+  const columnWidth = contentWidth / columns;
+  const startX = variant === "report" ? 28 : 24;
+  const sampleLength = Math.min(variant === "report" ? 98 : 64, Math.max(variant === "report" ? 36 : 24, columnWidth * 0.3));
+  const textOffset = sampleLength + (variant === "report" ? 22 : 10);
+  return {
+    columns,
+    columnWidth,
+    startX,
+    firstRowY: variant === "report" ? 100 : 70,
+    rowHeight: variant === "report" ? 62 : 42,
+    headerHeight: variant === "report" ? 116 : 84,
+    sampleLength,
+    textOffset,
+    maxTextWidth: columnWidth - textOffset - (variant === "report" ? 16 : 12)
+  };
 }
 
 function createLegendSvgMarker(item: LegendItem, x: number, y: number, size: number) {
@@ -325,14 +388,14 @@ function createLegendSvgMarker(item: LegendItem, x: number, y: number, size: num
   return `<rect x="${x - size}" y="${y - size}" width="${size * 2}" height="${size * 2}" fill="${color}"/>`;
 }
 
-function createReportLegendText(label: string, x: number, centerY: number, maxTextWidth: number) {
-  const maxChars = Math.max(14, Math.floor(maxTextWidth / 12));
-  const lines = wrapLegendLabel(label, maxChars, 2);
-  const firstBaselineY = centerY + 8 - ((lines.length - 1) * 24) / 2;
-  const tspans = lines
-    .map((line, index) => `<tspan x="${x}" y="${firstBaselineY + index * 24}">${escapeHtml(line)}</tspan>`)
+function createMeasuredLegendText(entry: LaidOutLegendItem, x: number, centerY: number, variant: LegendImageVariant) {
+  const fontSize = variant === "report" ? 22 : 13;
+  const lineHeight = variant === "report" ? 24 : 16;
+  const firstBaselineY = centerY + fontSize * 0.34 - ((entry.lines.length - 1) * lineHeight) / 2;
+  const tspans = entry.lines
+    .map((line, index) => `<tspan x="${x}" y="${firstBaselineY + index * lineHeight}">${escapeHtml(line)}</tspan>`)
     .join("");
-  return `<text fill="#263448" font-family="Arial, sans-serif" font-size="22" font-weight="700">${tspans}</text>`;
+  return `<text fill="#263448" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="${variant === "report" ? 700 : 400}">${tspans}</text>`;
 }
 
 function createExcelLegendSampleHtml(item: LegendItem) {
@@ -376,42 +439,6 @@ function sanitizeExcelText(value: string) {
     return `\u200B${value}`;
   }
   return value;
-}
-
-function wrapLegendLabel(label: string, maxChars: number, maxLines: number) {
-  const words = label.split(/\s+/u).filter(Boolean);
-  const lines: string[] = [];
-
-  for (const word of words.length > 0 ? words : [label]) {
-    const chunks = splitLongLegendLine(word, maxChars);
-    for (const chunk of chunks) {
-      const current = lines.at(-1);
-      if (!current || current.length + 1 + chunk.length > maxChars) {
-        lines.push(chunk);
-      } else {
-        lines[lines.length - 1] = `${current} ${chunk}`;
-      }
-    }
-  }
-
-  if (lines.length <= maxLines) return lines;
-  const visible = lines.slice(0, maxLines);
-  visible[maxLines - 1] = truncateLabel(visible[maxLines - 1], maxChars);
-  return visible;
-}
-
-function splitLongLegendLine(line: string, maxChars: number) {
-  if (line.length <= maxChars) return [line];
-  const chunks: string[] = [];
-  for (let index = 0; index < line.length; index += maxChars) {
-    chunks.push(line.slice(index, index + maxChars));
-  }
-  return chunks;
-}
-
-function truncateLabel(label: string, maxLength: number) {
-  if (label.length <= maxLength) return label;
-  return `${label.slice(0, Math.max(1, maxLength - 3))}...`;
 }
 
 function escapeHtml(value: string) {

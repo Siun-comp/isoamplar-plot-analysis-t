@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LegendItem } from "../chart/chartProjection";
+import { layoutLegendItems } from "../chart/legendLayout";
 import type { LineType, MarkerType } from "../data/types";
 
 export function CustomLegend({
@@ -12,10 +13,36 @@ export function CustomLegend({
   onHoverCurve?: (curveId: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
+  const listRef = useRef<HTMLUListElement>(null);
+  const [availableTextWidth, setAvailableTextWidth] = useState(150);
   const normalizedQuery = query.trim().toLowerCase();
   const visibleItems = normalizedQuery
     ? items.filter((item) => item.label.toLowerCase().includes(normalizedQuery))
     : items;
+  const layout = useMemo(
+    () => layoutLegendItems({ items: visibleItems, maxTextWidth: availableTextWidth, font: "12px Arial, sans-serif" }),
+    [availableTextWidth, visibleItems]
+  );
+  const layoutByCurveId = new Map(layout.items.map((entry) => [entry.item.curveId, entry]));
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const updateWidth = () => {
+      const listWidth = list.clientWidth;
+      if (listWidth <= 0) return;
+      const columnGap = 12;
+      const minimumColumnWidth = 230;
+      const columns = Math.max(1, Math.floor((listWidth + columnGap) / (minimumColumnWidth + columnGap)));
+      const columnWidth = (listWidth - columnGap * (columns - 1)) / columns;
+      setAvailableTextWidth(Math.max(24, columnWidth - 79));
+    };
+    updateWidth();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <section className="custom-legend" aria-label="Custom legend">
@@ -33,7 +60,7 @@ export function CustomLegend({
           onChange={(event) => setQuery(event.currentTarget.value)}
         />
       )}
-      <ul className="custom-legend-list">
+      <ul ref={listRef} className="custom-legend-list">
         {visibleItems.map((item) => (
           <li
             className={`custom-legend-item${highlightedCurveId === item.curveId ? " custom-legend-item-active" : ""}`}
@@ -45,11 +72,21 @@ export function CustomLegend({
             onBlur={() => onHoverCurve?.(null)}
           >
             <LegendSample item={item} />
-            <span title={item.label}>{item.label}</span>
+            <span className="custom-legend-label" title={item.label}>
+              {(layoutByCurveId.get(item.curveId)?.lines ?? [item.label]).map((line, index) => (
+                <span key={`${item.curveId}-line-${index}`}>{line}</span>
+              ))}
+            </span>
           </li>
         ))}
       </ul>
-      {visibleItems.length === 0 && <p>표시할 legend가 없습니다.</p>}
+      {layout.collisions.length > 0 && (
+        <div className="legend-identity-warning" role="alert">
+          Legend labels are not distinguishable: {layout.collisions.flatMap((collision) => collision.sourceIdentities).join(", ")}.
+          Use distinct Analysis labels before legend export.
+        </div>
+      )}
+      {visibleItems.length === 0 && <p>표시할 범례가 없습니다.</p>}
     </section>
   );
 }

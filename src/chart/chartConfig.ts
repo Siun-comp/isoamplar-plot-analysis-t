@@ -2,6 +2,7 @@ import type { EChartsCoreOption } from "echarts/core";
 import type { ChartScaleState, AxisScaleIssue } from "./chartScale";
 import { buildChartProjection, defaultChartColors } from "./chartProjection";
 import { buildReportLegendProjection } from "./reportLegend";
+import type { ReportLegendProjection } from "./reportLegend";
 import type { Curve, CurveStyleOverride, GroupingMode, LegendSettings, PcrDataset, StyleRules } from "../data/types";
 import type { LegendItem } from "./chartProjection";
 
@@ -9,6 +10,7 @@ export type ChartBuildResult = {
   option: EChartsCoreOption;
   visibleCurves: Curve[];
   legendItems: LegendItem[];
+  legendProjection: ReportLegendProjection;
   scaleIssues: AxisScaleIssue[];
 };
 
@@ -24,20 +26,22 @@ export function buildPcrChartOption(args: {
   highlightedCurveId?: string | null;
 }): ChartBuildResult {
   const projection = buildChartProjection(args);
-  const displayLegendItems = args.legendSettings
+  const legendProjection = args.legendSettings
     ? buildReportLegendProjection({
         curves: projection.visibleCurves,
         legendItems: projection.legendItems,
         labelMode: args.labelMode ?? "specimen",
         legendSettings: args.legendSettings,
         curveOverrides: args.curveOverrides
-      }).items
-    : projection.legendItems;
+      })
+    : { title: "Legend", items: projection.legendItems, compactedBy: null };
+  const displayLegendItems = legendProjection.items;
   const displayLegendNameByCurveId = new Map(displayLegendItems.map((item) => [item.curveId, item.label]));
 
   return {
     visibleCurves: projection.visibleCurves,
     legendItems: displayLegendItems,
+    legendProjection,
     scaleIssues: projection.scaleIssues,
     option: {
       backgroundColor: "#ffffff",

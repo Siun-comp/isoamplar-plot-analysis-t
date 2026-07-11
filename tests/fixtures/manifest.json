@@ -121,7 +121,7 @@
         "Data"
       ],
       "expected": "expected/FX-006-shared-prefix-labels.target.json",
-      "status": "known-red",
+      "status": "active",
       "covers": [
         "AC-PCR-046",
         "C-P1-02"
@@ -141,7 +141,7 @@
         "Data"
       ],
       "expected": "expected/FX-007-small-y.target.json",
-      "status": "known-red",
+      "status": "active",
       "covers": [
         "AC-PCR-045",
         "C-P1-01"

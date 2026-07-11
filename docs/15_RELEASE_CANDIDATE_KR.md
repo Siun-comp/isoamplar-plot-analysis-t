@@ -91,3 +91,13 @@ Released - post-deploy smoke passed
 - Post-deploy smoke: pass at 2026-07-11 23:39 KST
 - Rollback required: no
 - Nonblocking workflow annotation: GitHub reports Node 20 deprecation for current action majors while forcing them to Node 24; both branch and Pages workflows completed successfully
+
+## Post-S11 Selection Workflow 배포 기록
+
+- 기능 범위: Selection Sets, Analysis XLSX schema 4, Selected Data XLSX, output-role rejection, updated synthetic user guide
+- Final product source SHA: `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`
+- Final branch CI run: https://github.com/Siun-comp/isoamplar-plot-analysis/actions/runs/29161091055 - success, 293 Vitest tests and 12 Chromium tests
+- Final Pages workflow run: https://github.com/Siun-comp/isoamplar-plot-analysis/actions/runs/29161173159 - success
+- Public smoke: 1280x720 synthetic original-data import, one-curve selection, Selection Set creation, Selected Data XLSX download/readback, five-sheet and hidden-role-marker verification, no document horizontal overflow, zero browser errors, zero unexpected external origins
+- Public URL: https://siun-comp.github.io/isoamplar-plot-analysis/
+- Rollback required: no

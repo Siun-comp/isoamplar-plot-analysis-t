@@ -285,7 +285,7 @@ Analysis XLSX schema 1~4 roundtrip, append, tab isolation, XLSX numeric/null/for
 - 선택 세트는 현재 분석의 `curveId` 구성만 저장하며, 적용 후보와 현재 적용 세트를 분리하고 수동 선택 변경 시 `수정됨`을 표시한다.
 - 선택 데이터 XLSX는 `PlottedData`, `CurveInfo`, `Warnings`, `ExportInfo` 및 숨김 역할 marker를 포함하며 앱 복원 입력으로 사용되지 않는다.
 - Analysis XLSX는 전체 imported dataset과 선택 세트를 함께 보존하고 schema 1-3을 선택 세트가 없는 schema 4 상태로 migration한다.
-- 단위·상태·컴포넌트·workbook readback·Playwright 회귀와 합성 데이터 화면 증거를 추가했다. 최종 로컬 게이트는 Vitest 293/293, audit 1/1, Chromium 12/12, production dependency vulnerability 0, build 성공이며 세 독립 전문가 재감사는 모두 GO이다. 배포 증거는 `DEVELOPMENT_STATE.md`와 `CHANGELOG.md`에 기록한다.
+- 단위·상태·컴포넌트·workbook readback·Playwright 회귀와 합성 데이터 화면 증거를 추가했다. 최종 로컬 게이트는 Vitest 293/293, audit 1/1, Chromium 12/12, production dependency vulnerability 0, build 성공이며 세 독립 전문가 재감사는 모두 GO이다. 최종 product source `6c57afb`는 branch CI `29161091055`와 Pages `29161173159`를 통과했고 공개 합성 smoke도 통과했다.
 
 ## 12. 사용자 결정 필요 항목
 

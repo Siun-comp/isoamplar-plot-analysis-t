@@ -1,5 +1,14 @@
 # CHANGELOG.md
 
+## 2026-07-11 - Audit remediation S10 release verification
+
+- Added fresh GitHub Pages base-path Chromium verification on a dedicated non-reused preview server.
+- Added exact `dist` SHA-256 manifests before and after Playwright so Pages uploads only the browser-tested bytes.
+- Added context-wide browser network evidence that permits only known static app `GET/HEAD` paths plus browser-local blob/data output, and blocks same-origin writes, cross-origin HTTP(S) transports, and WebSockets.
+- Strengthened legend PNG checks for fully opaque white background, complete white perimeter, bounded content, and expected text/style pixels.
+- Added Chromium clipboard-failure guidance and Analysis XLSX save/restore/resave coverage that verifies exact curve/source/X/Y/stats equality for null, negative, exponential, and large fluorescence values plus selection/scale/style/label continuity.
+- Reduced Pages workflow permissions so only the deployment job can write Pages and request the OIDC token.
+
 ## 2026-07-11 - Audit remediation S9 hover and editor performance
 
 - Coalesced chart pointer movement to one readout calculation per animation frame.

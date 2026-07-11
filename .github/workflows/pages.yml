@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -18,9 +16,16 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "1"
+      E2E_BASE_URL: "http://127.0.0.1:4174/isoamplar-plot-analysis/"
+      VITE_BASE_PATH: "/isoamplar-plot-analysis/"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,11 +36,60 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check committed patch formatting
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${BASE_SHA:-}" && ! "$BASE_SHA" =~ ^0+$ ]] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git diff --check "$BASE_SHA" "$GITHUB_SHA"
+          else
+            git show --check --format= "$GITHUB_SHA"
+          fi
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Test
-        run: npm run test
+        run: |
+          mkdir -p evidence
+          npm run test
+          npm run test:audit:red
 
       - name: Build
         run: npm run build
+
+      - name: Hash built dist
+        run: npm run check:dist:before
+
+      - name: Run fresh Chromium against built dist
+        run: |
+          npm run test:e2e -- \
+            --project=chromium \
+            --fail-on-flaky-tests \
+            --reporter=github,html
+
+      - name: Verify dist was not changed by browser tests
+        if: always()
+        run: |
+          npm run check:dist:after
+          npm run check:dist:unchanged
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-verification-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            evidence/
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -48,6 +102,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

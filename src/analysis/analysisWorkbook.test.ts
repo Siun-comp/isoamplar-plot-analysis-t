@@ -6,6 +6,7 @@ import { createDefaultStyleRules } from "../chart/chartStyle";
 import { createOneSpecimenEightReagentDataset, createSyntheticPcrDataset } from "../data/sampleData";
 import { appendPcrDataset } from "../data/mergeDatasets";
 import { parsePastedTable } from "../data/parsePastedTable";
+import { createStats } from "../data/normalizePcrData";
 import { createInitialSelectionState } from "../selection/selectionState";
 import { createGroupId } from "../selection/buildTrees";
 import { createAnalysisState, createSourceFileSummary, serializeAnalysisState } from "./analysisState";
@@ -22,6 +23,9 @@ import {
 describe("Analysis XLSX workbook", () => {
   it("exports visible review sheets, hidden restore JSON, and roundtrips full unselected dataset", async () => {
     const dataset = createOneSpecimenEightReagentDataset();
+    dataset.curves[0].x = [1, 2, 3, 4];
+    dataset.curves[0].y = [-1.25, null, 1.2e-9, 950_000_000];
+    dataset.curves[0].stats = createStats(dataset.curves[0].y);
     const selection = createInitialSelectionState(dataset);
     selection.selectedCurveIds.add(dataset.curves[0].curveId);
     const collapsedReagentGroupId = createGroupId("reagent", dataset.reagents[0].id);
@@ -129,6 +133,23 @@ describe("Analysis XLSX workbook", () => {
     if (restored.kind !== "analysis") return;
     expect(restored.analysis.analysisName).toBe("Run A");
     expect(restored.analysis.dataset.curves).toHaveLength(dataset.curves.length);
+    expect(
+      restored.analysis.dataset.curves.map((curve) => ({
+        curveId: curve.curveId,
+        x: curve.x,
+        y: curve.y,
+        stats: curve.stats,
+        source: curve.source
+      }))
+    ).toEqual(
+      dataset.curves.map((curve) => ({
+        curveId: curve.curveId,
+        x: curve.x,
+        y: curve.y,
+        stats: curve.stats,
+        source: curve.source
+      }))
+    );
     expect(restored.analysis.selection.selectedCurveIds.has(dataset.curves[0].curveId)).toBe(true);
     expect(restored.analysis.selection.selectedCurveIds.has(dataset.curves[1].curveId)).toBe(false);
     expect(restored.analysis.selection.collapsedGroupIds.has(collapsedReagentGroupId)).toBe(true);

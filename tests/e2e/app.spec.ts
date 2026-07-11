@@ -1,11 +1,125 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test as base, type Locator, type Page } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import * as XLSX from "xlsx";
-import { inspectRasterDataUrl } from "./helpers/rasterEvidence";
+import { readAnalysisWorkbookBuffer } from "../../src/analysis/analysisWorkbook";
+import { calculateLegendEvidenceRegions, exportPixelRatio } from "../../src/chart/exportChart";
+import { findOverlappingBounds, inspectRasterDataUrl, inspectRasterRegions } from "./helpers/rasterEvidence";
+
+type NetworkGuardControl = {
+  violations: string[];
+  browserErrors: string[];
+  acknowledgeExpectedViolations: () => void;
+  acknowledgeExpectedBrowserErrors: () => void;
+};
+
+const test = base.extend<{ browserLocalNetworkGuard: NetworkGuardControl }>({
+  browserLocalNetworkGuard: [
+    async ({ context }, use, testInfo) => {
+      const configuredBaseUrl = testInfo.project.use.baseURL;
+      if (typeof configuredBaseUrl !== "string") throw new Error("Playwright baseURL must be configured.");
+      const appUrl = new URL(configuredBaseUrl);
+      const appOrigin = appUrl.origin;
+      const appBasePath = appUrl.pathname.endsWith("/") ? appUrl.pathname : `${appUrl.pathname}/`;
+      const evidence = {
+        allowed: [] as string[],
+        expectedBlockedProbes: [] as string[],
+        expectedBrowserErrors: [] as string[],
+        violations: [] as string[]
+      };
+      const browserDiagnostics: string[] = [];
+      const browserErrors: string[] = [];
+      const attachDiagnostics = (targetPage: Page) => {
+        targetPage.on("console", (message) => {
+          const entry = `CONSOLE ${message.type()} ${message.text()}`;
+          browserDiagnostics.push(entry);
+          if (message.type() === "error") browserErrors.push(entry);
+        });
+        targetPage.on("pageerror", (error) => {
+          const entry = `PAGEERROR ${error.message}`;
+          browserDiagnostics.push(entry);
+          browserErrors.push(entry);
+        });
+        targetPage.on("requestfailed", (request) => {
+          browserDiagnostics.push(
+            `REQUESTFAILED ${request.method()} ${request.resourceType()} ${request.url()} ${request.failure()?.errorText ?? "unknown"}`
+          );
+        });
+      };
+      context.pages().forEach(attachDiagnostics);
+      context.on("page", attachDiagnostics);
+
+      await context.route("**/*", async (route) => {
+        const url = route.request().url();
+        const requestEvidence = `${route.request().method()} ${route.request().resourceType()} ${url}`;
+        if (isAllowedBrowserLocalUrl(url, route.request().method(), appOrigin, appBasePath)) {
+          evidence.allowed.push(requestEvidence);
+          await route.continue();
+          return;
+        }
+        evidence.violations.push(requestEvidence);
+        await route.abort("blockedbyclient");
+      });
+
+      await context.routeWebSocket(
+        (url) => {
+          evidence.violations.push(`WEBSOCKET websocket ${url.href}`);
+          return true;
+        },
+        async (socket) => socket.close({ code: 1008, reason: "Browser-local analysis blocks WebSocket connections." })
+      );
+
+      await use({
+        violations: evidence.violations,
+        browserErrors,
+        acknowledgeExpectedViolations: () => {
+          evidence.expectedBlockedProbes.push(...evidence.violations.splice(0));
+        },
+        acknowledgeExpectedBrowserErrors: () => {
+          evidence.expectedBrowserErrors.push(...browserErrors.splice(0));
+        }
+      });
+
+      await testInfo.attach("browser-local-network-evidence", {
+        body: JSON.stringify(
+          {
+            appOrigin,
+            allowedRequestCount: evidence.allowed.length,
+            expectedBlockedProbes: evidence.expectedBlockedProbes,
+            expectedBrowserErrors: evidence.expectedBrowserErrors,
+            violations: evidence.violations
+          },
+          null,
+          2
+        ),
+        contentType: "application/json"
+      });
+      await testInfo.attach("browser-console.txt", {
+        body: browserDiagnostics.length > 0 ? `${browserDiagnostics.join("\n")}\n` : "No browser console, page, or request errors.\n",
+        contentType: "text/plain"
+      });
+      expect(evidence.violations, "Unexpected cross-origin browser request").toEqual([]);
+      expect(browserErrors, "Unexpected browser console or page error").toEqual([]);
+    },
+    { auto: true }
+  ]
+});
+
+function isAllowedBrowserLocalUrl(value: string, method: string, appOrigin: string, appBasePath: string) {
+  const url = new URL(value);
+  if (url.protocol === "blob:" || url.protocol === "data:") return true;
+  if (url.origin !== appOrigin || !["GET", "HEAD"].includes(method)) return false;
+  if (url.pathname === appBasePath || url.pathname.startsWith(`${appBasePath}assets/`)) return true;
+  return ["favicon.svg", "favicon-32.png", "favicon-16.png", "apple-touch-icon.png", "manifest.webmanifest"].some(
+    (fileName) => url.pathname === `${appBasePath}${fileName}`
+  );
+}
 
 test("renders the upload-first PCR workspace", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("./");
+
+  const configuredPath = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:4174").pathname;
+  if (configuredPath !== "/") expect(new URL(page.url()).pathname).toBe(configuredPath);
 
   await expect(page.getByRole("heading", { name: "IsoAmplar Plot Analysis" })).toBeVisible();
   await expect(page.getByText("Developer Jang Si Un")).toBeVisible();
@@ -15,8 +129,53 @@ test("renders the upload-first PCR workspace", async ({ page }) => {
   await expect(page.getByText("원본 Excel은 첫 번째 시트만 읽고, 모든 데이터는 브라우저 안에서 처리합니다.")).toBeVisible();
 });
 
+test("blocks synthetic cross-origin browser transports", async ({ page, browserLocalNetworkGuard }) => {
+  await page.goto("./");
+  await page.evaluate(async () => {
+    const settleImage = new Promise<void>((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve();
+      image.onerror = () => resolve();
+      image.src = "https://blocked.invalid/image";
+    });
+    const settleXhr = new Promise<void>((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onloadend = () => resolve();
+      xhr.onerror = () => resolve();
+      xhr.open("GET", "https://blocked.invalid/xhr");
+      xhr.send();
+    });
+    const settleWebSocket = new Promise<void>((resolve) => {
+      const socket = new WebSocket("wss://blocked.invalid/ws");
+      socket.onerror = () => resolve();
+      socket.onclose = () => resolve();
+      window.setTimeout(resolve, 1_000);
+    });
+    const fetchGet = fetch("https://blocked.invalid/fetch").catch(() => undefined);
+    const fetchPost = fetch("https://blocked.invalid/post", { method: "POST", body: "synthetic" }).catch(() => undefined);
+    const sameOriginPost = fetch(new URL("synthetic-upload", window.location.href), {
+      method: "POST",
+      body: "synthetic"
+    }).catch(() => undefined);
+    navigator.sendBeacon("https://blocked.invalid/beacon", "synthetic");
+    await Promise.all([settleImage, settleXhr, settleWebSocket, fetchGet, fetchPost, sameOriginPost]);
+  });
+
+  await expect.poll(() => browserLocalNetworkGuard.violations.length).toBe(7);
+  const evidence = browserLocalNetworkGuard.violations.join("\n");
+  for (const transport of ["/image", "/xhr", "/fetch", "/post", "/beacon", "/ws", "/synthetic-upload"]) {
+    expect(browserLocalNetworkGuard.violations.filter((entry) => entry.includes(transport))).toHaveLength(1);
+  }
+  expect(evidence).toContain("POST");
+  expect(evidence).toContain("WEBSOCKET");
+  browserLocalNetworkGuard.acknowledgeExpectedViolations();
+  await expect.poll(() => browserLocalNetworkGuard.browserErrors.length).toBe(6);
+  browserLocalNetworkGuard.browserErrors.forEach((entry) => expect(entry).toContain("ERR_BLOCKED_BY_CLIENT"));
+  browserLocalNetworkGuard.acknowledgeExpectedBrowserErrors();
+});
+
 test("previews and imports full-table and single-specimen pasted data", async ({ page }, testInfo) => {
-  await page.goto("/");
+  await page.goto("./");
   await page.getByRole("button", { name: "빠른 붙여넣기" }).click();
   let dialog = page.getByRole("dialog", { name: "소량 표 붙여넣기" });
   await expect(dialog).toBeVisible();
@@ -78,7 +237,7 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   writeWorkbookFixture(workbookPath, "검체 1");
   writeWorkbookFixture(appendWorkbookPath, "검체 2");
 
-  await page.goto("/");
+  await page.goto("./");
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
 
   await expect(page.getByText(/phase3-upload.xlsx · 곡선 2개/)).toBeVisible();
@@ -192,6 +351,9 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await expect(page.getByRole("button", { name: "Save PNG" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Copy selected layout PNG to clipboard" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy report legend Excel cells" })).toBeVisible();
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined }));
+  await page.getByRole("button", { name: "Copy selected layout PNG to clipboard" }).click();
+  await expect(page.locator(".export-message")).toContainText("Download PNG instead.");
   await page.getByText("Legend file save").click();
   await expect(page.getByRole("button", { name: "Save report legend PNG" })).toBeVisible();
   const downloadPromise = page.waitForEvent("download");
@@ -217,7 +379,7 @@ test("keeps dense Style and sticky plot inspectable at desktop viewports", async
   const workbookPath = testInfo.outputPath("s8-dense-desktop.xlsx");
   writeDenseWorkbookFixture(workbookPath, 100);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/");
+  await page.goto("./");
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
   await page.getByRole("button", { name: "표시 선택" }).click();
   await page.locator(".settings-accordion > details > summary", { hasText: "Style" }).click();
@@ -294,7 +456,7 @@ test("records reusable S9 reference and stress workload measurements", async ({ 
   ]) {
     const workbookPath = testInfo.outputPath(`s9-${workload.name}.xlsx`);
     writeDenseWorkbookFixture(workbookPath, workload.curveCount, 100);
-    await page.goto("/");
+    await page.goto("./");
 
     const importStarted = performance.now();
     await page.getByTestId("original-data-input").setInputFiles(workbookPath);
@@ -393,7 +555,7 @@ test("preserves long legend identity and distinguishable line-marker raster samp
   const workbookPath = testInfo.outputPath("s3-legend-identity.xlsx");
   writeLegendIdentityWorkbook(workbookPath);
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.goto("/");
+  await page.goto("./");
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
   await page.getByRole("button", { name: "표시 선택" }).click();
 
@@ -410,6 +572,25 @@ test("preserves long legend identity and distinguishable line-marker raster samp
   await setGroupLineMarker(page, lotBLabel, "dotted", "rect");
   await expect(legend.locator('[data-line-type="dashed"][data-marker-type="circle"]')).toHaveCount(1);
   await expect(legend.locator('[data-line-type="dotted"][data-marker-type="rect"]')).toHaveCount(1);
+  const legendBounds = await legend.evaluate((root) => {
+    const bounds = (element: Element, id: string) => {
+      const box = element.getBoundingClientRect();
+      return { id, left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+    };
+    return Array.from(root.querySelectorAll(".custom-legend-item")).map((item, index) => ({
+      item: bounds(item, `item-${index}`),
+      sample: bounds(item.querySelector(".legend-sample")!, `sample-${index}`),
+      label: bounds(item.querySelector(".custom-legend-label")!, `label-${index}`)
+    }));
+  });
+  expect(findOverlappingBounds(legendBounds.map((entry) => entry.item))).toEqual([]);
+  legendBounds.forEach(({ item, sample, label }) => {
+    expect(sample.right).toBeLessThanOrEqual(label.left);
+    expect(sample.left).toBeGreaterThanOrEqual(item.left);
+    expect(label.right).toBeLessThanOrEqual(item.right + 1);
+    expect(label.top).toBeGreaterThanOrEqual(item.top - 1);
+    expect(label.bottom).toBeLessThanOrEqual(item.bottom + 1);
+  });
   await page.screenshot({ path: testInfo.outputPath("s3-legend-preview.png"), fullPage: false });
 
   const exportSummary = page.locator(".settings-accordion > details > summary", { hasText: "Export" });
@@ -424,10 +605,46 @@ test("preserves long legend identity and distinguishable line-marker raster samp
   const dataUrl = `data:image/png;base64,${readFileSync(downloadedPath).toString("base64")}`;
   const raster = await inspectRasterDataUrl(page, dataUrl);
   const samples = await inspectLegendStyleSamples(page, dataUrl);
+  const exportedColors = await legend.locator(".legend-sample line").evaluateAll((lines) =>
+    lines.map((line) => line.getAttribute("stroke") ?? "#000000")
+  );
+  const evidenceRegions = calculateLegendEvidenceRegions(2).flatMap((region, index) => [
+    {
+      id: `sample-${index}`,
+      left: region.sample.left * exportPixelRatio,
+      top: region.sample.top * exportPixelRatio,
+      right: region.sample.right * exportPixelRatio,
+      bottom: region.sample.bottom * exportPixelRatio,
+      expectedColor: exportedColors[index]
+    },
+    {
+      id: `text-${index}`,
+      left: region.text.left * exportPixelRatio,
+      top: region.text.top * exportPixelRatio,
+      right: region.text.right * exportPixelRatio,
+      bottom: region.text.bottom * exportPixelRatio
+    }
+  ]);
+  const regionEvidence = await inspectRasterRegions(page, dataUrl, evidenceRegions);
 
   expect(raster.width).toBe(2400);
+  expect(raster.height).toBe(252);
   expect(raster.whiteCornerPixels).toBe(4);
+  expect(raster.transparentPixels).toBe(0);
+  expect(raster.whitePerimeterPixels).toBe(raster.perimeterPixels);
   expect(raster.nonWhitePixels).toBeGreaterThan(300);
+  expect(raster.nonWhiteBounds).not.toBeNull();
+  expect(raster.nonWhiteBounds!.left).toBeGreaterThan(0);
+  expect(raster.nonWhiteBounds!.top).toBeGreaterThan(0);
+  expect(raster.nonWhiteBounds!.right).toBeLessThan(raster.width);
+  expect(raster.nonWhiteBounds!.bottom).toBeLessThan(raster.height);
+  expect(findOverlappingBounds(evidenceRegions)).toEqual([]);
+  regionEvidence.filter((region) => region.id.startsWith("sample-")).forEach((region) => {
+    expect(region.expectedColorPixels).toBeGreaterThan(20);
+  });
+  regionEvidence.filter((region) => region.id.startsWith("text-")).forEach((region) => {
+    expect(region.nonWhitePixels).toBeGreaterThan(20);
+  });
   expect(samples.dashedRuns).toBeGreaterThanOrEqual(4);
   expect(samples.dottedRuns).toBeGreaterThan(samples.dashedRuns);
   expect(samples.rectPixels).toBeGreaterThan(samples.circlePixels);
@@ -436,7 +653,7 @@ test("preserves long legend identity and distinguishable line-marker raster samp
 test("preserves formatted Excel identity and exposes actionable warning provenance", async ({ page }, testInfo) => {
   const workbookPath = testInfo.outputPath("s4-warning-provenance.xlsx");
   writeWarningProvenanceWorkbook(workbookPath);
-  await page.goto("/");
+  await page.goto("./");
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
 
   await expect(page.getByText(/s4-warning-provenance\.xlsx · 곡선 2개/u)).toBeVisible();
@@ -485,11 +702,103 @@ test("preserves formatted Excel identity and exposes actionable warning provenan
   expect(warningRows[0]).toEqual(expect.arrayContaining(["Handling", "Source ID", "Display value", "Formula cache"]));
 });
 
+test("roundtrips dataset selection scale style and labels through Analysis XLSX", async ({ page }, testInfo) => {
+  const workbookPath = testInfo.outputPath("s10-analysis-roundtrip.xlsx");
+  const restorePath = testInfo.outputPath("s10-restored-analysis.xlsx");
+  const resavedPath = testInfo.outputPath("s10-resaved-analysis.xlsx");
+  const specimenLabel = "Synthetic continuity specimen";
+  const curveLabel = `A2 \u2502 ${specimenLabel}`;
+  writeAnalysisRoundtripWorkbookFixture(workbookPath, specimenLabel);
+
+  await page.goto("./");
+  await page.getByTestId("original-data-input").setInputFiles(workbookPath);
+  await page.getByRole("searchbox").fill("A2");
+  const selectionActions = page.locator(".selection-actions button");
+  await expect(selectionActions).toHaveCount(4);
+  await selectionActions.nth(0).click();
+  await expect(page.locator(".selection-meta span").nth(1)).toHaveText(/1$/u);
+
+  const yAxis = page.getByRole("region", { name: "Y axis" });
+  await yAxis.getByRole("button", { name: "Fixed" }).click();
+  const yInputs = yAxis.getByRole("spinbutton");
+  await yInputs.nth(0).fill("-1000");
+  await yInputs.nth(1).fill("900000");
+  await expect(yAxis).toContainText("Applied: Fixed -1000");
+
+  const styleSummary = page.locator(".settings-accordion > details > summary", { hasText: "Style" });
+  await styleSummary.click();
+  await page.getByLabel(`${curveLabel} line and marker editor`, { exact: true }).click();
+  await page.getByRole("button", { name: `${curveLabel} line dashed` }).click();
+
+  const legendSummary = page.locator(".settings-accordion > details > summary", { hasText: "Legend" });
+  await legendSummary.click();
+  await page.getByRole("tab", { name: "Labels" }).click();
+  const analysisLabel = page.getByLabel(`${curveLabel} analysis label`, { exact: true });
+  await analysisLabel.fill("Synthetic review condition");
+
+  const savePromise = page.waitForEvent("download");
+  await page.locator(".analysis-save-button").click();
+  const savedAnalysis = await savePromise;
+  await savedAnalysis.saveAs(restorePath);
+
+  await page.getByTestId("analysis-restore-input").setInputFiles(restorePath);
+  await expect(page.locator(".analysis-tab-button")).toHaveCount(2);
+  await expect(page.locator('.analysis-tab-button[aria-selected="true"]')).toHaveCount(1);
+  await expect(page.locator(".import-summary")).toContainText("s10-analysis-roundtrip.xlsx");
+  await expect(page.locator(".import-summary")).toContainText("2");
+  await expect(page.locator(".selection-meta span").nth(1)).toHaveText(/1$/u);
+  await expect(yAxis.getByRole("button", { name: "Fixed" })).toHaveClass(/is-active/u);
+  await expect(yInputs.nth(0)).toHaveValue("-1000");
+  await expect(yInputs.nth(1)).toHaveValue("900000");
+
+  const styleDetails = styleSummary.locator("..");
+  if ((await styleDetails.getAttribute("open")) === null) await styleSummary.click();
+  await page.getByLabel(`${curveLabel} line and marker editor`, { exact: true }).click();
+  await expect(page.getByRole("button", { name: `${curveLabel} line dashed` })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
+
+  const legendDetails = legendSummary.locator("..");
+  if ((await legendDetails.getAttribute("open")) === null) await legendSummary.click();
+  const labelsTab = page.getByRole("tab", { name: "Labels" });
+  if ((await labelsTab.getAttribute("aria-selected")) !== "true") await labelsTab.click();
+  await expect(page.getByLabel(`${curveLabel} analysis label`, { exact: true })).toHaveValue("Synthetic review condition");
+
+  const resavePromise = page.waitForEvent("download");
+  await page.locator(".analysis-save-button").click();
+  const resavedAnalysis = await resavePromise;
+  await resavedAnalysis.saveAs(resavedPath);
+
+  const firstRead = await readAnalysisWorkbookBuffer(readFileSync(restorePath));
+  const secondRead = await readAnalysisWorkbookBuffer(readFileSync(resavedPath));
+  expect(firstRead.kind).toBe("analysis");
+  expect(secondRead.kind).toBe("analysis");
+  if (firstRead.kind !== "analysis" || secondRead.kind !== "analysis") return;
+  const projectCurveIntegrity = (curve: (typeof firstRead.analysis.dataset.curves)[number]) => ({
+    curveId: curve.curveId,
+    specimenId: curve.specimenId,
+    reagentId: curve.reagentId,
+    specimenLabel: curve.specimenLabel,
+    reagentLabel: curve.reagentLabel,
+    x: curve.x,
+    y: curve.y,
+    stats: curve.stats,
+    source: curve.source
+  });
+  expect(secondRead.analysis.dataset.curves.map(projectCurveIntegrity)).toEqual(
+    firstRead.analysis.dataset.curves.map(projectCurveIntegrity)
+  );
+  const restoredValues = secondRead.analysis.dataset.curves.flatMap((curve) => curve.y);
+  expect(restoredValues).toContain(null);
+  expect(restoredValues.some((value) => typeof value === "number" && value < 0)).toBe(true);
+  expect(restoredValues.some((value) => typeof value === "number" && value > 0 && value < 1e-6)).toBe(true);
+  expect(restoredValues.some((value) => typeof value === "number" && value > 1e8)).toBe(true);
+});
+
 test("creates and switches internal analysis tabs", async ({ page }, testInfo) => {
   const workbookPath = testInfo.outputPath("phase-r3-tabs.xlsx");
   writeWorkbookFixture(workbookPath, "Tab sample");
 
-  await page.goto("/");
+  await page.goto("./");
   await expect(page.getByRole("tab", { name: "Analysis 1" })).toHaveAttribute("aria-selected", "true");
 
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
@@ -528,6 +837,22 @@ function writeWorkbookFixture(filePath: string, specimenLabel: string) {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
   writeFileSync(filePath, buffer);
+}
+
+function writeAnalysisRoundtripWorkbookFixture(filePath: string, specimenLabel: string) {
+  const workbook = XLSX.utils.book_new();
+  const rows: Array<Array<string | number | null>> = [
+    [specimenLabel, specimenLabel],
+    ["A1", "A2"],
+    [-1.25, 0.1],
+    [null, 2.5e-7],
+    [1.2e-9, -2],
+    [950_000_000, 300],
+    [42, 4_500_000]
+  ];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "SyntheticRoundtrip");
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer);
 }
 
 function writeLegendIdentityWorkbook(filePath: string) {
@@ -713,7 +1038,7 @@ async function applyBoxZoom(page: Page, canvasLocator: Locator) {
 }
 
 async function previewBoundaryPaste(page: Page, sourceText: string, firstExpected: string, secondExpected: string) {
-  await page.goto("/");
+  await page.goto("./");
   await page.getByRole("button", { name: "빠른 붙여넣기" }).click();
   const dialog = page.getByRole("dialog", { name: "소량 표 붙여넣기" });
   await dialog.getByRole("textbox", { name: "표 데이터" }).evaluate((element, value) => {

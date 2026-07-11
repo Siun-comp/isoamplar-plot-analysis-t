@@ -13,7 +13,8 @@ import {
 
 type EchartsCoreModule = typeof import("echarts/core");
 
-const EXPORT_PIXEL_RATIO = 2;
+export const exportPixelRatio = 2;
+const EXPORT_PIXEL_RATIO = exportPixelRatio;
 let echartsPromise: Promise<EchartsCoreModule> | null = null;
 type LegendImageVariant = "standard" | "report";
 type LegendGeometry = {
@@ -142,6 +143,26 @@ export function calculateLegendImageSize(items: LegendItem[], width = 1200, vari
     width,
     height: geometry.headerHeight + rows * geometry.rowHeight
   };
+}
+
+export function calculateLegendEvidenceRegions(itemCount: number, width = 1200, variant: LegendImageVariant = "standard") {
+  const geometry = getLegendGeometry(width, variant);
+  return Array.from({ length: itemCount }, (_, index) => {
+    const column = index % geometry.columns;
+    const row = Math.floor(index / geometry.columns);
+    const x = geometry.startX + column * geometry.columnWidth;
+    const y = geometry.firstRowY + row * geometry.rowHeight;
+    return {
+      itemIndex: index,
+      sample: { left: x, top: y - geometry.rowHeight / 2, right: x + geometry.sampleLength, bottom: y + geometry.rowHeight / 2 },
+      text: {
+        left: x + geometry.textOffset,
+        top: y - geometry.rowHeight / 2,
+        right: x + geometry.textOffset + geometry.maxTextWidth,
+        bottom: y + geometry.rowHeight / 2
+      }
+    };
+  });
 }
 
 export function createLegendSvg(

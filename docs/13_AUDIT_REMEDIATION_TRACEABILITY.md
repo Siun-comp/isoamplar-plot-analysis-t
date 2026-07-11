@@ -30,7 +30,7 @@
 | U-P2-01 inactive Legend panel visible | FR-008, D035, D047 | AC-PCR-052A | Synthetic selected curves with Legend Order/Labels tabs | Frontend QA: `src/app/App.test.tsx`, `tests/e2e/app.spec.ts` | Accessibility QA: computed display, accessibility tree, roving focus, Arrow/Home keys | Passing S8 | S8 |
 | U-P2-03 sticky plot unavailable at desktop height | FR-020, D032, D047 | AC-PCR-052B | Generated 100-curve long-label workspace | Frontend QA: `tests/e2e/app.spec.ts` at 1280x720, 1366x768, 1920x1080 | Desktop QA: plot bounding box, fixed canvas height, horizontal overflow, compact rows and portalled popovers | Passing S8; official minimum resolution remains UD-08 | S8 |
 | C-P2-04 dense hover/editor work | FR-020, D030, D031, D048 | AC-PCR-038, AC-PCR-039, AC-PCR-040 | Generated 20x100 reference and 100x100 stress workbooks | Chart QA: `src/chart/ChartView.test.ts`, `src/app/App.test.tsx`; browser QA and reusable JSON output: `tests/e2e/app.spec.ts` | Evidence: `docs/14_S9_PERFORMANCE_EVIDENCE.md`; representative user-file budget remains undecided | Passing S9 implementation: RAF coalescing, 32 px X-window candidates with deterministic >=5x work reduction, real ECharts patch fidelity, stale-work invalidation, measured Style and Legend retained without new virtualization | S9 |
-| CI/release drift | FR-013, D002, D003 | RQ-CI-001 | Fixed fixture manifest and exact built `dist` | Release QA: `.github/workflows/s1-ci.yml` | Release owner: artifact hash, workflow evidence, later Pages smoke | Partial foundation; raster/network/Pages remain open | S10 |
+| CI/release drift | FR-013, D002, D003, D049 | RQ-CI-001 | Fixed fixture manifest, exact built `dist`, generated browser workbooks, PNG evidence | Release QA: `.github/workflows/s1-ci.yml`, `.github/workflows/pages.yml`, `scripts/dist-integrity.mjs`, `tests/audit/auditEvidence.todo.test.ts`, `tests/e2e/app.spec.ts` | Release owner: actual workflow run, candidate hash, post-deploy Pages smoke in S11 | Passing S10 implementation: fresh dedicated preview, real repository base path, committed-diff/audit gates, exact-dist before/after equality, exact expected network/WebSocket probe evidence, opaque raster/text/style bounds, clipboard fallback, Analysis XLSX save/restore/resave with exact curve/source/X/Y/stats equality, least deploy permissions | S10 |
 | C-P1-06 accepted Quick Paste stack overflow | FR-003, D037, D041, D044 | AC-QP-021 | Exact 250,000 x 1, 3 x 83,333, 500 x 500 empty-heavy, 2,000,000-character inputs; exact over-limit rejection | Parser/UI QA: `tests/fixtures/generatedCases.test.ts`, `src/data/parsePastedTable.test.ts`, `src/ui/PasteImportPanel.test.tsx`, localized boundary tests | Desktop QA: fresh Chromium and in-app production preview summary/overflow/log inspection | Passing S5: accepted envelope previews, out-of-envelope/parser/import/render failures remain controlled, current analysis and app shell are preserved | S2/S5 |
 
 ## Fixed Evidence Files
@@ -41,7 +41,7 @@
 - Binary sources: `tests/fixtures/source/`
 - Passing fixture tests: `tests/data/parseExcel.fixture.test.ts`
 - Isolated known-red probes: `tests/audit/knownRed.audit.ts`
-- Remaining target TODO inventory: `tests/audit/auditEvidence.todo.test.ts`
+- S10 release contract tests: `tests/audit/auditEvidence.todo.test.ts` (historical filename retained; contains passing dist/workflow gates)
 - Raster evidence helper: `tests/e2e/helpers/rasterEvidence.ts`
 
 ## S1 Exit Rule

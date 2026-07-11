@@ -20,11 +20,14 @@ jobs:
     timeout-minutes: 30
     env:
       CI: "1"
-      VITE_BASE_PATH: "./"
+      E2E_BASE_URL: "http://127.0.0.1:4174/isoamplar-plot-analysis/"
+      VITE_BASE_PATH: "/isoamplar-plot-analysis/"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,6 +40,21 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Check committed patch formatting
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${BASE_SHA:-}" && ! "$BASE_SHA" =~ ^0+$ ]] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git diff --check "$BASE_SHA" "$GITHUB_SHA"
+          else
+            git show --check --format= "$GITHUB_SHA"
+          fi
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Run Vitest
         run: |
@@ -57,17 +75,7 @@ jobs:
         run: npm run build
 
       - name: Hash built dist
-        shell: bash
-        run: |
-          set -euo pipefail
-          (
-            cd dist
-            find . -type f -print0 \
-              | LC_ALL=C sort -z \
-              | xargs -0 -r sha256sum
-          ) > evidence/dist-files.sha256
-          sha256sum evidence/dist-files.sha256 \
-            | tee evidence/dist-tree.sha256
+        run: npm run check:dist:before
 
       - name: Run fresh Chromium against built dist
         run: |
@@ -78,29 +86,9 @@ jobs:
 
       - name: Verify dist was not changed by browser tests
         if: always()
-        shell: bash
         run: |
-          set -euo pipefail
-          (
-            cd dist
-            find . -type f -print0 \
-              | LC_ALL=C sort -z \
-              | xargs -0 -r sha256sum
-          ) > evidence/dist-files-after-playwright.sha256
-          sha256sum evidence/dist-files-after-playwright.sha256 \
-            | tee evidence/dist-tree-after-playwright.sha256
-          if cmp -s \
-            evidence/dist-files.sha256 \
-            evidence/dist-files-after-playwright.sha256; then
-            echo "PASS: complete dist tree is byte-identical after Playwright." \
-              | tee evidence/dist-verification.txt
-          else
-            diff -u \
-              evidence/dist-files.sha256 \
-              evidence/dist-files-after-playwright.sha256 \
-              | tee evidence/dist-verification.txt
-            exit 1
-          fi
+          npm run check:dist:after
+          npm run check:dist:unchanged
 
       - name: Upload tested dist and evidence
         if: always()

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegendItem } from "./chartProjection";
 import {
+  calculateLegendEvidenceRegions,
   calculateLegendImageSize,
   createLegendSvg,
   createReportLegendExcelClipboardPayload,
@@ -9,6 +10,14 @@ import {
 } from "./exportChart";
 
 describe("chart export helpers", () => {
+  it("derives non-overlapping standard legend evidence slots from export geometry", () => {
+    const regions = calculateLegendEvidenceRegions(2);
+    expect(regions).toHaveLength(2);
+    expect(regions[0].sample.right).toBeLessThanOrEqual(regions[0].text.left);
+    expect(regions[0].text.right).toBeLessThanOrEqual(regions[1].sample.left);
+    expect(calculateLegendImageSize(Array.from({ length: 2 }) as LegendItem[]).height).toBe(126);
+  });
+
   it("creates a legend SVG with line and marker samples", () => {
     const items: LegendItem[] = [
       {

@@ -22,10 +22,11 @@ Active
 - Phase S6 save continuity, dedicated Analysis XLSX commands, browser-close protection, and asynchronous tab isolation are committed as `63e42dd` after final independent code and desktop-UX GO verdicts.
 - Phase S7A Analysis XLSX semantic validation, payload measurement, surrogate-safe restore chunks, and formula-safe plotted CSV headers are committed as `0d35ccf` after final independent semantic and performance/security GO verdicts.
 - Phase S8 desktop UI and density remediation is complete on the active branch after full verification and final independent code/UX GO verdicts.
-- Phase S9 hover/editor performance remediation is complete after deterministic work-unit, full unit, production build, reusable no-retry measurement, fresh Chromium, in-app desktop, dependency, and final independent code/UX GO gates.
+- Phase S9 hover/editor performance remediation is committed as `5ef12ec` after deterministic work-unit, full unit, production build, reusable no-retry measurement, fresh Chromium, in-app desktop, dependency, and final independent code/UX GO gates.
+- Phase S10 fresh CI, exact-dist, network, raster, clipboard-fallback, Analysis XLSX exact browser roundtrip, Pages base-path, and least-permission promotion gates are complete after final independent release/security and browser/data-integrity GO verdicts.
 - S1 adds synthetic-only fixed `.xlsx`/BIFF8 `.xls` fixtures, SHA-256 manifest, normalized/target snapshots, raster evidence helper, Target/Known-red acceptance criteria, traceability, and a read-only non-deploying CI workflow.
 - Product runtime behavior is unchanged by S1. No parser, chart, state, export, UI, dependency, or Pages deployment behavior was modified.
-- Latest S9 verification: the deterministic standard suite passed 31 files / 262 tests with only 1 S10 TODO; audit probe and build passed; dependency audit found 0 vulnerabilities; the domain-shaped no-retry 20x100/100x100 measurement passed; fresh Chromium passed 9/9 with fail-on-flaky enabled; 1366x768 in-app production preview had no horizontal overflow or console warning/error. Final independent code/performance and desktop-UX verdicts are GO.
+- Latest S10 verification: the standard suite passed 32 files / 265 tests with no TODO; isolated audit probe passed; production dependency audit found 0 vulnerabilities; Pages-base build and fresh Chromium passed 11/11 with fail-on-flaky enabled. Complete dist tree hash `d4818b8cdfe826c374dd9ca4f5145f2119f2418b7a5859eb8849813161f85706` was byte-identical before and after Playwright. The 1366x768 in-app Pages-path preview had no horizontal overflow or console warning/error.
 - User data remains browser-local. No real workbook, patient/specimen record, or actual fluorescence dataset is checked into S1 fixtures.
 - The user has granted standing approval for subsequent remediation phase commits. Continue phases sequentially, but do not push or deploy until the plan reaches the corresponding release phase.
 
@@ -52,18 +53,36 @@ Active
 - The latest UI consistency pass normalizes button/form-control sizing across top tabs, import actions, selection controls, chart tools, scale controls, legend controls, and export controls; status badges remain intentionally smaller. It also scopes settings accordion summary styling so nested Style color/line popover triggers stay compact, tightens reset-icon button padding, and removes an obsolete hidden Export legend button wrapper.
 - Quick Paste Import Phases Q0-Q6 are implemented from `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`. It supports full-table and single-specimen input, tab-separated and single-column text, read-only preview, paginated source-position warnings with acknowledgement, stale/target revision guards for append and new-analysis actions, per-import source identity, mixed-source Analysis XLSX continuity, and the existing chart/export pipeline. Comma/CSV tables are rejected to prevent silent delimiter corruption.
 - A 2026-07-11 code/data-integrity/desktop-UX audit is complete in `docs/11_GPT56_PROJECT_AUDIT_KR.md`. Mobile was explicitly excluded. No P0 issue was identified; Stabilization A prioritizes invalid Fixed-scale export fallback, exported-legend identity truncation, Excel formatted-header identity, actionable Excel warnings, browser refresh/close protection, and accepted-size Quick Paste crash prevention. The audit also records P2 state/export/performance risks, documentation drift, and workflow candidates such as Warning Center, explicit save commands, Named Views, and optional export preflight.
-- The audit remediation plan is active in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`. Phases S0-S9 are complete on the active branch. S10-S11 remain sequential and pending.
+- The audit remediation plan is active in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`. Phases S0-S9 are committed; S10 is complete and ready to commit. S11 remains pending.
 
 ## Current Goal
-Commit the verified S9 performance remediation, then implement S10 CI/release/security gates without changing unresolved hosting policy. Stop only for a genuine user business decision.
+Commit the verified S10 release gates without deployment, then execute S11 documentation synchronization, final multi-role audit, release-candidate preparation, approved push, and post-deploy verification.
 
 ## Current Milestone
 M9 - Release validation and real-data hardening.
 
 ## Last Completed Step
-Completed S9 implementation and verification: frame-coalesced hover work, 32 px X-window nearest-point indexing, stale pointer-work generation guards, memoized full chart options, and data-free ECharts highlight patches. Deterministic 100x100 geometry requires at least a fivefold conversion-work reduction; real ECharts merge tests preserve data, markers, line style, and order. Domain-shaped no-retry browser evidence measures nonblank chart, committed readout, Style, Legend Labels, last-row label edit/reset, tab switching, and completed Plot-only PNG without declaring a hard time limit. Full unit, audit, build, fresh Chromium, in-app desktop, dependency, and independent expert gates pass.
+Completed S10 local verification: Playwright uses a dedicated non-reused port and the real repository path; context-wide routing permits only known static app `GET/HEAD` paths plus blob/data and blocks same-origin writes, cross-origin image/fetch/XHR/beacon/POST, and WebSocket with exact expected-probe evidence retained separately from unexpected violations. PNG evidence verifies exact size, no transparency, fully white perimeter, bounded nonwhite content, and expected text/style pixels. Chromium proves clipboard failure guidance and Analysis XLSX save/restore/resave with exact curve/source/X/Y/stats equality across null, negative, exponential, and large fluorescence values plus selection/scale/style/label continuity. Branch CI and Pages build hash one dist before/after fresh Chromium and Pages uploads those same bytes; only deploy receives Pages/OIDC write permission. Final independent release/security and browser/data-integrity verdicts are GO.
 
 ## Latest Changed Files
+- `.github/workflows/pages.yml`
+- `.github/workflows/s1-ci.yml`
+- `scripts/dist-integrity.mjs`
+- `playwright.config.ts`
+- `tests/audit/auditEvidence.todo.test.ts`
+- `tests/e2e/app.spec.ts`
+- `tests/e2e/helpers/rasterEvidence.ts`
+- `src/analysis/analysisWorkbook.test.ts`
+- `src/chart/exportChart.ts`
+- `src/chart/exportChart.test.ts`
+- `package.json`
+- `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`
+- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
+- `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+## Previous Phase S9 Changed Files
 - `src/chart/ChartView.tsx`
 - `src/chart/ChartView.test.ts`
 - `src/ui/ChartPanel.tsx`
@@ -561,11 +580,11 @@ Completed S9 implementation and verification: frame-coalesced hover work, 32 px 
   - `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
 
 ## Known Gaps
-- Phases S0-S9 are complete on the active branch; S10-S11 remain pending.
+- Phases S0-S9 are committed; S10 is complete and ready to commit; S11 remains pending.
 - S2-S7A resolve invalid Fixed-scale fallback, accepted-envelope large-array hazards, exported-legend identity loss, Excel formatted-header identity, actionable source-aware warnings, localized containment, browser refresh/close protection, captured-tab async output routing, contradictory Analysis XLSX restoration, non-BMP restore chunk damage, and plotted CSV formula-like headers.
 - S8 resolves the inactive Legend panel, laptop-height chart availability, compact individual-style identity, and clipped style-popover defects without introducing a new editor workflow or mobile redesign.
 - Clipboard image copy and rich Excel-cell legend paste have not been manually verified in Chrome/Edge on the final deployment origin.
-- The audit CSV probe and S8 desktop Legend/workspace evidence are passing. Only S10 release-quality CI evidence remains TODO.
+- The audit CSV probe, S8 desktop evidence, and S10 local release-quality CI evidence are passing with no remaining automated TODO. Actual GitHub workflow and public-origin evidence remain S11 work.
 - Public URL technical smoke used generated `.xlsx` workbooks. Real `C:\Users\siunj\Desktop\graph_TEST.xlsx` has been inspected read-only but has not yet been uploaded through the finished UI in this session; final domain judgement for real labels/curve counts remains a user/manual validation item.
 - Performance budgets for max file size, row count, specimen count, imported curve count, and rendered curve count remain undecided.
 - Analysis XLSX now reports payload measurements and passes a generated 96-curve by 100-cycle roundtrip, but no hard browser-memory/file-size guard is claimed until UD-02 is decided. SheetJS workbook parse/write peak allocation remains a residual risk.
@@ -592,6 +611,6 @@ Completed S9 implementation and verification: frame-coalesced hover work, 32 px 
 - Local production preview: `http://127.0.0.1:4173/`
 
 ## Next 3 Tasks
-1. Commit the fully verified S9 changes without push or deployment.
-2. Implement S10 fresh production preview CI, exact-dist, network, raster, Pages-permission, and security promotion gates.
-3. Run S10 local/CI-equivalent verification and independent release/security review, then update evidence and commit without deployment.
+1. Commit the verified S10 changes without push or deployment.
+2. Execute S11 documentation synchronization and four-role final audit against current implementation and synthetic evidence.
+3. Prepare candidate SHA/tag and artifact hash, push/deploy under standing approval, run public Pages smoke, and record rollback evidence.

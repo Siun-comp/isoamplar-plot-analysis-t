@@ -1,5 +1,14 @@
 # CHANGELOG.md
 
+## 2026-07-11 - Audit remediation S9 hover and editor performance
+
+- Coalesced chart pointer movement to one readout calculation per animation frame.
+- Replaced every-point pixel conversion with a nearest-X hit-window lookup that preserves steep curves, gaps, boundaries, and duplicate X values while requiring at least a fivefold work-unit reduction in the deterministic 100x100 regression geometry.
+- Separated transient hover emphasis from full chart option/data generation with a data-free series style patch.
+- Avoided repeated React readout updates when the hovered curve and point have not changed.
+- Added reusable 20x100 and 100x100 production-build measurements for import, selection/chart readiness, hover, Style open, tab switching, Export readiness, and DOM size.
+- Retained the current Style/Legend workflow without new virtualization because the measured 100-curve editor remained responsive.
+
 ## 2026-07-11 - Audit remediation S8 desktop workspace clarity
 
 - Fixed Legend Order/Labels tabs so the inactive editor is removed from both display and accessibility trees, with standard arrow/Home/End keyboard navigation.

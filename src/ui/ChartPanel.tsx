@@ -29,17 +29,23 @@ export function ChartPanel() {
   const [hoveredCurveId, setHoveredCurveId] = useState<string | null>(null);
   const [boxZoomEnabled, setBoxZoomEnabled] = useState(false);
   const [boxZoomMessage, setBoxZoomMessage] = useState("Box zoom off.");
-  const buildResult = buildPcrChartOption({
-    dataset,
-    selectedCurveIds: selection?.selectedCurveIds ?? new Set<string>(),
-    orderedCurveIds: selection?.orderedCurveIds,
-    scale: chartScale,
-    labelMode: selection?.groupingMode,
-    styleRules,
-    curveOverrides,
-    legendSettings,
-    highlightedCurveId: hoveredCurveId
-  });
+  const selectedCurveSet = selection?.selectedCurveIds;
+  const orderedCurveIds = selection?.orderedCurveIds;
+  const groupingMode = selection?.groupingMode;
+  const buildResult = useMemo(
+    () =>
+      buildPcrChartOption({
+        dataset,
+        selectedCurveIds: selectedCurveSet ?? new Set<string>(),
+        orderedCurveIds,
+        scale: chartScale,
+        labelMode: groupingMode,
+        styleRules,
+        curveOverrides,
+        legendSettings
+      }),
+    [chartScale, curveOverrides, dataset, groupingMode, legendSettings, orderedCurveIds, selectedCurveSet, styleRules]
+  );
   const selectedCount = buildResult.visibleCurves.length;
   const selectedCurveIds = buildResult.visibleCurves.map((curve) => curve.curveId);
   const matchedSearchCurveIds = useMemo(
@@ -54,7 +60,7 @@ export function ChartPanel() {
     .join("|");
   const handleHoverReadout = useCallback((readout: ChartHoverReadout | null) => {
     if (boxZoomEnabled) return;
-    setHoverReadout(readout);
+    setHoverReadout((current) => (areHoverReadoutsEqual(current, readout) ? current : readout));
     setHoveredCurveId(readout?.curveId ?? null);
   }, [boxZoomEnabled]);
   const handleLegendHover = useCallback((curveId: string | null) => {
@@ -164,6 +170,7 @@ export function ChartPanel() {
             <LazyChartView
               option={buildResult.option}
               onHoverReadout={handleHoverReadout}
+              highlightedCurveId={hoveredCurveId}
               boxZoomEnabled={boxZoomEnabled}
               onBoxZoom={handleBoxZoom}
               onBoxZoomRejected={handleBoxZoomRejected}
@@ -232,6 +239,12 @@ function ChartReadout({ readout }: { readout: ChartHoverReadout | null }) {
       <span>Fluorescence {readout?.y === null || !readout ? "-" : formatReadoutValue(readout.y)}</span>
     </div>
   );
+}
+
+function areHoverReadoutsEqual(left: ChartHoverReadout | null, right: ChartHoverReadout | null) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return left.curveId === right.curveId && left.x === right.x && left.y === right.y && left.seriesName === right.seriesName;
 }
 
 function formatReadoutValue(value: number | string) {

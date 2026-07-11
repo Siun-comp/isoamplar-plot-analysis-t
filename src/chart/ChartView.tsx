@@ -27,6 +27,7 @@ export type ChartBoxZoomRejectReason = "too-small" | "outside" | "invalid";
 type ChartViewProps = {
   option: EChartsCoreOption;
   onHoverReadout?: (readout: ChartHoverReadout | null) => void;
+  highlightedCurveId?: string | null;
   boxZoomEnabled?: boolean;
   onBoxZoom?: (bounds: ChartZoomBounds) => void;
   onBoxZoomRejected?: (reason: ChartBoxZoomRejectReason) => void;
@@ -44,7 +45,32 @@ type DragState = {
   current: [number, number];
 };
 
-export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBoxZoom, onBoxZoomRejected }: ChartViewProps) {
+type ReadoutSeries = ReturnType<typeof getReadoutSeries>[number] & {
+  numericXAscending: boolean;
+};
+
+export type ChartReadoutIndex = ReadoutSeries[];
+
+type FrameRequest = (callback: (timestamp: number) => void) => number;
+type FrameCancel = (handle: number) => void;
+type PointerWork = {
+  point: [number, number];
+  intent: "hover" | "drag";
+  generation: number;
+};
+type PointerThrottle = {
+  schedule: (work: PointerWork) => void;
+  cancel: () => void;
+};
+
+export function ChartView({
+  option,
+  onHoverReadout,
+  highlightedCurveId = null,
+  boxZoomEnabled = false,
+  onBoxZoom,
+  onBoxZoomRejected
+}: ChartViewProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
   const optionRef = useRef(option);
@@ -52,17 +78,33 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
   const onBoxZoomRef = useRef(onBoxZoom);
   const onBoxZoomRejectedRef = useRef(onBoxZoomRejected);
   const boxZoomEnabledRef = useRef(boxZoomEnabled);
+  const highlightedCurveIdRef = useRef(highlightedCurveId);
+  const readoutIndexRef = useRef<ChartReadoutIndex | null>(null);
+  const pointerThrottleRef = useRef<PointerThrottle | null>(null);
+  const pointerGenerationRef = useRef(0);
+  const previousOptionRef = useRef(option);
+  const previousBoxZoomEnabledRef = useRef(boxZoomEnabled);
   const dragStateRef = useRef<DragState | null>(null);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
   const [plotAreaBox, setPlotAreaBox] = useState<DragBox | null>(null);
 
+  if (previousOptionRef.current !== option) {
+    previousOptionRef.current = option;
+    pointerGenerationRef.current += 1;
+  }
+  if (previousBoxZoomEnabledRef.current !== boxZoomEnabled) {
+    previousBoxZoomEnabledRef.current = boxZoomEnabled;
+    pointerGenerationRef.current += 1;
+  }
   optionRef.current = option;
   onHoverReadoutRef.current = onHoverReadout;
   onBoxZoomRef.current = onBoxZoom;
   onBoxZoomRejectedRef.current = onBoxZoomRejected;
   boxZoomEnabledRef.current = boxZoomEnabled;
+  highlightedCurveIdRef.current = highlightedCurveId;
 
   useEffect(() => {
+    pointerThrottleRef.current?.cancel();
     if (!boxZoomEnabled) {
       dragStateRef.current = null;
       setDragBox(null);
@@ -81,13 +123,30 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
 
     const chart = echarts.init(elementRef.current, undefined, { renderer: "canvas" });
     chartRef.current = chart;
+    readoutIndexRef.current = createChartReadoutIndex(option);
     chart.setOption(option, true);
-    const handleMouseOver = (params: unknown) => {
-      if (dragStateRef.current) return;
-      onHoverReadoutRef.current?.(createHoverReadout(params));
-    };
+    applySeriesHighlight(chart, option, highlightedCurveIdRef.current);
+    const pointerThrottle = createFrameThrottle<PointerWork>(
+      (work) => {
+        if (work.generation !== pointerGenerationRef.current) return;
+        if (work.intent === "drag") {
+          const dragState = dragStateRef.current;
+          if (!dragState) return;
+          setDragBox(createDragBox(dragState.start, work.point));
+          return;
+        }
+        if (dragStateRef.current || boxZoomEnabledRef.current) return;
+        onHoverReadoutRef.current?.(
+          createNearestReadout(chart, readoutIndexRef.current ?? [], work.point[0], work.point[1])
+        );
+      },
+      (callback) => requestAnimationFrame(callback),
+      (handle) => cancelAnimationFrame(handle)
+    );
+    pointerThrottleRef.current = pointerThrottle;
     const handleGlobalOut = () => {
       if (dragStateRef.current) return;
+      pointerThrottle.cancel();
       chart.dispatchAction({ type: "downplay" });
       onHoverReadoutRef.current?.(null);
     };
@@ -96,11 +155,12 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
       if (!point) return;
       if (dragStateRef.current) {
         dragStateRef.current.current = point;
-        setDragBox(createDragBox(dragStateRef.current.start, point));
+        pointerThrottle.schedule({ point, intent: "drag", generation: pointerGenerationRef.current });
         preventNativeEvent(event);
         return;
       }
-      onHoverReadoutRef.current?.(createNearestReadout(chart, optionRef.current, point[0], point[1]));
+      if (boxZoomEnabledRef.current) return;
+      pointerThrottle.schedule({ point, intent: "hover", generation: pointerGenerationRef.current });
     };
     const handleBoxZoomMouseDown = (event: unknown) => {
       if (!boxZoomEnabledRef.current) return;
@@ -113,6 +173,7 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
       }
 
       dragStateRef.current = { start: point, current: point };
+      pointerThrottle.cancel();
       setDragBox(createDragBox(point, point));
       chart.dispatchAction({ type: "downplay" });
       onHoverReadoutRef.current?.(null);
@@ -123,6 +184,7 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
       if (!dragState) return;
 
       const endPoint = extractCanvasPoint(event) ?? dragState.current;
+      pointerThrottle.cancel();
       dragStateRef.current = null;
       setDragBox(null);
       preventNativeEvent(event);
@@ -142,11 +204,11 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
     };
     const handleWindowMouseUp = () => {
       if (!dragStateRef.current) return;
+      pointerThrottle.cancel();
       dragStateRef.current = null;
       setDragBox(null);
       onBoxZoomRejectedRef.current?.("outside");
     };
-    chart.on("mouseover", handleMouseOver);
     chart.on("globalout", handleGlobalOut);
     chart.getZr().on("mousedown", handleBoxZoomMouseDown);
     chart.getZr().on("mousemove", handleCanvasMouseMove);
@@ -165,7 +227,7 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
 
     return () => {
       resizeObserver.disconnect();
-      chart.off("mouseover", handleMouseOver);
+      pointerThrottle.cancel();
       chart.off("globalout", handleGlobalOut);
       chart.getZr().off("mousedown", handleBoxZoomMouseDown);
       chart.getZr().off("mousemove", handleCanvasMouseMove);
@@ -175,16 +237,28 @@ export function ChartView({ option, onHoverReadout, boxZoomEnabled = false, onBo
       window.removeEventListener("mouseup", handleWindowMouseUp);
       chart.dispose();
       chartRef.current = null;
+      readoutIndexRef.current = null;
+      pointerThrottleRef.current = null;
     };
   }, []);
 
   useEffect(() => {
+    pointerThrottleRef.current?.cancel();
+    readoutIndexRef.current = createChartReadoutIndex(option);
     chartRef.current?.setOption(option, true);
+    if (chartRef.current) {
+      applySeriesHighlight(chartRef.current, option, highlightedCurveIdRef.current);
+    }
     if (boxZoomEnabled) {
       const chart = chartRef.current;
       setPlotAreaBox(chart ? createPlotAreaBox(option, chart.getWidth(), chart.getHeight()) : null);
     }
   }, [option]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (chart) applySeriesHighlight(chart, optionRef.current, highlightedCurveId);
+  }, [highlightedCurveId]);
 
   return (
     <div className={`chart-view-root${boxZoomEnabled ? " is-box-zoom-enabled" : ""}`}>
@@ -280,25 +354,35 @@ export function createHoverReadout(params: unknown): ChartHoverReadout | null {
   };
 }
 
-function createNearestReadout(
+export function createNearestReadout(
   chart: echarts.ECharts,
-  option: EChartsCoreOption,
+  readoutIndex: ChartReadoutIndex,
   offsetX: number,
-  offsetY: number
+  offsetY: number,
+  maximumPixelDistance = 32
 ): ChartHoverReadout | null {
   const pixel = [offsetX, offsetY] as [number, number];
   if (!chart.containPixel({ gridIndex: 0 }, pixel)) return null;
 
+  const dataPoint = chart.convertFromPixel({ gridIndex: 0 }, pixel);
+  if (!isNumberPair(dataPoint)) return null;
+  const leftData = chart.convertFromPixel({ gridIndex: 0 }, [offsetX - maximumPixelDistance, offsetY]);
+  const rightData = chart.convertFromPixel({ gridIndex: 0 }, [offsetX + maximumPixelDistance, offsetY]);
+  if (!isNumberPair(leftData) || !isNumberPair(rightData)) return null;
+  const candidateXMin = Math.min(leftData[0], rightData[0]);
+  const candidateXMax = Math.max(leftData[0], rightData[0]);
+
   let nearest:
     | {
-        series: ReturnType<typeof getReadoutSeries>[number];
-        point: ReturnType<typeof getReadoutSeries>[number]["data"][number];
+        series: ReadoutSeries;
+        point: ReadoutSeries["data"][number];
         distance: number;
       }
     | null = null;
 
-  for (const series of getReadoutSeries(option)) {
-    for (const point of series.data) {
+  for (const series of readoutIndex) {
+    for (const pointIndex of findXWindowCandidateIndices(series, candidateXMin, candidateXMax, dataPoint[0])) {
+      const point = series.data[pointIndex];
       const pointPixel = chart.convertToPixel({ gridIndex: 0 }, [point.x, point.y]);
       if (!isNumberPair(pointPixel)) continue;
       const distance = Math.hypot(pointPixel[0] - offsetX, pointPixel[1] - offsetY);
@@ -308,7 +392,7 @@ function createNearestReadout(
     }
   }
 
-  if (!nearest || nearest.distance > 32) return null;
+  if (!nearest || nearest.distance > maximumPixelDistance) return null;
 
   return {
     curveId: nearest.series.id,
@@ -317,6 +401,105 @@ function createNearestReadout(
     y: nearest.point.y,
     color: nearest.series.color
   };
+}
+
+export function createChartReadoutIndex(option: EChartsCoreOption): ChartReadoutIndex {
+  return getReadoutSeries(option).map((series) => ({
+    ...series,
+    numericXAscending: series.data.every(
+      (point, index) => typeof point.x === "number" && (index === 0 || point.x >= (series.data[index - 1].x as number))
+    )
+  }));
+}
+
+function findXWindowCandidateIndices(series: ReadoutSeries, minimumX: number, maximumX: number, targetX: number) {
+  if (series.data.length === 0) return [];
+  if (!series.numericXAscending) {
+    const candidates: number[] = [];
+    let nearestIndex = -1;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    series.data.forEach((point, index) => {
+      if (typeof point.x !== "number") return;
+      if (point.x >= minimumX && point.x <= maximumX) candidates.push(index);
+      const distance = Math.abs(point.x - targetX);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+    return candidates.length > 0 ? candidates : nearestIndex < 0 ? [] : [nearestIndex];
+  }
+
+  const start = findNumericLowerBound(series.data, minimumX);
+  const end = findNumericLowerBound(series.data, maximumX, true);
+  if (start < end) {
+    return Array.from({ length: end - start }, (_, offset) => start + offset);
+  }
+  const insertion = findNumericLowerBound(series.data, targetX);
+  return [...new Set([Math.max(0, insertion - 1), Math.min(series.data.length - 1, insertion)])];
+}
+
+function findNumericLowerBound(data: ReadoutSeries["data"], targetX: number, afterEqual = false) {
+  let low = 0;
+  let high = data.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    const middleX = data[middle].x as number;
+    if (middleX < targetX || (afterEqual && middleX === targetX)) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+export function createFrameThrottle<T>(callback: (value: T) => void, requestFrame: FrameRequest, cancelFrame: FrameCancel) {
+  let frameHandle: number | null = null;
+  let latestValue: T;
+  let hasValue = false;
+
+  return {
+    schedule(value: T) {
+      latestValue = value;
+      hasValue = true;
+      if (frameHandle !== null) return;
+      frameHandle = requestFrame(() => {
+        frameHandle = null;
+        if (!hasValue) return;
+        hasValue = false;
+        callback(latestValue);
+      });
+    },
+    cancel() {
+      if (frameHandle !== null) cancelFrame(frameHandle);
+      frameHandle = null;
+      hasValue = false;
+    }
+  };
+}
+
+export function createSeriesHighlightPatch(option: EChartsCoreOption, highlightedCurveId: string | null) {
+  return {
+    series: normalizeSeriesOption((option as { series?: unknown }).series).map((series) => {
+      const lineStyle = isObject(series.lineStyle) ? series.lineStyle : {};
+      const baseLineWidth = typeof lineStyle.width === "number" ? lineStyle.width : 2.25;
+      const isHighlighted = highlightedCurveId !== null && series.id === highlightedCurveId;
+      const isMuted = highlightedCurveId !== null && !isHighlighted;
+      return {
+        id: series.id,
+        z: isHighlighted ? 3 : 1,
+        lineStyle: {
+          width: isHighlighted ? baseLineWidth + 0.9 : baseLineWidth,
+          opacity: isMuted ? 0.16 : 1
+        },
+        itemStyle: {
+          opacity: isMuted ? 0.16 : 1
+        }
+      };
+    })
+  };
+}
+
+function applySeriesHighlight(chart: echarts.ECharts, option: EChartsCoreOption, highlightedCurveId: string | null) {
+  chart.setOption(createSeriesHighlightPatch(option, highlightedCurveId), false, true);
 }
 
 function getReadoutSeries(option: EChartsCoreOption) {

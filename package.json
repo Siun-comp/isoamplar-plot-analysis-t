@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
     "test:audit:red": "vitest run --config vitest.audit.config.ts",
+    "test:e2e:s9-performance": "playwright test tests/e2e/app.spec.ts --project=chromium --grep \"S9 reference\"",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },

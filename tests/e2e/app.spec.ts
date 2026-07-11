@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import * as XLSX from "xlsx";
 import { inspectRasterDataUrl } from "./helpers/rasterEvidence";
 
@@ -158,11 +159,20 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await page.locator(".settings-accordion summary", { hasText: "Style" }).click();
   await expect(page.getByLabel("현재 스타일 기준")).toContainText("마커 시약별");
   await expect(page.getByLabel("마커 기준")).toBeVisible();
+  await page.getByLabel("선 기준").selectOption("reagent");
+  await page.getByLabel("A2 line and marker editor").click();
+  await page.getByRole("button", { name: "A2 line dashed" }).click();
   await page.getByLabel("A2 line and marker editor").click();
   await page.getByRole("button", { name: "A2 marker circle" }).click();
   await page.getByLabel("A2 │ 검체 1 line and marker editor", { exact: true }).click();
   await expect(page.getByRole("button", { name: "A2 │ 검체 1 marker circle" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('.custom-legend [data-marker-type="circle"]')).toHaveCount(1);
+  const a2LegendItem = page.getByRole("region", { name: "Custom legend" }).getByTitle("A2 │ 검체 1").locator("..");
+  await expect(a2LegendItem.locator('[data-line-type="dashed"][data-marker-type="circle"]')).toHaveCount(1);
+  await a2LegendItem.hover();
+  await expect(a2LegendItem).toHaveClass(/custom-legend-item-active/u);
+  await expect(a2LegendItem.locator('[data-line-type="dashed"][data-marker-type="circle"]')).toHaveCount(1);
+  await page.mouse.move(0, 0);
+  await expect(a2LegendItem).not.toHaveClass(/custom-legend-item-active/u);
   await page.screenshot({ path: testInfo.outputPath("phase-r8-style-legend-panel.png"), fullPage: false });
   await page.locator(".settings-accordion > details > summary", { hasText: "Legend" }).click();
   const orderTab = page.getByRole("tab", { name: "Order" });
@@ -214,9 +224,10 @@ test("keeps dense Style and sticky plot inspectable at desktop viewports", async
 
   const individualStyleScroll = page.locator(".individual-style-scroll");
   for (const index of [1, 50, 100]) {
-    const padded = String(index).padStart(2, "0");
+    const reagentNumber = String(((index - 1) % 8) + 1).padStart(2, "0");
+    const specimenNumber = String(Math.floor((index - 1) / 8) + 1).padStart(2, "0");
     const editor = page.getByLabel(
-      `Assay ${padded} │ Synthetic condition ${padded} with long label line and marker editor`,
+      `Assay ${reagentNumber} │ Synthetic specimen ${specimenNumber} with long label line and marker editor`,
       { exact: true }
     );
     await editor.scrollIntoViewIfNeeded();
@@ -267,6 +278,115 @@ test("keeps dense Style and sticky plot inspectable at desktop viewports", async
       await page.screenshot({ path: testInfo.outputPath("s8-dense-1366x768.png"), fullPage: false });
     }
   }
+});
+
+test.describe("S9 performance evidence", () => {
+test.describe.configure({ retries: 0 });
+
+test("records reusable S9 reference and stress workload measurements", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  expect(testInfo.retry).toBe(0);
+  const measurements: Array<Record<string, number | string>> = [];
+
+  for (const workload of [
+    { name: "reference-20x100", curveCount: 20 },
+    { name: "stress-100x100", curveCount: 100 }
+  ]) {
+    const workbookPath = testInfo.outputPath(`s9-${workload.name}.xlsx`);
+    writeDenseWorkbookFixture(workbookPath, workload.curveCount, 100);
+    await page.goto("/");
+
+    const importStarted = performance.now();
+    await page.getByTestId("original-data-input").setInputFiles(workbookPath);
+    await expect(page.getByText(`곡선 ${workload.curveCount}개`, { exact: false })).toBeVisible({ timeout: 15_000 });
+    const importMs = performance.now() - importStarted;
+
+    const selectionStarted = performance.now();
+    await page.getByRole("button", { name: "표시 선택" }).click();
+    await expect(page.getByText(`${workload.curveCount}개 curve 선택됨`)).toBeVisible();
+    const canvas = page.locator(".echarts-surface canvas");
+    await expect(canvas).toBeVisible();
+    await expect.poll(async () => await countNonWhiteCanvasPixels(canvas), { timeout: 15_000 }).toBeGreaterThan(100);
+    const selectionAndChartMs = performance.now() - selectionStarted;
+
+    const chartBox = await page.locator(".echarts-surface").boundingBox();
+    expect(chartBox).not.toBeNull();
+    const hoverStarted = performance.now();
+    for (let index = 0; index < 20; index += 1) {
+      await page.mouse.move(
+        chartBox!.x + chartBox!.width * (0.25 + index * 0.025),
+        chartBox!.y + chartBox!.height * (0.35 + (index % 5) * 0.1)
+      );
+    }
+    await hoverUntilChartReadoutUpdates(page, page.locator(".echarts-surface"));
+    const hoverReadoutSettledMs = performance.now() - hoverStarted;
+
+    const styleStarted = performance.now();
+    await page.locator(".settings-accordion > details > summary", { hasText: "Style" }).click();
+    await expect(page.getByRole("region", { name: "개별 curve 스타일" })).toBeVisible();
+    const styleOpenMs = performance.now() - styleStarted;
+    const domElementCount = await page.evaluate(() => document.getElementsByTagName("*").length);
+
+    await page.locator(".settings-accordion > details > summary", { hasText: "Style" }).click();
+    const legendStarted = performance.now();
+    await page.locator(".settings-accordion > details > summary", { hasText: "Legend" }).click();
+    await page.getByRole("tab", { name: "Labels" }).click();
+    const labelEditor = page.getByRole("region", { name: "Analysis label editor" });
+    await expect(labelEditor).toBeVisible();
+    const legendLabelsOpenMs = performance.now() - legendStarted;
+    const legendDomElementCount = await page.evaluate(() => document.getElementsByTagName("*").length);
+
+    if (workload.curveCount === 100) {
+      const labelRows = labelEditor.locator(".report-legend-row");
+      await expect(labelRows).toHaveCount(100);
+      const lastLabelRow = labelRows.nth(99);
+      const lastLabelInput = lastLabelRow.locator("input");
+      await lastLabelInput.scrollIntoViewIfNeeded();
+      await lastLabelInput.fill("Synthetic review label 100");
+      await expect(lastLabelInput).toHaveValue("Synthetic review label 100");
+      await lastLabelRow.getByRole("button").click();
+      await expect(lastLabelInput).toHaveValue("");
+    }
+
+    const tabStarted = performance.now();
+    await page.getByRole("button", { name: "새 분석" }).click();
+    await expect(page.getByRole("tab", { name: "Analysis 2" })).toBeVisible();
+    const oldAnalysisTab = page.getByRole("tab", { name: `s9-${workload.name}.xlsx` });
+    await oldAnalysisTab.click();
+    await expect(oldAnalysisTab).toHaveAttribute("aria-selected", "true");
+    const tabRoundTripMs = performance.now() - tabStarted;
+
+    const exportStarted = performance.now();
+    await page.locator(".settings-accordion > details > summary", { hasText: "Export" }).click();
+    await expect(page.getByRole("button", { name: "Save PNG" })).toBeVisible();
+    await page.getByLabel("Image export layout").selectOption("plotOnly");
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Save PNG" }).click();
+    await downloadPromise;
+    const plotOnlyPngExportMs = performance.now() - exportStarted;
+
+    measurements.push({
+      workload: workload.name,
+      cacheState: workload.curveCount === 20 ? "cold-first-import" : "warm-module-cache",
+      attempt: 1,
+      curves: workload.curveCount,
+      cycles: 100,
+      importMs: roundMeasurement(importMs),
+      selectionAndChartMs: roundMeasurement(selectionAndChartMs),
+      hoverReadoutSettledMs: roundMeasurement(hoverReadoutSettledMs),
+      styleOpenMs: roundMeasurement(styleOpenMs),
+      legendLabelsOpenMs: roundMeasurement(legendLabelsOpenMs),
+      tabRoundTripMs: roundMeasurement(tabRoundTripMs),
+      plotOnlyPngExportMs: roundMeasurement(plotOnlyPngExportMs),
+      styleDomElementCount: domElementCount,
+      legendDomElementCount
+    });
+  }
+
+  const evidence = JSON.stringify({ measuredAt: new Date().toISOString(), measurements }, null, 2);
+  await testInfo.attach("s9-performance-measurements", { body: evidence, contentType: "application/json" });
+  console.log(`S9_PERFORMANCE ${JSON.stringify(measurements)}`);
+});
 });
 
 test("preserves long legend identity and distinguishable line-marker raster samples", async ({ page }, testInfo) => {
@@ -426,13 +546,17 @@ function writeLegendIdentityWorkbook(filePath: string) {
   writeFileSync(filePath, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer);
 }
 
-function writeDenseWorkbookFixture(filePath: string, curveCount: number) {
+function writeDenseWorkbookFixture(filePath: string, curveCount: number, cycleCount = 60) {
   const workbook = XLSX.utils.book_new();
+  const reagentCount = Math.min(curveCount, 8);
   const rows: Array<Array<string | number>> = [
-    Array.from({ length: curveCount }, (_, index) => `Synthetic condition ${String(index + 1).padStart(2, "0")} with long label`),
-    Array.from({ length: curveCount }, (_, index) => `Assay ${String(index + 1).padStart(2, "0")}`)
+    Array.from(
+      { length: curveCount },
+      (_, index) => `Synthetic specimen ${String(Math.floor(index / reagentCount) + 1).padStart(2, "0")} with long label`
+    ),
+    Array.from({ length: curveCount }, (_, index) => `Assay ${String((index % reagentCount) + 1).padStart(2, "0")}`)
   ];
-  for (let cycle = 1; cycle <= 60; cycle += 1) {
+  for (let cycle = 1; cycle <= cycleCount; cycle += 1) {
     rows.push(
       Array.from({ length: curveCount }, (_, index) =>
         createAmplificationValue(cycle, 18 + (index % 12), 400_000 + index * 20_000)
@@ -440,7 +564,12 @@ function writeDenseWorkbookFixture(filePath: string, curveCount: number) {
     );
   }
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "DenseSyntheticData");
+  mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer);
+}
+
+function roundMeasurement(value: number) {
+  return Math.round(value * 100) / 100;
 }
 
 function writeWarningProvenanceWorkbook(filePath: string) {
@@ -565,6 +694,7 @@ async function applyBoxZoom(page: Page, canvasLocator: Locator) {
 
   await page.getByRole("button", { name: "Box zoom" }).click();
   await expect(page.getByRole("button", { name: "Box zoom" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Chart point readout")).toContainText("Cycle -");
   const plotArea = page.locator(".box-zoom-plot-area");
   await expect(plotArea).toBeVisible();
   const plotAreaBox = await plotArea.boundingBox();
@@ -573,6 +703,9 @@ async function applyBoxZoom(page: Page, canvasLocator: Locator) {
   expect(plotAreaBox?.y ?? 0).toBeGreaterThan((box?.y ?? 0) + 10);
   expect((plotAreaBox?.x ?? 0) + (plotAreaBox?.width ?? 0)).toBeLessThanOrEqual((box?.x ?? 0) + (box?.width ?? 0) + 1);
   expect((plotAreaBox?.y ?? 0) + (plotAreaBox?.height ?? 0)).toBeLessThanOrEqual((box?.y ?? 0) + (box?.height ?? 0) + 1);
+  await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) * 0.5, (box?.y ?? 0) + (box?.height ?? 0) * 0.5);
+  await page.waitForTimeout(50);
+  await expect(page.getByLabel("Chart point readout")).toContainText("Cycle -");
   await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) * 0.34, (box?.y ?? 0) + (box?.height ?? 0) * 0.22);
   await page.mouse.down();
   await page.mouse.move((box?.x ?? 0) + (box?.width ?? 0) * 0.72, (box?.y ?? 0) + (box?.height ?? 0) * 0.62, { steps: 8 });

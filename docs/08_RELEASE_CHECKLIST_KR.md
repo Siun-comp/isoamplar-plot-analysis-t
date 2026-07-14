@@ -22,7 +22,7 @@ Active release gate
 - [x] 로컬 데스크톱 화면: 문서 가로 overflow 없음, 고정 chart 높이, 한글 깨짐/console error 없음
 - [x] 최종 독립 재감사: prior P1/P2 4건 해소, release-blocking finding 없음, GO
 - [x] 사용자 로컬 검수 및 T 에디션 별도 배포 승인
-- [ ] `isoamplar-plot-analysis-t` commit/push/GitHub Pages 배포 및 공개 smoke
+- [x] `isoamplar-plot-analysis-t` commit/push/GitHub Pages 배포 및 공개 smoke: source `3b6c6a1`, run `29302909343`
 
 ## 자동 게이트
 - [x] `git diff --check`

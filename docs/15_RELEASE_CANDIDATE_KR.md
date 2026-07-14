@@ -118,4 +118,14 @@ Released - post-deploy smoke passed
 - Audit remediation: per-event raw bracket/cell/source/formula-cache evidence is inspectable in the bounded UI; multiple crossings are included in review; non-primary XLSX notes no longer claim a displayed crossing; all outcome families and mismatched-draft restore are regression-tested
 - Independent final re-audit: GO; no release-blocking correctness, UX, accessibility, density, or data-integrity finding
 - User guide: Threshold workflow, observed/interpolated distinction, expanded source evidence, troubleshooting, and synthetic screenshots added; 19-page A4 PDF render and sensitive-term scan passed
-- Release status: approved for separate T-edition commit and deployment; original non-T repository and Pages URL must remain unchanged.
+- Release status: separate T-edition commit, tag, Pages deployment, and public smoke complete; original non-T repository and Pages URL remain unchanged.
+
+## IsoAmplar Plot Analysis T 배포 기록
+
+- Product source commit: `3b6c6a1ba79793979780a44b10edd9760874b8c0`
+- Rollback tag: `release-20260714-threshold-edition`
+- Separate repository: https://github.com/Siun-comp/isoamplar-plot-analysis-t
+- Pages workflow: https://github.com/Siun-comp/isoamplar-plot-analysis-t/actions/runs/29302909343 - success
+- Public URL: https://siun-comp.github.io/isoamplar-plot-analysis-t/
+- Public smoke: T title/H1 and Threshold empty-state were present, browser warning/error log was empty, and the original non-T URL still exposed the non-T title/H1.
+- Original isolation: no push was made to `https://github.com/Siun-comp/isoamplar-plot-analysis.git`.

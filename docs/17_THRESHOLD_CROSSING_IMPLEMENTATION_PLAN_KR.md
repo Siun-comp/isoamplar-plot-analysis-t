@@ -2,7 +2,7 @@
 
 ## 문서 상태
 
-- 상태: T-edition local implementation and verification complete; separate commit/deployment approved and in progress
+- 상태: Complete; separately committed and deployed as IsoAmplar Plot Analysis T
 - 작성일: 2026-07-14
 - Owner: Product / Engineering / Data Visualization / QA
 - 기준 소스: `6a2fe80d94d3a269a6dc728cd57efa3a7276faa9`
@@ -560,7 +560,7 @@ Selected Data XLSX의 Threshold 결과는 두 표시 toggle과 무관하고 `ena
 - 최종 감사 보완: curve별 event raw bracket/cell/source/formula-cache 근거 표시, 다중 교차 review 통합, 비-primary XLSX note 정합성, 전 outcome/mismatched-draft/out-of-range export 회귀를 추가했다.
 - 전체 로컬 gate: Vitest 336/336, audit 1/1, dependency vulnerability 0, production build pass, fresh Chromium 13/13, pre/post `dist` byte equality pass.
 - 최종 독립 재감사: prior P1/P2 4건 해소 확인, release-blocking finding 없음, GO.
-- 사용자 검수와 별도 T 에디션 배포가 승인되었다. 원본 non-T 저장소와 Pages는 변경하지 않고 `isoamplar-plot-analysis-t` 저장소에서 commit, Pages workflow, 공개 URL smoke를 수행한 뒤 최종 release 완료를 판정한다.
+- 사용자 검수와 별도 T 에디션 배포가 완료되었다. Product source `3b6c6a1`과 rollback tag `release-20260714-threshold-edition`은 `isoamplar-plot-analysis-t`에만 push되었고 Pages run `29302909343` 및 공개 URL smoke가 통과했다. 원본 non-T 저장소와 Pages는 변경하지 않았다.
 
 ## 16. 공통 Phase 실행 규칙
 

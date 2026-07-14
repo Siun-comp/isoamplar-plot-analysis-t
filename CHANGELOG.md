@@ -1,6 +1,6 @@
 # CHANGELOG.md
 
-## 2026-07-14 - User-set raw fluorescence Threshold (local candidate)
+## 2026-07-14 - IsoAmplar Plot Analysis T
 
 - Separated this Threshold-capable build as `IsoAmplar Plot Analysis T` with its own package, repository, Pages base path, PWA identity, and user guide so the original non-T deployment remains unchanged.
 - Added one tab-local user-set raw fluorescence Threshold with strict decimal/scientific input, apply/restore/clear states, and independent preview and plot-export visibility controls.
@@ -12,7 +12,7 @@
 - Added synthetic-only preview/export raster parity, workbook download/readback, schema restore, numerical edge-case, state-isolation, and desktop layout regression coverage.
 - Classified multiple upward crossings as review-needed even when the primary outcome is crossed, and corrected Selected Data XLSX notes so start/gap outcomes with later candidates never claim a primary crossing was shown.
 - Updated the Korean first-user Markdown/PDF guide with synthetic Threshold settings/result screenshots and troubleshooting guidance.
-- This candidate is verified locally only; no commit, push, or GitHub Pages deployment is included in this work session.
+- Released the verified Threshold edition separately at `https://siun-comp.github.io/isoamplar-plot-analysis-t/`; the original non-T repository and Pages deployment remain unchanged.
 
 ## 2026-07-12 - Selection Sets and Selected Data XLSX
 

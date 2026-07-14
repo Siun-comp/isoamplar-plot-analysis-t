@@ -24,6 +24,21 @@ Active release gate
 - [x] 사용자 로컬 검수 및 T 에디션 별도 배포 승인
 - [x] `isoamplar-plot-analysis-t` commit/push/GitHub Pages 배포 및 공개 smoke: source `3b6c6a1`, run `29302909343`
 
+## M13 보고서 출력 가독성 패치
+
+- [x] 신규 분석 Chart image layout 기본값 `Plot only`
+- [x] Analysis XLSX 명시적 기존 layout 값 보존
+- [x] 9.5 cm 축소 배치용 출력 전용 축·선·마커·여백 프로필
+- [x] preview와 source data/scale/selection/order/style 비변이 테스트
+- [x] T판 Threshold 수치 중심 annotation과 Y범위 밖 안내
+- [x] T판 42 files / 337 tests, audit 1/1, dependency vulnerabilities 0
+- [x] T Pages base-path build와 fresh Chromium 13/13
+- [x] T판 exact `dist` pre/post Playwright equality: `72999c9b01d582a7478e4bda7565af48ce106750c57e232b68a47dfd1c6d6c79`
+- [x] T 사용자 가이드 PDF 재생성과 Export page render QA
+- [ ] T판 commit/push/Pages/public smoke
+- [ ] 원본판 공통 변경 이식과 독립 전체 게이트
+- [ ] 원본판 commit/push/Pages/public smoke
+
 ## 자동 게이트
 - [x] `git diff --check`
 - [x] `npm run test`: 32 files / 265 tests

@@ -15,6 +15,7 @@ Active
 - Current working extension: Selection Sets and Selected Data XLSX are implemented, independently reviewed, and deployed from `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md` at product source SHA `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`.
 - Current published product artifact source: `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`. The prior tagged release `release-20260711-audit-remediation-r1` at `eae3281fb8f9bbbd900fab528be3e094b93b555a` remains the documented rollback anchor.
 - Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is complete and published as the separately managed `IsoAmplar Plot Analysis T` repository/Pages project. Product source is `3b6c6a1ba79793979780a44b10edd9760874b8c0`; rollback tag is `release-20260714-threshold-edition`; Pages run `29302909343` succeeded. The original non-T deployment remains unchanged.
+- Pending dual-edition release: plot-bearing PNG/JPEG/clipboard output now uses a 1200 x 760 logical report profile at 2x raster resolution, with enlarged axis labels, margins, grid, curves, markers, and Threshold annotation for readability near 9.5 cm physical width. New analyses default Chart image layout to `Plot only`; explicitly saved Analysis XLSX layout values remain authoritative. The same generic profile is scheduled for the original edition, while the shortened numeric Threshold annotation remains T-only.
 - Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
@@ -64,15 +65,17 @@ Active
 - Threshold remains absent from the original non-T public runtime and is available in the separately deployed T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and positive/negative interpretation.
 
 ## Current Goal
-Maintain and validate the separately deployed IsoAmplar Plot Analysis T application during real use while preserving the original non-T deployment.
+Apply and release the shared 9.5 cm report-readable plot export profile and Plot-only default to both original and T editions while preserving their separate repositories and deployments.
 
 ## Current Milestone
-M12 T-edition separation and publication complete.
+M13 dual-edition export readability patch: T implementation and local release gates complete; T deployment and original-edition port remain.
 
 ## Last Completed Step
-Committed the T product source as `3b6c6a1ba79793979780a44b10edd9760874b8c0`, created rollback tag `release-20260714-threshold-edition`, and pushed both only to the new `threshold` remote. GitHub Pages run `29302909343` passed formatting, dependency, unit/audit, build, 13/13 fresh Chromium, exact-dist, artifact, and deploy stages. Public smoke confirmed the T title/H1, Threshold UI, zero browser warning/error logs, and unchanged original non-T title/H1.
+Completed the T-edition local release gate for the report-readable export patch: 42 Vitest files / 337 tests, audit probe 1/1, production dependency audit 0 vulnerabilities, T Pages-base build, fresh Chromium 13/13, and byte-identical pre/post Playwright `dist` hash `72999c9b01d582a7478e4bda7565af48ce106750c57e232b68a47dfd1c6d6c79`. The regenerated 19-page T guide PDF Export page passed Poppler render review.
 
 ## Latest Changed Files
+- `src/chart/exportProfile.ts`
+- `src/chart/exportProfile.test.ts`
 - `src/analysis/threshold.ts`
 - `src/analysis/threshold.test.ts`
 - `src/chart/thresholdRender.ts`
@@ -695,6 +698,6 @@ Committed the T product source as `3b6c6a1ba79793979780a44b10edd9760874b8c0`, cr
 - Original non-T public Pages: `https://siun-comp.github.io/isoamplar-plot-analysis/`
 
 ## Next 3 Tasks
-1. Use the T edition with representative workflows and record only reproducible usability or correctness issues without checking sensitive workbooks into the repository.
-2. For each future patch, rerun unit/audit/build/fresh Chromium/exact-dist and public smoke gates before promoting it to the T repository `main` branch.
-3. Periodically verify Analysis XLSX schema 5 continuation and Selected Data XLSX schema 2 output against real operating patterns while keeping scientific interpretation with the user.
+1. Commit the verified T patch, push only to `threshold/main`, wait for Pages, and complete a public synthetic smoke.
+2. Port only the shared export profile and Plot-only default to a separate original-repository worktree, then rerun its complete release gates.
+3. Commit and deploy the original patch, smoke both public URLs, and record final SHAs/workflow runs without storing sensitive data.

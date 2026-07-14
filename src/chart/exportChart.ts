@@ -3,6 +3,7 @@ import { applyRenderedThresholdAnnotation } from "./thresholdRender";
 import type { ImageExportType } from "./exportFilenames";
 import type { LegendItem } from "./chartProjection";
 import type { ImageExportLayout } from "../data/types";
+import { createReportExportChartOption, REPORT_EXPORT_HEIGHT, REPORT_EXPORT_WIDTH } from "./exportProfile";
 import {
   assertLegendIdentity,
   assertLegendLabelsUnique,
@@ -48,8 +49,8 @@ export async function exportChartLayoutImageBlob(args: {
   width?: number;
   height?: number;
 }) {
-  const width = args.width ?? 1200;
-  const chartHeight = args.height ?? 760;
+  const width = args.width ?? REPORT_EXPORT_WIDTH;
+  const chartHeight = args.height ?? REPORT_EXPORT_HEIGHT;
 
   if (args.layout === "plotOnly") {
     return exportChartImageBlob({ option: args.option, type: args.type, width, height: chartHeight });
@@ -226,20 +227,23 @@ export async function exportChartImageDataUrl(args: {
   container.style.position = "fixed";
   container.style.left = "-10000px";
   container.style.top = "0";
-  container.style.width = `${args.width ?? 1200}px`;
-  container.style.height = `${args.height ?? 760}px`;
+  const width = args.width ?? REPORT_EXPORT_WIDTH;
+  const height = args.height ?? REPORT_EXPORT_HEIGHT;
+  const exportOption = createReportExportChartOption(args.option);
+  container.style.width = `${width}px`;
+  container.style.height = `${height}px`;
   container.style.background = "#ffffff";
   document.body.appendChild(container);
 
   const chart = echarts.init(container, undefined, {
     renderer: "canvas",
-    width: args.width ?? 1200,
-    height: args.height ?? 760
+    width,
+    height
   });
 
   try {
-    chart.setOption(args.option, true);
-    applyRenderedThresholdAnnotation(chart, args.option);
+    chart.setOption(exportOption, true);
+    applyRenderedThresholdAnnotation(chart, exportOption);
     await new Promise((resolve) => requestAnimationFrame(resolve));
     const dataUrl = chart.getDataURL({
       type: args.type,

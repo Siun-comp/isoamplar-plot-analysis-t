@@ -149,7 +149,7 @@ export function createDefaultLegendSettings(): LegendSettings {
 
 export function createDefaultExportSettings(): ExportSettings {
   return {
-    imageLayout: "plotWithLegend"
+    imageLayout: "plotOnly"
   };
 }
 

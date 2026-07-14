@@ -2,6 +2,7 @@
 
 ## 2026-07-14 - IsoAmplar Plot Analysis T
 
+- Added a plot-export-only report profile for approximately 9.5 cm Excel placement: 2400 px output is retained while axis text, titles, margins, major ticks, curves, markers, and Threshold styling are enlarged. New analyses now default Chart image layout to Plot only, and the in-range Threshold line label shows only its numeric value.
 - Separated this Threshold-capable build as `IsoAmplar Plot Analysis T` with its own package, repository, Pages base path, PWA identity, and user guide so the original non-T deployment remains unchanged.
 - Added one tab-local user-set raw fluorescence Threshold with strict decimal/scientific input, apply/restore/clear states, and independent preview and plot-export visibility controls.
 - Added versioned `raw-first-upward-linear-v1` crossing inspection over unmodified raw X/Y arrays, keeping Cycle-axis linear estimates separate from first observed at-or-above points and preserving null-gap, start-above, multiple-crossing, and source-cell evidence.

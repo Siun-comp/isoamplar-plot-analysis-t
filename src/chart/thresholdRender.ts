@@ -32,7 +32,7 @@ export function createThresholdMarkLine(threshold: AppliedThreshold) {
       backgroundColor: "rgba(255,255,255,0.92)",
       padding: [2, 4],
       fontSize: 11,
-      formatter: `User-set raw fluorescence Threshold (no correction): ${formatThresholdValue(threshold.value)}`
+      formatter: formatThresholdValue(threshold.value)
     },
     data: [{ name: THRESHOLD_MARK_LINE_NAME, yAxis: threshold.value }]
   };
@@ -107,8 +107,7 @@ function hasFiniteSeriesPoint(option: EChartsCoreOption) {
 }
 
 function createRangeAnnotation(threshold: number, direction: "above" | "below" | "no-data") {
-  const directionText =
-    direction === "no-data" ? "has no displayable Y-axis data" : `is ${direction} the displayed Y range`;
+  const directionText = direction === "no-data" ? "no Y-axis data" : `${direction} Y range`;
   return {
     id: THRESHOLD_ANNOTATION_ID,
     type: "text",
@@ -117,7 +116,7 @@ function createRangeAnnotation(threshold: number, direction: "above" | "below" |
     silent: true,
     z: 20,
     style: {
-      text: `User-set raw fluorescence Threshold (no correction) ${formatThresholdValue(threshold)} ${directionText}`,
+      text: `Threshold ${formatThresholdValue(threshold)} · ${directionText}`,
       fill: "#374151",
       font: "11px Arial, sans-serif",
       backgroundColor: "rgba(255,255,255,0.96)",

@@ -27,7 +27,7 @@ describe("Threshold chart rendering", () => {
     const option = createOption(5);
     expect(findThresholdValue(option)).toBe(5);
     expect((option.series as Array<Record<string, unknown>>)[0]).toMatchObject({
-      markLine: { silent: true, symbol: ["none", "none"], data: [{ yAxis: 5 }] }
+      markLine: { silent: true, symbol: ["none", "none"], label: { formatter: "5" }, data: [{ yAxis: 5 }] }
     });
   });
 

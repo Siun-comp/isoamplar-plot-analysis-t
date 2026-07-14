@@ -129,3 +129,19 @@ Released - post-deploy smoke passed
 - Public URL: https://siun-comp.github.io/isoamplar-plot-analysis-t/
 - Public smoke: T title/H1 and Threshold empty-state were present, browser warning/error log was empty, and the original non-T URL still exposed the non-T title/H1.
 - Original isolation: no push was made to `https://github.com/Siun-comp/isoamplar-plot-analysis.git`.
+
+## M13 T판 보고서 출력 가독성 패치 - 로컬 후보
+
+- 신규 분석의 Chart image layout 기본값: `Plot only`
+- 기존 Analysis XLSX에 명시된 `plotOnly`, `plotWithLegend`, `legendOnly`: 값 그대로 복원
+- Plot 포함 PNG/JPEG/clipboard: 1200 x 760 논리 캔버스와 2x 래스터(2400px 너비), 9.5 cm 축소 배치를 고려한 축·선·마커·여백 출력 전용 프로필
+- Preview, raw fluorescence, 선택 curve, X/Y bounds, 순서와 스타일: 변경 없음
+- T판 Threshold export annotation: 긴 설명 대신 수치 중심 라벨; 설정·결과 근거 문구는 유지
+- `npm run test`: 42 files / 337 tests
+- `npm run test:audit`: 1/1
+- `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities
+- T Pages base-path build: pass
+- Fresh Chromium: 13/13
+- Exact `dist` pre/post Playwright SHA-256: `72999c9b01d582a7478e4bda7565af48ce106750c57e232b68a47dfd1c6d6c79`, byte-identical
+- 19-page T user guide: regenerated; Export page Poppler render QA pass
+- Status: local gate complete; commit, T Pages deployment, public smoke pending

@@ -18,11 +18,18 @@ import type {
   StyleRules
 } from "../data/types";
 import { inferWarningHandling } from "../data/warningProvenance";
+import {
+  createDefaultThresholdSettings,
+  THRESHOLD_RULE_ID,
+  type ThresholdSettings
+} from "./threshold";
 
-export const ANALYSIS_STATE_SCHEMA_VERSION = 4;
+export const ANALYSIS_STATE_SCHEMA_VERSION = 5;
+export const THRESHOLD_ANALYSIS_SCHEMA_VERSION = 5;
 const LEGACY_ANALYSIS_STATE_SCHEMA_VERSION = 1;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION = 2;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 = 3;
+const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4 = 4;
 
 export type SourceFileSummary = {
   sourceKind?: DatasetSourceKind;
@@ -48,6 +55,7 @@ export type AnalysisState = {
   curveOverrides: Record<string, CurveStyleOverride>;
   legendSettings: LegendSettings;
   exportSettings: ExportSettings;
+  thresholdSettings: ThresholdSettings;
   exportCounter: number;
   importFileName: string | null;
   sourceFiles: SourceFileSummary[];
@@ -73,10 +81,17 @@ export type SerializedAnalysisState = Omit<
 
 export type CreateAnalysisStateInput = Omit<
   AnalysisState,
-  "sourceFiles" | "dirty" | "legendSettings" | "exportSettings" | "selectionSets" | "activeSelectionSetId"
+  | "sourceFiles"
+  | "dirty"
+  | "legendSettings"
+  | "exportSettings"
+  | "thresholdSettings"
+  | "selectionSets"
+  | "activeSelectionSetId"
 > & {
   legendSettings?: LegendSettings;
   exportSettings?: ExportSettings;
+  thresholdSettings?: ThresholdSettings;
   selectionSets?: SelectionSet[];
   activeSelectionSetId?: string | null;
   sourceFiles?: SourceFileSummary[];
@@ -118,6 +133,7 @@ export function createAnalysisState(input: CreateAnalysisStateInput): AnalysisSt
       reportNameOverrides: {}
     },
     exportSettings: input.exportSettings ?? createDefaultExportSettings(),
+    thresholdSettings: cloneThresholdSettings(input.thresholdSettings ?? createDefaultThresholdSettings()),
     sourceFiles: input.sourceFiles ?? [createSourceFileSummary(input.dataset)],
     dirty: input.dirty ?? false
   };
@@ -134,6 +150,18 @@ export function createDefaultLegendSettings(): LegendSettings {
 export function createDefaultExportSettings(): ExportSettings {
   return {
     imageLayout: "plotWithLegend"
+  };
+}
+
+function cloneThresholdSettings(settings: ThresholdSettings): ThresholdSettings {
+  return {
+    enabled: settings.enabled,
+    draftValue: settings.draftValue,
+    applied: settings.applied
+      ? { value: settings.applied.value, ruleId: settings.applied.ruleId }
+      : null,
+    showInPreview: settings.showInPreview,
+    includeInPlotExport: settings.includeInPlotExport
   };
 }
 
@@ -183,6 +211,7 @@ export function serializeAnalysisState(state: AnalysisState): SerializedAnalysis
     curveOverrides: state.curveOverrides,
     legendSettings: state.legendSettings,
     exportSettings: state.exportSettings,
+    thresholdSettings: cloneThresholdSettings(state.thresholdSettings),
     exportCounter: state.exportCounter,
     importFileName: state.importFileName,
     sourceFiles: state.sourceFiles
@@ -212,6 +241,7 @@ export function deserializeAnalysisState(
       reportNameOverrides: {}
     },
     exportSettings: serialized.exportSettings ?? createDefaultExportSettings(),
+    thresholdSettings: cloneThresholdSettings(serialized.thresholdSettings),
     exportCounter: serialized.exportCounter,
     importFileName: serialized.importFileName,
     sourceFiles: serialized.sourceFiles,
@@ -255,10 +285,12 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
     payload.schemaVersion !== LEGACY_ANALYSIS_STATE_SCHEMA_VERSION &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 &&
+    payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4 &&
     payload.schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
   ) {
     throw new Error("Unsupported Analysis XLSX schema version.");
   }
+  const schemaVersion = payload.schemaVersion as number;
 
   const requiredKeys = [
     "analysisName",
@@ -280,12 +312,15 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
     }
   });
 
-  if (payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION) {
+  if (schemaVersion >= PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4) {
     ["selectionSets", "activeSelectionSetId"].forEach((key) => {
       if (!(key in payload)) {
         throw new Error(`Analysis state restore data is missing ${key}.`);
       }
     });
+  }
+  if (schemaVersion >= THRESHOLD_ANALYSIS_SCHEMA_VERSION && !("thresholdSettings" in payload)) {
+    throw new Error("Analysis state restore data is missing thresholdSettings.");
   }
 
   const migratedPayload = migrateSerializedAnalysisPayload(payload);
@@ -311,12 +346,13 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
   validateCurveOverrides(migratedPayload.curveOverrides, datasetCurveIds);
   validateLegendSettings(migratedPayload.legendSettings, datasetCurveIds);
   validateExportSettings(migratedPayload.exportSettings);
+  validateThresholdSettings(migratedPayload.thresholdSettings);
   validateSourceFiles(migratedPayload.sourceFiles);
   validateDatasetRelationships(dataset);
   validateSourceFileRelationships(
     dataset,
     migratedPayload.sourceFiles as SourceFileSummary[],
-    payload.schemaVersion === PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 || payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION
+    schemaVersion >= PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3
   );
   validatePersistedReferences(
     dataset,
@@ -329,10 +365,13 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
 
 function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Record<string, unknown> {
   const isLegacySchema = payload.schemaVersion === LEGACY_ANALYSIS_STATE_SCHEMA_VERSION;
-  const hasSelectionSetSchema = payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION;
-  const needsProvenanceMigration =
-    payload.schemaVersion === LEGACY_ANALYSIS_STATE_SCHEMA_VERSION ||
-    payload.schemaVersion === PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION;
+  const hasProvenanceSchema =
+    typeof payload.schemaVersion === "number" && payload.schemaVersion >= PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3;
+  const hasSelectionSetSchema =
+    typeof payload.schemaVersion === "number" && payload.schemaVersion >= PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4;
+  const hasThresholdSchema =
+    typeof payload.schemaVersion === "number" && payload.schemaVersion >= THRESHOLD_ANALYSIS_SCHEMA_VERSION;
+  const needsProvenanceMigration = !hasProvenanceSchema;
   const styleRules = isRecord(payload.styleRules)
     ? {
         ...payload.styleRules,
@@ -355,6 +394,7 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
     styleRules,
     selectionSets: hasSelectionSetSchema ? payload.selectionSets : [],
     activeSelectionSetId: hasSelectionSetSchema ? payload.activeSelectionSetId : null,
+    thresholdSettings: hasThresholdSchema ? payload.thresholdSettings : createDefaultThresholdSettings(),
     legendSettings:
       "legendSettings" in payload && isRecord(payload.legendSettings)
         ? {
@@ -921,6 +961,46 @@ function validateExportSettings(value: unknown): asserts value is ExportSettings
     throw new Error("Analysis state exportSettings restore data is invalid.");
   }
   assertOneOf(value.imageLayout, imageExportLayouts, "exportSettings.imageLayout");
+}
+
+function validateThresholdSettings(value: unknown): asserts value is ThresholdSettings {
+  if (!isRecord(value)) {
+    throw new Error("Analysis state thresholdSettings restore data is invalid.");
+  }
+
+  assertExactKeys(
+    value,
+    ["enabled", "draftValue", "applied", "showInPreview", "includeInPlotExport"],
+    "thresholdSettings"
+  );
+
+  assertBoolean(value.enabled, "thresholdSettings.enabled");
+  assertString(value.draftValue, "thresholdSettings.draftValue");
+  assertBoolean(value.showInPreview, "thresholdSettings.showInPreview");
+  assertBoolean(value.includeInPlotExport, "thresholdSettings.includeInPlotExport");
+
+  if (value.applied !== null) {
+    if (!isRecord(value.applied)) throw new Error("thresholdSettings.applied is invalid.");
+    assertExactKeys(value.applied, ["value", "ruleId"], "thresholdSettings.applied");
+    if (typeof value.applied.value !== "number" || !Number.isFinite(value.applied.value)) {
+      throw new Error("thresholdSettings.applied.value must be a finite number.");
+    }
+    if (value.applied.ruleId !== THRESHOLD_RULE_ID) {
+      throw new Error("thresholdSettings.applied.ruleId is unsupported.");
+    }
+  }
+
+  if (value.enabled && value.applied === null) {
+    throw new Error("thresholdSettings.enabled requires an applied Threshold.");
+  }
+}
+
+function assertExactKeys(value: Record<string, unknown>, allowedKeys: readonly string[], path: string) {
+  const allowed = new Set(allowedKeys);
+  const unexpected = Object.keys(value).find((key) => !allowed.has(key));
+  if (unexpected) {
+    throw new Error(`${path} contains unsupported field ${unexpected}.`);
+  }
 }
 
 function validateCurveOverrides(value: unknown, datasetCurveIds: Set<string>): asserts value is Record<string, CurveStyleOverride> {

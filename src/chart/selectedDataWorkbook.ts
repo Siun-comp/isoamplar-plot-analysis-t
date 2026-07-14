@@ -1,18 +1,28 @@
 import type * as XLSX from "xlsx";
 import type { ChartScaleState } from "./chartScale";
 import type { Curve, PcrWarning, WarningSourceRef } from "../data/types";
+import {
+  calculateThresholdResults,
+  createDefaultThresholdSettings,
+  isThresholdDraftApplied,
+  type ThresholdResult,
+  type ThresholdSettings
+} from "../analysis/threshold";
 
 type XlsxModule = typeof import("xlsx");
 type WorkbookCellValue = string | number | boolean | undefined;
 
 export const SELECTED_DATA_ROLE_SHEET_NAME = "_IsoAmplarSelectedData";
 export const SELECTED_DATA_WORKBOOK_MARKER = "IsoAmplarSelectedData";
-export const SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 1;
+export const SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 2;
+export const PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 1;
 
 const PLOTTED_DATA_SHEET_NAME = "PlottedData";
 const CURVE_INFO_SHEET_NAME = "CurveInfo";
 const WARNINGS_SHEET_NAME = "Warnings";
 const EXPORT_INFO_SHEET_NAME = "ExportInfo";
+export const THRESHOLD_RESULTS_SHEET_NAME = "ThresholdResults";
+export const THRESHOLD_EVENTS_SHEET_NAME = "ThresholdEvents";
 
 export type SelectedDataLabelLookup =
   | ReadonlyMap<string, string>
@@ -26,6 +36,7 @@ export type SelectedDataWorkbookArgs = {
   warnings: readonly PcrWarning[];
   analysisName: string;
   chartScale: ChartScaleState;
+  thresholdSettings?: ThresholdSettings;
   exportedAt?: Date | string;
 };
 
@@ -34,7 +45,7 @@ export type SelectedDataWorkbookResult =
   | { ok: false; reason: string };
 
 export type SelectedDataWorkbookRole =
-  | { kind: "selected-data"; schemaVersion: typeof SELECTED_DATA_WORKBOOK_SCHEMA_VERSION }
+  | { kind: "selected-data"; schemaVersion: 1 | 2 }
   | { kind: "not-selected-data" }
   | { kind: "invalid-selected-data"; message: string };
 
@@ -76,6 +87,14 @@ export async function createSelectedDataWorkbook(
   const labels = args.curves.map((curve) => lookupLabel(args.labelsByCurveId, curve.curveId) ?? curve.displayLabel);
   const headers = createUniqueHeaders(args.curves, labels);
   const warnings = collectRelevantWarnings(args.curves, args.warnings);
+  const thresholdSettings = args.thresholdSettings ?? createDefaultThresholdSettings();
+  if (thresholdSettings.enabled && !isThresholdDraftApplied(thresholdSettings)) {
+    return { ok: false, reason: "Threshold 입력값을 적용하거나 적용값으로 복원한 뒤 저장하십시오." };
+  }
+  const thresholdResults =
+    thresholdSettings.enabled && thresholdSettings.applied
+      ? calculateThresholdResults([...args.curves], thresholdSettings.applied.value)
+      : [];
 
   appendSheet(xlsx, workbook, PLOTTED_DATA_SHEET_NAME, createPlottedDataRows(args.curves, headers));
   appendSheet(
@@ -85,7 +104,19 @@ export async function createSelectedDataWorkbook(
     createCurveInfoRows(args.curves, headers, labels, warnings, args.analysisLabelsByCurveId)
   );
   appendSheet(xlsx, workbook, WARNINGS_SHEET_NAME, createWarningRows(args.curves, warnings));
-  appendSheet(xlsx, workbook, EXPORT_INFO_SHEET_NAME, createExportInfoRows(args));
+  appendSheet(xlsx, workbook, EXPORT_INFO_SHEET_NAME, createExportInfoRows(args, thresholdSettings));
+  appendSheet(
+    xlsx,
+    workbook,
+    THRESHOLD_RESULTS_SHEET_NAME,
+    createThresholdResultRows(args, labels, thresholdSettings, thresholdResults)
+  );
+  appendSheet(
+    xlsx,
+    workbook,
+    THRESHOLD_EVENTS_SHEET_NAME,
+    createThresholdEventRows(args, labels, thresholdSettings, thresholdResults)
+  );
   appendSheet(xlsx, workbook, SELECTED_DATA_ROLE_SHEET_NAME, createRoleRows());
   hideSheet(workbook, SELECTED_DATA_ROLE_SHEET_NAME);
   assertDataOnlyWorkbook(workbook);
@@ -109,10 +140,14 @@ export function inspectSelectedDataWorkbookRole(workbook: XLSX.WorkBook): Select
   if (roleSheet.A1?.v !== SELECTED_DATA_WORKBOOK_MARKER) {
     return { kind: "invalid-selected-data", message: "Selected Data XLSX marker is invalid." };
   }
-  if (roleSheet.A2?.v !== "schemaVersion" || roleSheet.B2?.v !== SELECTED_DATA_WORKBOOK_SCHEMA_VERSION) {
+  const schemaVersion = roleSheet.B2?.v;
+  if (
+    roleSheet.A2?.v !== "schemaVersion" ||
+    (schemaVersion !== PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION && schemaVersion !== SELECTED_DATA_WORKBOOK_SCHEMA_VERSION)
+  ) {
     return { kind: "invalid-selected-data", message: "Selected Data XLSX schema version is unsupported." };
   }
-  return { kind: "selected-data", schemaVersion: SELECTED_DATA_WORKBOOK_SCHEMA_VERSION };
+  return { kind: "selected-data", schemaVersion };
 }
 
 function createPlottedDataRows(curves: readonly Curve[], headers: readonly string[]): WorkbookCellValue[][] {
@@ -254,7 +289,10 @@ function createWarningRows(curves: readonly Curve[], warnings: readonly PcrWarni
   return rows;
 }
 
-function createExportInfoRows(args: SelectedDataWorkbookArgs): WorkbookCellValue[][] {
+function createExportInfoRows(
+  args: SelectedDataWorkbookArgs,
+  thresholdSettings: ThresholdSettings
+): WorkbookCellValue[][] {
   const exportedAt = args.exportedAt instanceof Date
     ? args.exportedAt.toISOString()
     : args.exportedAt ?? new Date().toISOString();
@@ -274,9 +312,184 @@ function createExportInfoRows(args: SelectedDataWorkbookArgs): WorkbookCellValue
     ["Applied scale note", "Display metadata only; exported rows are not cropped by the applied scale."],
     ["Exported rows", "Full common X range"],
     ["Fluorescence transform", "None"],
+    ["Threshold enabled", thresholdSettings.enabled],
+    ["Threshold applied", thresholdSettings.applied?.value ?? undefined],
+    ["Threshold rule ID", thresholdSettings.applied?.ruleId ?? undefined],
+    ["Threshold calculation", "Full raw X/Y arrays; first adjacent upward crossing; no null-gap interpolation."],
+    ["Threshold data transform", "None; raw fluorescence / no baseline correction"],
     ["Native editable Excel chart", "Not included"],
     ["App analysis restore", "Not supported; use Analysis XLSX to continue an analysis."]
   ];
+}
+
+function createThresholdResultRows(
+  args: SelectedDataWorkbookArgs,
+  labels: readonly string[],
+  settings: ThresholdSettings,
+  results: readonly ThresholdResult[]
+): WorkbookCellValue[][] {
+  const rows: WorkbookCellValue[][] = [
+    ["Threshold status", settings.enabled ? "Applied" : "Threshold disabled"],
+    [
+      "Order",
+      "Curve ID",
+      "Analysis label",
+      "Original specimen",
+      "Original reagent",
+      "Source instance ID",
+      "Source name",
+      "Source column",
+      "Threshold",
+      "Rule ID",
+      "Outcome",
+      "Candidate count",
+      "Multiple upward crossings",
+      "First observed index",
+      "First observed Cycle",
+      "First observed Fluorescence",
+      "Primary upper observed Cycle",
+      "Primary Cycle-axis linear estimate",
+      "Left X",
+      "Left Y",
+      "Right X",
+      "Right Y",
+      "Note"
+    ]
+  ];
+  if (!settings.enabled) return rows;
+
+  results.forEach((result, index) => {
+    const curve = args.curves[index];
+    const observed = result.firstObservedAtOrAbovePoint;
+    const primary = result.outcome === "crossed" ? result.primaryEvent : null;
+    rows.push([
+      index + 1,
+      result.curveId,
+      lookupLabel(args.analysisLabelsByCurveId, result.curveId) ?? labels[index],
+      curve.specimenLabel,
+      curve.reagentLabel,
+      curve.source.sourceInstanceId ?? "",
+      curve.source.fileName,
+      curve.source.columnLetter,
+      result.threshold,
+      result.ruleId,
+      result.outcome,
+      result.candidateCount,
+      result.multipleUpwardCrossings,
+      observed?.index,
+      observed?.x,
+      observed?.y,
+      primary?.rightPoint?.x,
+      primary?.interpolatedCycle ?? undefined,
+      primary?.leftPoint?.x,
+      primary?.leftPoint?.y,
+      primary?.rightPoint?.x,
+      primary?.rightPoint?.y,
+      createThresholdResultNote(result)
+    ]);
+  });
+  return rows;
+}
+
+function createThresholdEventRows(
+  args: SelectedDataWorkbookArgs,
+  labels: readonly string[],
+  settings: ThresholdSettings,
+  results: readonly ThresholdResult[]
+): WorkbookCellValue[][] {
+  const rows: WorkbookCellValue[][] = [
+    ["Threshold status", settings.enabled ? "Applied" : "Threshold disabled"],
+    [
+      "Curve order",
+      "Curve ID",
+      "Analysis label",
+      "Event type",
+      "Event relation",
+      "Event number",
+      "Left index",
+      "Left X",
+      "Left Y",
+      "Right index",
+      "Right X",
+      "Right Y",
+      "Missing start index",
+      "Missing end index",
+      "Interpolated cycle",
+      "Interpolation status",
+      "Formula cached-value evidence",
+      "Source instance references",
+      "Source name references",
+      "Worksheet references",
+      "Source column references",
+      "Source cell references",
+      "Source references JSON"
+    ]
+  ];
+  if (!settings.enabled) return rows;
+
+  results.forEach((result, curveIndex) => {
+    result.events.forEach((event) => {
+      const sources = event.sourceReferences;
+      rows.push([
+        curveIndex + 1,
+        result.curveId,
+        lookupLabel(args.analysisLabelsByCurveId, result.curveId) ?? labels[curveIndex],
+        event.eventType,
+        event.relation,
+        event.eventIndex + 1,
+        event.leftPoint?.index,
+        event.leftPoint?.x,
+        event.leftPoint?.y,
+        event.rightPoint?.index,
+        event.rightPoint?.x,
+        event.rightPoint?.y,
+        event.missingStartIndex ?? undefined,
+        event.missingEndIndex ?? undefined,
+        event.interpolatedCycle ?? undefined,
+        event.interpolationStatus,
+        event.formulaCacheEvidence,
+        joinSourceValues(sources.map((source) => source.sourceInstanceId ?? "")),
+        joinSourceValues(sources.map((source) => source.sourceName)),
+        joinSourceValues(sources.map((source) => source.worksheet)),
+        joinSourceValues(sources.map((source) => source.columnLetter)),
+        joinSourceValues(sources.map((source) => source.cell)),
+        JSON.stringify(sources)
+      ]);
+    });
+  });
+  return rows;
+}
+
+function createThresholdResultNote(result: ThresholdResult) {
+  if (result.outcome === "crossed") {
+    return result.multipleUpwardCrossings
+      ? `First upward crossing shown; ${result.candidateCount} candidates require review.`
+      : "Primary estimate is Cycle-axis linear interpolation between adjacent raw finite points.";
+  }
+  if (result.outcome === "not-reached") return "No observed upward crossing.";
+  if (result.outcome === "starts-at-threshold" || result.outcome === "starts-above-threshold") {
+    return appendSubsequentCandidateNote(
+      "Observation starts at or above Threshold; prior crossing location is unavailable.",
+      result.candidateCount
+    );
+  }
+  if (result.outcome === "indeterminate-leading-gap" || result.outcome === "indeterminate-gap") {
+    return appendSubsequentCandidateNote(
+      "A null gap prevents a valid adjacent-point crossing estimate.",
+      result.candidateCount
+    );
+  }
+  return "Insufficient finite raw points for a crossing estimate.";
+}
+
+function appendSubsequentCandidateNote(note: string, candidateCount: number) {
+  return candidateCount > 0
+    ? `${note} ${candidateCount} subsequent upward crossing event(s) are recorded in ThresholdEvents.`
+    : note;
+}
+
+function joinSourceValues(values: string[]) {
+  return values.join(" | ");
 }
 
 function createRoleRows(): WorkbookCellValue[][] {

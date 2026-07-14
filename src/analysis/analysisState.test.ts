@@ -6,6 +6,7 @@ import { parsePastedTable } from "../data/parsePastedTable";
 import { createOneSpecimenEightReagentDataset } from "../data/sampleData";
 import { createGroupId } from "../selection/buildTrees";
 import { createInitialSelectionState } from "../selection/selectionState";
+import { THRESHOLD_RULE_ID } from "./threshold";
 import {
   ANALYSIS_STATE_SCHEMA_VERSION,
   createAnalysisState,
@@ -50,6 +51,13 @@ function createTestAnalysisState(): AnalysisState {
       reportNameOverrides: { [firstCurveId]: "Report A1" }
     },
     exportSettings: { imageLayout: "legendOnly" },
+    thresholdSettings: {
+      enabled: true,
+      draftValue: "2.5e5",
+      applied: { value: 250_000, ruleId: THRESHOLD_RULE_ID },
+      showInPreview: false,
+      includeInPlotExport: true
+    },
     exportCounter: 7,
     importFileName: dataset.sourceFileName,
     sourceFiles: [createSourceFileSummary(dataset)],
@@ -92,6 +100,7 @@ describe("analysis state serialization", () => {
     expect(restored.legendSettings.reportLabelMode).toBe("full");
     expect(restored.legendSettings.reportNameOverrides).toEqual({});
     expect(restored.exportSettings.imageLayout).toBe("legendOnly");
+    expect(restored.thresholdSettings).toEqual(state.thresholdSettings);
     expect(restored.exportCounter).toBe(7);
     expect(restored.dirty).toBe(false);
     expect(restored.sourceFiles[0]).toMatchObject({
@@ -99,31 +108,54 @@ describe("analysis state serialization", () => {
       sheetName: state.dataset.sheetName,
       curveCount: state.dataset.curves.length
     });
+    expect(serializeAnalysisState(restored)).toEqual(serialized);
   });
 
-  it("migrates schema 3 restore data to empty selection sets", () => {
-    const serialized = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
-    serialized.schemaVersion = 3;
-    serialized.selectionSets = [{ selectionSetId: "legacy-injected", name: "Ignore", curveIds: ["unknown"] }];
-    serialized.activeSelectionSetId = "legacy-injected";
+  it.each([1, 2, 3, 4])("migrates schema %i by persisted capability", (schemaVersion) => {
+    const serialized = JSON.parse(JSON.stringify(serializeAnalysisState(createTestAnalysisState())));
+    serialized.schemaVersion = schemaVersion;
+    const sourceInstanceId = serialized.dataset.curves[0].source.sourceInstanceId;
 
     const restored = deserializeAnalysisState(serialized);
 
-    expect(restored.selectionSets).toEqual([]);
-    expect(restored.activeSelectionSetId).toBeNull();
+    if (schemaVersion >= 4) {
+      expect(restored.selectionSets).toEqual(serialized.selectionSets);
+      expect(restored.activeSelectionSetId).toBe(serialized.activeSelectionSetId);
+    } else {
+      expect(restored.selectionSets).toEqual([]);
+      expect(restored.activeSelectionSetId).toBeNull();
+    }
+    expect(restored.thresholdSettings).toEqual({
+      enabled: false,
+      draftValue: "",
+      applied: null,
+      showInPreview: true,
+      includeInPlotExport: true
+    });
+    if (schemaVersion >= 3) {
+      expect(restored.dataset.curves[0].source.sourceInstanceId).toBe(sourceInstanceId);
+    }
   });
 
-  it("rejects schema 4 restore data with missing selection set fields", () => {
-    const missingSets = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
+  it("rejects schema 4 and 5 restore data with missing selection set fields", () => {
+    const missingSets = JSON.parse(JSON.stringify(serializeAnalysisState(createTestAnalysisState())));
+    missingSets.schemaVersion = 4;
+    delete missingSets.thresholdSettings;
     delete missingSets.selectionSets;
     expect(() => deserializeAnalysisState(missingSets)).toThrow("missing selectionSets");
 
-    const missingActiveId = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
+    const missingActiveId = JSON.parse(JSON.stringify(serializeAnalysisState(createTestAnalysisState())));
     delete missingActiveId.activeSelectionSetId;
     expect(() => deserializeAnalysisState(missingActiveId)).toThrow("missing activeSelectionSetId");
   });
 
-  it("rejects schema 4 restore data with invalid selection set field types", () => {
+  it("rejects schema 5 restore data with a missing Threshold field", () => {
+    const serialized = serializeAnalysisState(createTestAnalysisState()) as unknown as Record<string, unknown>;
+    delete serialized.thresholdSettings;
+    expect(() => deserializeAnalysisState(serialized)).toThrow("missing thresholdSettings");
+  });
+
+  it("rejects schema 5 restore data with invalid selection set field types", () => {
     const serialized = serializeAnalysisState(createTestAnalysisState());
     expect(() => deserializeAnalysisState({ ...serialized, selectionSets: null })).toThrow(
       "selectionSets must be an array"
@@ -131,6 +163,57 @@ describe("analysis state serialization", () => {
     expect(() => deserializeAnalysisState({ ...serialized, activeSelectionSetId: 123 })).toThrow(
       "activeSelectionSetId must be a string or null"
     );
+  });
+
+  it("strictly validates schema 5 Threshold settings", () => {
+    const serialized = serializeAnalysisState(createTestAnalysisState());
+    const thresholdSettings = serialized.thresholdSettings;
+
+    expect(() =>
+      deserializeAnalysisState({ ...serialized, thresholdSettings: { ...thresholdSettings, enabled: "yes" } })
+    ).toThrow("thresholdSettings.enabled");
+    expect(() =>
+      deserializeAnalysisState({ ...serialized, thresholdSettings: { ...thresholdSettings, draftValue: 10 } })
+    ).toThrow("thresholdSettings.draftValue");
+    expect(() =>
+      deserializeAnalysisState({ ...serialized, thresholdSettings: { ...thresholdSettings, showInPreview: 1 } })
+    ).toThrow("thresholdSettings.showInPreview");
+    expect(() =>
+      deserializeAnalysisState({ ...serialized, thresholdSettings: { ...thresholdSettings, includeInPlotExport: null } })
+    ).toThrow("thresholdSettings.includeInPlotExport");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        thresholdSettings: { ...thresholdSettings, applied: { value: Infinity, ruleId: THRESHOLD_RULE_ID } }
+      })
+    ).toThrow("thresholdSettings.applied.value");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        thresholdSettings: { ...thresholdSettings, applied: { value: 250_000, ruleId: "unknown-rule" } }
+      })
+    ).toThrow("thresholdSettings.applied.ruleId");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        thresholdSettings: { ...thresholdSettings, enabled: true, applied: null }
+      })
+    ).toThrow("requires an applied Threshold");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        thresholdSettings: { ...thresholdSettings, thresholdResults: [{ curveId: "derived" }] }
+      })
+    ).toThrow("unsupported field thresholdResults");
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        thresholdSettings: {
+          ...thresholdSettings,
+          applied: { ...thresholdSettings.applied, results: [{ curveId: "derived" }] }
+        }
+      })
+    ).toThrow("unsupported field results");
   });
 
   it("rejects selection sets with unknown curve references or active IDs", () => {
@@ -154,7 +237,8 @@ describe("analysis state serialization", () => {
       importError: "bad file",
       exportMessage: "copied",
       lastPresetUndo: { affectedCurveIds: [] },
-      clipboardResult: "failed"
+      clipboardResult: "failed",
+      thresholdResults: [{ curveId: "derived-result" }]
     } as AnalysisState & Record<string, unknown>;
 
     const serialized = serializeAnalysisState(state);
@@ -164,6 +248,7 @@ describe("analysis state serialization", () => {
     expect(serialized).not.toHaveProperty("exportMessage");
     expect(serialized).not.toHaveProperty("lastPresetUndo");
     expect(serialized).not.toHaveProperty("clipboardResult");
+    expect(serialized).not.toHaveProperty("thresholdResults");
     expect(serialized).not.toHaveProperty("analysisId");
     expect(serialized).not.toHaveProperty("dirty");
   });
@@ -188,6 +273,13 @@ describe("analysis state serialization", () => {
     expect(state.sourceFiles).toEqual([createSourceFileSummary(dataset)]);
     expect(state.legendSettings).toEqual({ previewVisible: true, reportLabelMode: "autoCompact", reportNameOverrides: {} });
     expect(state.exportSettings).toEqual({ imageLayout: "plotWithLegend" });
+    expect(state.thresholdSettings).toEqual({
+      enabled: false,
+      draftValue: "",
+      applied: null,
+      showInPreview: true,
+      includeInPlotExport: true
+    });
   });
 
   it("restores default legend/export settings from older serialized payloads", () => {

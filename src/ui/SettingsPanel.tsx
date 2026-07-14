@@ -26,6 +26,7 @@ import { createPlottedDataCsv } from "../chart/plottedDataExport";
 import { createSelectedDataWorkbook, validateSelectedDataProjection } from "../chart/selectedDataWorkbook";
 import { buildReportLegendProjection } from "../chart/reportLegend";
 import { createStyleAdvisories, normalizeHexColor, type StyleAdvisories } from "../chart/styleAdvisories";
+import { isThresholdDraftApplied } from "../analysis/threshold";
 import { useAppStore } from "../app/appStore";
 import { formatCurveLabel, formatCurveSourceSuffix } from "../data/curveLabels";
 import type {
@@ -40,6 +41,7 @@ import type {
   ResolvedCurveStyle,
   StyleGroupingTarget
 } from "../data/types";
+import { ThresholdSettingsPanel } from "./ThresholdSettingsPanel";
 
 export function SettingsPanel() {
   const chartScale = useAppStore((state) => state.chartScale);
@@ -50,6 +52,7 @@ export function SettingsPanel() {
   const curveOverrides = useAppStore((state) => state.curveOverrides);
   const legendSettings = useAppStore((state) => state.legendSettings);
   const exportSettings = useAppStore((state) => state.exportSettings);
+  const thresholdSettings = useAppStore((state) => state.thresholdSettings);
   const exportCounter = useAppStore((state) => state.exportCounter);
   const activeExportJob = useAppStore((state) => state.activeExportJob);
   const exportMessage = useAppStore((state) => state.exportMessage);
@@ -138,6 +141,10 @@ export function SettingsPanel() {
           onFixedValueChange={setAxisFixedValue}
           onPresetValueChange={setAxisPresetValue}
         />
+      </details>
+      <details>
+        <summary>Threshold</summary>
+        <ThresholdSettingsPanel curves={selectedCurves} hasDataset={Boolean(dataset)} />
       </details>
       <details>
         <summary>Style</summary>
@@ -258,6 +265,7 @@ export function SettingsPanel() {
           curveOverrides={curveOverrides}
           legendSettings={legendSettings}
           exportSettings={exportSettings}
+          thresholdSettings={thresholdSettings}
           onExportLayoutChange={setExportImageLayout}
           exportCounter={exportCounter}
           exportMessage={exportMessage}
@@ -286,6 +294,7 @@ function ExportControls({
   curveOverrides,
   legendSettings,
   exportSettings,
+  thresholdSettings,
   onExportLayoutChange,
   exportCounter,
   exportMessage,
@@ -308,6 +317,7 @@ function ExportControls({
   curveOverrides: ReturnType<typeof useAppStore.getState>["curveOverrides"];
   legendSettings: ReturnType<typeof useAppStore.getState>["legendSettings"];
   exportSettings: ReturnType<typeof useAppStore.getState>["exportSettings"];
+  thresholdSettings: ReturnType<typeof useAppStore.getState>["thresholdSettings"];
   onExportLayoutChange: ReturnType<typeof useAppStore.getState>["setExportImageLayout"];
   exportCounter: number;
   exportMessage: string | null;
@@ -324,6 +334,29 @@ function ExportControls({
   const blockingScaleIssues = scaleIssues.filter((issue) => issue.blocksPlotExport);
   const plotImageScaleBlocked = exportSettings.imageLayout !== "legendOnly" && blockingScaleIssues.length > 0;
   const plotScaleMessage = blockingScaleIssues.map((issue) => issue.message).join(" ");
+  const thresholdDraftMismatch = thresholdSettings.enabled && !isThresholdDraftApplied(thresholdSettings);
+  const thresholdBlocksLayout = (layout: ImageExportLayout) =>
+    layout !== "legendOnly" && thresholdSettings.includeInPlotExport && thresholdDraftMismatch;
+  const plotImageThresholdBlocked = thresholdBlocksLayout(exportSettings.imageLayout);
+  const plotImageBlocked = plotImageScaleBlocked || plotImageThresholdBlocked;
+
+  function buildCurrentChart(layout: ImageExportLayout) {
+    if (!dataset) return null;
+    return buildPcrChartOption({
+      dataset,
+      selectedCurveIds,
+      orderedCurveIds,
+      scale: chartScale,
+      labelMode,
+      styleRules,
+      curveOverrides,
+      legendSettings,
+      threshold:
+        layout !== "legendOnly" && thresholdSettings.enabled && thresholdSettings.includeInPlotExport
+          ? thresholdSettings.applied
+          : null
+    });
+  }
 
   async function exportImage(type: ImageExportType) {
     if (!dataset) return;
@@ -331,19 +364,15 @@ function ExportControls({
       setExportMessage(`Plot image export is blocked. ${plotScaleMessage} Edit Scale settings.`);
       return;
     }
+    if (thresholdBlocksLayout(exportSettings.imageLayout)) {
+      setExportMessage("Plot image export is blocked. Apply the current Threshold draft or restore the applied value.");
+      return;
+    }
     const job = beginExportJob("file", true);
     if (!job) return;
     try {
-      const chart = buildPcrChartOption({
-        dataset,
-        selectedCurveIds,
-        orderedCurveIds,
-        scale: chartScale,
-        labelMode,
-        styleRules,
-        curveOverrides,
-        legendSettings
-      });
+      const chart = buildCurrentChart(exportSettings.imageLayout);
+      if (!chart) return;
       const blob = await exportChartLayoutImageBlob({
         option: chart.option,
         type,
@@ -364,19 +393,15 @@ function ExportControls({
       setExportMessage(`Plot clipboard export is blocked. ${plotScaleMessage} Edit Scale settings.`);
       return;
     }
+    if (thresholdBlocksLayout(layout)) {
+      setExportMessage("Plot clipboard export is blocked. Apply the current Threshold draft or restore the applied value.");
+      return;
+    }
     const job = beginExportJob("clipboard", false);
     if (!job) return;
     try {
-      const chart = buildPcrChartOption({
-        dataset,
-        selectedCurveIds,
-        orderedCurveIds,
-        scale: chartScale,
-        labelMode,
-        styleRules,
-        curveOverrides,
-        legendSettings
-      });
+      const chart = buildCurrentChart(layout);
+      if (!chart) return;
       const blob = await exportChartLayoutImageBlob({
         option: chart.option,
         type: "png",
@@ -496,6 +521,10 @@ function ExportControls({
 
   async function exportSelectedDataXlsx() {
     if (!dataset) return;
+    if (thresholdDraftMismatch) {
+      setExportMessage("Selected Data XLSX is blocked. Apply the current Threshold draft or restore the applied value.");
+      return;
+    }
     if (!selectedDataValidation.ok) {
       setExportMessage(selectedDataValidation.reason);
       return;
@@ -513,7 +542,8 @@ function ExportControls({
         ),
         warnings: dataset.warnings,
         analysisName,
-        chartScale
+        chartScale,
+        thresholdSettings
       });
       if (!result.ok) throw new Error(result.reason);
       const fileName = createSelectedDataFileName(job.reservedCounter, new Date(), analysisName);
@@ -550,19 +580,24 @@ function ExportControls({
           </label>
         </div>
         <div className="export-button-grid">
-      <button type="button" aria-label="Save PNG" disabled={disabled || plotImageScaleBlocked} onClick={() => void exportImage("png")}>
+      <button type="button" aria-label="Save PNG" disabled={disabled || plotImageBlocked} onClick={() => void exportImage("png")}>
         PNG 저장
       </button>
-      <button type="button" aria-label="Save JPEG" disabled={disabled || plotImageScaleBlocked} onClick={() => void exportImage("jpeg")}>
+      <button type="button" aria-label="Save JPEG" disabled={disabled || plotImageBlocked} onClick={() => void exportImage("jpeg")}>
         JPEG 저장
       </button>
-      <button type="button" aria-label="Copy selected layout PNG to clipboard" disabled={disabled || plotImageScaleBlocked} onClick={() => void copyPng()}>
+      <button type="button" aria-label="Copy selected layout PNG to clipboard" disabled={disabled || plotImageBlocked} onClick={() => void copyPng()}>
         클립보드 PNG
       </button>
         </div>
         {plotImageScaleBlocked && (
           <p className="error-text" role="status">
             Plot image exports are blocked until the active Scale draft is valid. {plotScaleMessage}
+          </p>
+        )}
+        {plotImageThresholdBlocked && (
+          <p className="error-text" role="status">
+            Threshold 입력값이 적용값과 다릅니다. 현재 입력값을 적용하거나 적용값으로 복원하십시오.
           </p>
         )}
       </section>
@@ -616,7 +651,7 @@ function ExportControls({
             type="button"
             aria-label="선택 데이터 XLSX 저장"
             aria-describedby={!selectedDataValidation.ok ? "selected-data-xlsx-reason" : undefined}
-            disabled={busy || !selectedDataValidation.ok}
+            disabled={busy || !selectedDataValidation.ok || thresholdDraftMismatch}
             onClick={() => void exportSelectedDataXlsx()}
           >
             선택 데이터 XLSX
@@ -632,6 +667,9 @@ function ExportControls({
         </details>
       </section>
       {!selectedDataValidation.ok && <p id="selected-data-xlsx-reason">{selectedDataValidation.reason}</p>}
+      {thresholdDraftMismatch && (
+        <p className="error-text">Threshold 입력값을 적용하거나 복원하기 전에는 Threshold 결과 XLSX를 저장할 수 없습니다.</p>
+      )}
       {exportMessage && <p className="export-message">{exportMessage}</p>}
     </section>
   );

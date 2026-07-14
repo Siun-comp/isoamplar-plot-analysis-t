@@ -101,3 +101,21 @@ Released - post-deploy smoke passed
 - Public smoke: 1280x720 synthetic original-data import, one-curve selection, Selection Set creation, Selected Data XLSX download/readback, five-sheet and hidden-role-marker verification, no document horizontal overflow, zero browser errors, zero unexpected external origins
 - Public URL: https://siun-comp.github.io/isoamplar-plot-analysis/
 - Rollback required: no
+
+## Threshold 확장 로컬 후보 - 2026-07-14
+
+- Product identity: `IsoAmplar Plot Analysis T`; separate target repository and Pages path `isoamplar-plot-analysis-t`
+- 기준 branch/HEAD: `codex/audit-remediation` / `6a2fe80d94d3a269a6dc728cd57efa3a7276faa9` plus approved T-edition release candidate
+- 범위: 사용자 지정 raw fluorescence Threshold, crossing evidence, Analysis XLSX schema 5, Selected Data XLSX schema 2
+- Vitest: 41 files / 336 tests pass
+- Audit probe: 1 pass
+- Production dependency audit: 0 vulnerabilities
+- Production build: pass
+- Fresh Chromium: 13/13 pass
+- T Pages base-path complete dist pre/post Playwright SHA-256: byte-identical at `1fccad63a0182049c6d266b99642fb03b0b5be68e7e319ebd5fb17d0f8585224`
+- Browser evidence: synthetic import, Threshold apply, Auto Y non-expansion, preview/export independent visibility, out-of-range PNG raster difference, Selected Data XLSX result/event readback, Analysis XLSX schema 5 restore, no unexpected network/browser error
+- Desktop evidence: synthetic screenshots only; no document horizontal overflow, fixed chart viewport retained, Korean text and compact settings/results verified
+- Audit remediation: per-event raw bracket/cell/source/formula-cache evidence is inspectable in the bounded UI; multiple crossings are included in review; non-primary XLSX notes no longer claim a displayed crossing; all outcome families and mismatched-draft restore are regression-tested
+- Independent final re-audit: GO; no release-blocking correctness, UX, accessibility, density, or data-integrity finding
+- User guide: Threshold workflow, observed/interpolated distinction, expanded source evidence, troubleshooting, and synthetic screenshots added; 19-page A4 PDF render and sensitive-term scan passed
+- Release status: approved for separate T-edition commit and deployment; original non-T repository and Pages URL must remain unchanged.

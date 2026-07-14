@@ -91,7 +91,7 @@ export function CustomLegend({
   );
 }
 
-function LegendSample({ item }: { item: LegendItem }) {
+export function LegendSample({ item }: { item: LegendItem }) {
   return (
     <svg
       className="legend-sample"

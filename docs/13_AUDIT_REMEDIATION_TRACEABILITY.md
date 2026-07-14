@@ -3,8 +3,8 @@
 ## Status
 
 - Phase: S11 released on GitHub Pages
-- Updated: 2026-07-11
-- Product acceptance state: Passing S11 release; unresolved user-decision items remain outside accepted scope
+- Updated: 2026-07-14
+- Product acceptance state: Passing S11 release plus locally verified Threshold candidate; Threshold commit/deployment remains pending user review
 - Data policy: synthetic-only fixtures and generated values
 
 ## Status Vocabulary
@@ -163,3 +163,19 @@ S1 completes when fixed hashes, passing baseline tests, isolated known-red probe
 - `FR-022` / `AC-PCR-053`: Selection Sets persist curveId membership only, use explicit candidate selection and Apply, preserve other analysis settings, support modified/update/rename/delete/one-step return behavior, and remain isolated per analysis tab.
 - `D050`: selected-curves-to-new-analysis remains excluded; Analysis XLSX schema 4 is the complete-continuation format while Selected Data XLSX is Excel follow-up output only.
 - Evidence includes schema 1-4 migration/roundtrip/corruption and wrong-type rejection, append/replace/tab-isolation tests, 20-set/120-character compact-selector coverage, frozen management targets and focus restoration, numeric/null/formula/hyperlink workbook readback, related-warning counts, current-order browser download checks, role-safe re-import rejection, production build, and fresh Chromium verification. Final local gates passed 293/293 Vitest, 1/1 audit, 12/12 Chromium, and 0 production dependency vulnerabilities; three independent re-audits returned GO.
+## Threshold Extension Traceability - 2026-07-14 Local Candidate
+
+The Threshold extension is published as the separately managed `IsoAmplar Plot Analysis T` edition under the `/isoamplar-plot-analysis-t/` Pages base path. Historical non-T release evidence above remains unchanged.
+
+| Scope | Requirement / decision | Acceptance | Implementation evidence | Verification |
+|---|---|---|---|---|
+| Raw calculation integrity | FR-023, D051, IO-108 | AC-PCR-056 | `src/analysis/threshold.ts`; adjacent finite `previous < T && current >= T`; no null bridging; observed/raw source evidence retained; multiple crossings share one review predicate | `src/analysis/threshold.test.ts`; full Vitest 336/336 |
+| Preview and plot output | FR-023, D051 | AC-PCR-057 | `src/chart/thresholdRender.ts`, `src/chart/chartConfig.ts`, `src/chart/ChartView.tsx`, `src/chart/exportChart.ts`; one silent markLine or range annotation; no pseudo-series | Unit renderer tests plus Chromium preview/export raster difference, Auto-domain non-expansion, independent toggles |
+| Desktop review workflow | FR-023 | AC-PCR-056, AC-PCR-057 | `src/ui/ThresholdSettingsPanel.tsx`, `src/ui/ThresholdResultsPanel.tsx`; compact accordion, bounded results, current order/labels/styles, hover/focus linkage, expandable per-event raw bracket/cell/source/formula-cache evidence | Dedicated component test, 1280/1366/1920 desktop E2E coverage, local synthetic screenshots |
+| Analysis continuity | D051, IO-106, IO-108 | AC-PCR-058 | Analysis XLSX schema 5 stores Threshold configuration only and recomputes results after restore; schemas 1-4 migrate disabled | State/workbook/store tests, including enabled mismatched draft/applied roundtrip, and Chromium save/restore/readback |
+| Selected evidence workbook | D051, IO-107, IO-108 | AC-PCR-058 | Selected Data XLSX schema 2 adds fixed `ThresholdResults`/`ThresholdEvents`; raw `PlottedData` unchanged; schema 1 remains recognized output-only | Writer tests cover crossed/multiple, starts-at/above, leading/internal gap, not-reached, insufficient; Chromium download/readback |
+| Privacy and release integrity | FR-013, D049, D051 | AC-PCR-002 | Browser-local calculation, synthetic-only guide/evidence, no new network path | Network guard, dependency audit 0, fresh Chromium 13/13, byte-identical dist `e178d3bf3e95be3a64f04959968a39c3995ee9e1c459139598424588b64c2d8c` |
+
+The final independent re-audit returned GO after verifying the four prior evidence, workbook-note, review-classification, and coverage findings. No release-blocking correctness, UX, accessibility, density, or data-integrity issue remains in the local candidate.
+
+This entry describes a locally verified candidate. Commit, push, Pages deployment, and public smoke remain intentionally pending user review.

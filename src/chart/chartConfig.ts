@@ -5,6 +5,8 @@ import { buildReportLegendProjection } from "./reportLegend";
 import type { ReportLegendProjection } from "./reportLegend";
 import type { Curve, CurveStyleOverride, GroupingMode, LegendSettings, PcrDataset, StyleRules } from "../data/types";
 import type { LegendItem } from "./chartProjection";
+import type { AppliedThreshold } from "../analysis/threshold";
+import { createThresholdMarkLine } from "./thresholdRender";
 
 export type ChartBuildResult = {
   option: EChartsCoreOption;
@@ -24,6 +26,7 @@ export function buildPcrChartOption(args: {
   curveOverrides?: Record<string, CurveStyleOverride>;
   legendSettings?: LegendSettings;
   highlightedCurveId?: string | null;
+  threshold?: AppliedThreshold | null;
 }): ChartBuildResult {
   const projection = buildChartProjection(args);
   const legendProjection = args.legendSettings
@@ -152,7 +155,8 @@ export function buildPcrChartOption(args: {
           },
           emphasis: {
             disabled: true
-          }
+          },
+          ...(index === 0 && args.threshold ? { markLine: createThresholdMarkLine(args.threshold) } : {})
         };
       })
     }

@@ -1,6 +1,6 @@
 {
-  "name": "IsoAmplar Plot Analysis",
-  "short_name": "IsoAmplar",
+  "name": "IsoAmplar Plot Analysis T",
+  "short_name": "IsoAmplar T",
   "description": "Browser-based amplification fluorescence plot analysis tool.",
   "start_url": ".",
   "scope": ".",

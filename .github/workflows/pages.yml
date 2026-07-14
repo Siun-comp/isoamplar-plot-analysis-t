@@ -19,8 +19,8 @@ jobs:
     timeout-minutes: 30
     env:
       CI: "1"
-      E2E_BASE_URL: "http://127.0.0.1:4174/isoamplar-plot-analysis/"
-      VITE_BASE_PATH: "/isoamplar-plot-analysis/"
+      E2E_BASE_URL: "http://127.0.0.1:4174/isoamplar-plot-analysis-t/"
+      VITE_BASE_PATH: "/isoamplar-plot-analysis-t/"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

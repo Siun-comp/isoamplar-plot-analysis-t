@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { LineChart } from "echarts/charts";
-import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
+import { GraphicComponent, GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from "echarts/components";
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import type { EChartsCoreOption } from "echarts/core";
+import { applyRenderedThresholdAnnotation } from "./thresholdRender";
 
-echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, MarkLineComponent, GraphicComponent, CanvasRenderer]);
 
 export type ChartHoverReadout = {
   curveId?: string;
@@ -125,6 +126,7 @@ export function ChartView({
     chartRef.current = chart;
     readoutIndexRef.current = createChartReadoutIndex(option);
     chart.setOption(option, true);
+    applyRenderedThresholdAnnotation(chart, option);
     applySeriesHighlight(chart, option, highlightedCurveIdRef.current);
     const pointerThrottle = createFrameThrottle<PointerWork>(
       (work) => {
@@ -219,6 +221,7 @@ export function ChartView({
 
     const resizeObserver = new ResizeObserver(() => {
       chart.resize();
+      applyRenderedThresholdAnnotation(chart, optionRef.current);
       if (boxZoomEnabledRef.current) {
         setPlotAreaBox(createPlotAreaBox(optionRef.current, chart.getWidth(), chart.getHeight()));
       }
@@ -247,6 +250,7 @@ export function ChartView({
     readoutIndexRef.current = createChartReadoutIndex(option);
     chartRef.current?.setOption(option, true);
     if (chartRef.current) {
+      applyRenderedThresholdAnnotation(chartRef.current, option);
       applySeriesHighlight(chartRef.current, option, highlightedCurveIdRef.current);
     }
     if (boxZoomEnabled) {

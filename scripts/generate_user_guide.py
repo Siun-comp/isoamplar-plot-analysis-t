@@ -25,8 +25,8 @@ from reportlab.lib.utils import ImageReader
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MARKDOWN_PATH = ROOT / "output" / "pdf" / "IsoAmplar_Plot_Analysis_User_Guide_KR.md"
-PDF_PATH = ROOT / "output" / "pdf" / "IsoAmplar_Plot_Analysis_User_Guide_KR.pdf"
+MARKDOWN_PATH = ROOT / "output" / "pdf" / "IsoAmplar_Plot_Analysis_T_User_Guide_KR.md"
+PDF_PATH = ROOT / "output" / "pdf" / "IsoAmplar_Plot_Analysis_T_User_Guide_KR.pdf"
 FONT_REGULAR = Path(r"C:\Windows\Fonts\malgun.ttf")
 FONT_BOLD = Path(r"C:\Windows\Fonts\malgunbd.ttf")
 
@@ -314,7 +314,7 @@ def draw_page(canvas, doc) -> None:
     canvas.line(15 * mm, height - 14 * mm, width - 15 * mm, height - 14 * mm)
     canvas.setFont("Malgun-Bold", 7.5)
     canvas.setFillColor(MUTED)
-    canvas.drawString(15 * mm, height - 10 * mm, "IsoAmplar Plot Analysis User Guide")
+    canvas.drawString(15 * mm, height - 10 * mm, "IsoAmplar Plot Analysis T User Guide")
     canvas.setFont("Malgun", 8)
     canvas.drawRightString(width - 15 * mm, 10 * mm, str(doc.page))
     canvas.restoreState()
@@ -331,9 +331,9 @@ def main() -> None:
         leftMargin=15 * mm,
         topMargin=18 * mm,
         bottomMargin=16 * mm,
-        title="IsoAmplar Plot Analysis 최초 사용자용 상세 가이드",
+        title="IsoAmplar Plot Analysis T 최초 사용자용 상세 가이드",
         author="Jang Si Un",
-        subject="IsoAmplar Plot Analysis user guide using synthetic example data",
+        subject="IsoAmplar Plot Analysis T user guide using synthetic example data",
     )
     story = build_story(MARKDOWN_PATH, styles)
     document.build(story, onFirstPage=draw_page, onLaterPages=draw_page)

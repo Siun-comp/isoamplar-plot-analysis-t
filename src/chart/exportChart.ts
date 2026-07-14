@@ -1,4 +1,5 @@
 import type { EChartsCoreOption } from "echarts/core";
+import { applyRenderedThresholdAnnotation } from "./thresholdRender";
 import type { ImageExportType } from "./exportFilenames";
 import type { LegendItem } from "./chartProjection";
 import type { ImageExportLayout } from "../data/types";
@@ -238,6 +239,7 @@ export async function exportChartImageDataUrl(args: {
 
   try {
     chart.setOption(args.option, true);
+    applyRenderedThresholdAnnotation(chart, args.option);
     await new Promise((resolve) => requestAnimationFrame(resolve));
     const dataUrl = chart.getDataURL({
       type: args.type,
@@ -547,6 +549,8 @@ async function loadEchartsForExport() {
       components.GridComponent,
       components.LegendComponent,
       components.TooltipComponent,
+      components.MarkLineComponent,
+      components.GraphicComponent,
       renderers.CanvasRenderer
     ]);
     return echarts;

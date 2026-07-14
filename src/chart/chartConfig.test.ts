@@ -3,6 +3,8 @@ import { createDefaultChartScale, getAppliedAxisScaleForDraft, hasVisibleCurveWa
 import { buildPcrChartOption } from "./chartConfig";
 import { createDefaultStyleRules } from "./chartStyle";
 import { createOneSpecimenEightReagentDataset, createTwentyOnePlusCurveDataset } from "../data/sampleData";
+import { THRESHOLD_RULE_ID } from "../analysis/threshold";
+import { THRESHOLD_MARK_LINE_NAME } from "./thresholdRender";
 
 describe("PCR chart configuration", () => {
   it("builds a clean ECharts line option without dense minor grid lines", () => {
@@ -46,6 +48,27 @@ describe("PCR chart configuration", () => {
     expect(option.series[0].data).toEqual(curve.x.map((x, index) => [x, curve.y[index]]));
     expect(option.series[0].smooth).toBeUndefined();
     expect(option.series[0].sampling).toBeUndefined();
+  });
+
+  it("adds one silent Threshold mark line without creating a legend series", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const selectedCurveIds = new Set(dataset.curves.slice(0, 2).map((curve) => curve.curveId));
+    const result = buildPcrChartOption({
+      dataset,
+      selectedCurveIds,
+      scale: createDefaultChartScale(),
+      threshold: { value: 250_000, ruleId: THRESHOLD_RULE_ID }
+    });
+    const option = result.option as Record<string, any>;
+
+    expect(option.series).toHaveLength(2);
+    expect(result.legendItems).toHaveLength(2);
+    expect(option.series.filter((series: Record<string, unknown>) => "markLine" in series)).toHaveLength(1);
+    expect(option.series[0].markLine).toMatchObject({
+      silent: true,
+      data: [{ name: THRESHOLD_MARK_LINE_NAME, yAxis: 250_000 }]
+    });
+    expect(option.series[1].markLine).toBeUndefined();
   });
 
   it("uses app-controlled curve highlight without changing marker settings", () => {

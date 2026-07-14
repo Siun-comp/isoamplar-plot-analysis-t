@@ -7,13 +7,14 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-07-12
+2026-07-14
 
 ## CURRENT TRUTH
 
 - Active branch: `codex/audit-remediation`; it does not trigger the Pages deploy workflow.
 - Current working extension: Selection Sets and Selected Data XLSX are implemented, independently reviewed, and deployed from `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md` at product source SHA `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`.
 - Current published product artifact source: `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`. The prior tagged release `release-20260711-audit-remediation-r1` at `eae3281fb8f9bbbd900fab528be3e094b93b555a` remains the documented rollback anchor.
+- Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is implemented and locally verified through TH7 documentation/guide QA. The approved Threshold-capable edition is named `IsoAmplar Plot Analysis T` and is being separated into the `isoamplar-plot-analysis-t` repository/Pages project so the original non-T deployment remains unchanged.
 - Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
@@ -36,7 +37,7 @@ Active
 - The user has granted standing approval for subsequent remediation phase commits. Continue phases sequentially, but do not push or deploy until the plan reaches the corresponding release phase.
 
 ## Compression-Safe Summary
-- IsoAmplar Plot Analysis implementation has moved beyond the initial MVP into release-validation and real-data hardening after Phase 8 plus the 2026-07-08/09 UI/analysis refinement, GitHub Pages deployment, app icon, and staged UX refinement passes.
+- IsoAmplar Plot Analysis T is the separately managed Threshold-capable edition built from the validated original desktop workflow. The original IsoAmplar Plot Analysis repository and Pages deployment remain independent.
 - Stack: React + Vite + TypeScript, SheetJS/xlsx, Apache ECharts, Zustand + Immer, `@tanstack/react-virtual`, Vitest + Testing Library, Playwright.
 - Historical MVP input remains `.xls` / `.xlsx` upload only, first worksheet only. Post-MVP Quick Paste Import now supports small tab-separated or single-column pasted tables; CSV files, comma/CSV tables, manual cell entry, app-side data editing, and sheet picker remain excluded.
 - Parser preserves raw fluorescence values; no smoothing, normalization, baseline correction, log transform, averaging, or Ct/Cq calculation is applied.
@@ -60,17 +61,39 @@ Active
 - Quick Paste Import Phases Q0-Q6 are implemented from `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`. It supports full-table and single-specimen input, tab-separated and single-column text, read-only preview, paginated source-position warnings with acknowledgement, stale/target revision guards for append and new-analysis actions, per-import source identity, mixed-source Analysis XLSX continuity, and the existing chart/export pipeline. Comma/CSV tables are rejected to prevent silent delimiter corruption.
 - A 2026-07-11 code/data-integrity/desktop-UX audit is complete in `docs/11_GPT56_PROJECT_AUDIT_KR.md`. Mobile was explicitly excluded. No P0 issue was identified; Stabilization A prioritizes invalid Fixed-scale export fallback, exported-legend identity truncation, Excel formatted-header identity, actionable Excel warnings, browser refresh/close protection, and accepted-size Quick Paste crash prevention. The audit also records P2 state/export/performance risks, documentation drift, and workflow candidates such as Warning Center, explicit save commands, Named Views, and optional export preflight.
 - The audit remediation plan in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md` is implemented through S11 and the release is active on GitHub Pages.
+- Threshold remains absent from the original non-T public runtime and is complete in the approved T-edition release candidate. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and positive/negative interpretation.
 
 ## Current Goal
-Hand the deployed Selection Sets and Selected Data XLSX workflow to the user for representative-workbook acceptance.
+Commit and publish the approved Threshold-capable build as the separate IsoAmplar Plot Analysis T repository and Pages application without changing the original deployment.
 
 ## Current Milestone
-M10 - Repeated-selection workflow and Excel follow-up export.
+M12 T-edition separation and publication in progress.
 
 ## Last Completed Step
-Deployed final product source `6c57afb` after branch CI run `29161091055` and Pages run `29161173159` passed the full 293-test/audit/dependency/build/fresh-Chromium/exact-dist gates. Public 1280px synthetic smoke passed original XLSX import, curve selection, Selection Set creation, Selected Data XLSX download/readback, expected five-sheet/role-marker contract, no document overflow, zero browser errors, and zero unexpected external origins. Independent state/data, XLSX, and desktop UX re-audits are GO.
+Completed TH0~TH7 local scope, final audit remediation, and T-edition identity/base-path separation. Runtime, workbook schemas, per-event evidence UI, synthetic screenshots, release documents, and first-user guide were updated. Final T-edition local gates passed 41 files / 336 Vitest tests, 1 audit probe, 13/13 fresh Chromium tests, 0 production dependency vulnerabilities, production build, and byte-identical pre/post-Playwright `dist` hash `1fccad63a0182049c6d266b99642fb03b0b5be68e7e319ebd5fb17d0f8585224`. Commit and separate deployment are the active next step.
 
 ## Latest Changed Files
+- `src/analysis/threshold.ts`
+- `src/analysis/threshold.test.ts`
+- `src/chart/thresholdRender.ts`
+- `src/chart/thresholdRender.test.ts`
+- `src/ui/ThresholdSettingsPanel.tsx`
+- `src/ui/ThresholdResultsPanel.tsx`
+- `src/ui/ThresholdResultsPanel.test.tsx`
+- `src/analysis/analysisState.ts`
+- `src/analysis/analysisWorkbook.ts`
+- `src/app/appStore.ts`
+- `src/chart/chartConfig.ts`
+- `src/chart/exportChart.ts`
+- `src/chart/selectedDataWorkbook.ts`
+- `src/ui/ChartPanel.tsx`
+- `src/ui/SettingsPanel.tsx`
+- `src/styles.css`
+- `tests/e2e/app.spec.ts`
+- `docs/gui_mockups/screenshots/threshold_settings_plot.png`
+- `docs/gui_mockups/screenshots/threshold_results_panel.png`
+- `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md`
+- `DEVELOPMENT_STATE.md`
 - `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md`
 - `src/selection/selectionSets.ts`
 - `src/ui/SelectionSetPanel.tsx`
@@ -80,8 +103,8 @@ Deployed final product source `6c57afb` after branch CI run `29161091055` and Pa
 - `src/app/appStore.ts`
 - `src/ui/SettingsPanel.tsx`
 - `tests/e2e/app.spec.ts`
-- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.md`
-- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
+- `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.md`
+- `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.pdf`
 - `.github/workflows/pages.yml`
 - `.github/workflows/s1-ci.yml`
 - `AGENTS.md`
@@ -98,8 +121,8 @@ Deployed final product source `6c57afb` after branch CI run `29161091055` and Pa
 - `docs/15_RELEASE_CANDIDATE_KR.md`
 - `DEVELOPMENT_STATE.md`
 - `tests/audit/releaseEvidence.test.ts`
-- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.md`
-- `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
+- `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.md`
+- `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.pdf`
 
 ## Previous Phase S10 Changed Files
 - `.github/workflows/pages.yml`
@@ -179,6 +202,15 @@ Deployed final product source `6c57afb` after branch CI run `29161091055` and Pa
 - `docs/gui_mockups/screenshots/s2_scale_draft_applied.png`
 
 ## Implemented
+- Threshold local candidate:
+  - one tab-local user-set raw fluorescence Threshold with strict draft/applied state and independent preview/export display controls
+  - versioned adjacent finite first-upward crossing rule with no null bridging or source-data transformation
+  - separate Cycle-axis linear estimate, first observed at-or-above point, start/gap/multiple-event outcomes, and source-cell/formula-cache evidence
+  - ECharts silent Threshold markLine or above/below range annotation without Auto/Fixed/P1/P2/Box zoom expansion and without a pseudo legend series
+  - compact Threshold settings accordion and bounded per-curve review panel in current order with Analysis labels/style samples and hover linkage
+  - Analysis XLSX schema 5 configuration continuity with schema 1-4 migration and result recomputation after restore
+  - Selected Data XLSX schema 2 fixed `ThresholdResults`/`ThresholdEvents` sheets while raw `PlottedData` remains unchanged
+  - synthetic-only guide screenshots and Korean first-user guide update
 - Audit remediation S4:
   - recomputes Excel header display identity from raw value/type/number format instead of trusting stale `cell.w`
   - preserves header and warning raw/display/type/format/formula/cache provenance without changing raw fluorescence
@@ -458,6 +490,11 @@ Deployed final product source `6c57afb` after branch CI run `29161091055` and Pa
 - `D035`: Analysis labels replace report-only labels and apply consistently to chart legends, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state.
 
 ## Verification Status
+- 2026-07-14 Threshold final local gate: `npm run test` passed 41 files / 336 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; production build passed; fresh Chromium passed 13/13. The complete `dist` tree remained byte-identical before/after Playwright at `e178d3bf3e95be3a64f04959968a39c3995ee9e1c459139598424588b64c2d8c`.
+- Threshold browser evidence uses synthetic data only and covers Auto Y non-expansion, independent preview/export visibility, out-of-range downloaded PNG raster difference, crossed/multiple/internal-gap/starts-above results, Selected Data XLSX schema 2 sheet/readback, Analysis XLSX schema 5 restore, no document horizontal overflow, and no unexpected browser/network errors.
+- Final audit remediation exposes every event's raw bracket values, exact source cells, source instance ID, interpolation status, and formula-cache evidence in the bounded result panel; multiple crossings share the review filter/count predicate; non-primary XLSX notes remain consistent with blank primary columns. Edge outcome and enabled mismatched-draft roundtrip regressions are covered.
+- 2026-07-14 independent final Threshold re-audit: prior P1/P2 evidence, workbook-note, review-classification, and coverage findings are resolved; no release-blocking correctness, UX, accessibility, density, or data-integrity issue; verdict GO.
+- 2026-07-14 Threshold planning review: two independent experts reviewed molecular-assay semantics and frontend/state/XLSX migration. Chronological gap precedence, event/source evidence, standalone naming, out-of-range raster annotation, capability-based migration, tab-facade propagation, and schema-1/2 role compatibility were integrated; both final re-audits returned GO. Markdown fence/UTF-8/replacement-character and `git diff --check` validation passed. No runtime test claim is added because product code did not change.
 - Phase R1 `git diff --check`: passed, with CRLF replacement warnings only.
 - Phase R1 `npm run test`: passed, 45 Vitest tests.
 - Phase R1 `npm run build`: passed.
@@ -617,6 +654,9 @@ Deployed final product source `6c57afb` after branch CI run `29161091055` and Pa
   - `docs/gui_mockups/screenshots/phase-r12_hover_warning_mobile.png`
 
 ## Known Gaps
+- Threshold is complete only in the uncommitted local candidate; the public Pages app remains on the prior Selection Sets/Selected Data XLSX build until user review and explicit release work.
+- The app does not validate whether raw fluorescence from different instruments, dyes, reagent conditions, or source instances is scientifically comparable under one Threshold. It shows source identity/advisory evidence and leaves that experimental judgement to the user.
+- Threshold automatic recommendation, baseline correction, multiple simultaneous Thresholds, Ct/Cq/Tt/Tp, quantitative interpretation, and positive/negative or clinical classification remain excluded.
 - Selection Sets intentionally store curve membership only; full Named Views containing scale/style/labels/order remain a future decision.
 - Selected Data XLSX currently requires a common-X rectangular projection and is output-only. Non-common-X workbook layouts and native editable Excel charts remain excluded.
 - Phases S0-S11 are implemented, deployed, and independently reviewed with no automated release blocker.
@@ -646,13 +686,14 @@ Deployed final product source `6c57afb` after branch CI run `29161091055` and Pa
 - Audit remediation implementation plan: `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md`
 - Audit remediation traceability: `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
 - Selection Sets and Selected Data XLSX plan: `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md`
+- Threshold and crossing inspection plan: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md`
 - Release candidate evidence: `docs/15_RELEASE_CANDIDATE_KR.md`
 - Synthetic fixture contract: `docs/07_FIXTURE_SNAPSHOT_PLAN_KR.md`
-- First-user guide PDF: `output/pdf/IsoAmplar_Plot_Analysis_User_Guide_KR.pdf`
+- First-user guide PDF: `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.pdf`
 - Local dev server: `http://127.0.0.1:5173/`
-- Local production preview: `http://127.0.0.1:4173/`
+- Local Threshold candidate preview: `http://127.0.0.1:4175/`
 
 ## Next 3 Tasks
-1. User manually checks Selection Set switching and Selected Data XLSX usability with representative non-sensitive workbooks.
-2. Record any domain-specific issue with source location, intended set membership, and exported workbook evidence before changing parser or export policy.
-3. Decide only when needed on official payload limits, internal tab cap, hosting access control, full Named Views, and GitHub action-major migration.
+1. User inspects the local candidate at `http://127.0.0.1:4175/` with representative non-sensitive workflows, especially observed/interpolated evidence and preview/export toggles.
+2. If approved, create an intentional commit on `codex/audit-remediation`; rerun the exact release gate if any correction is made.
+3. Push and run GitHub Pages deployment, then perform public synthetic smoke for Threshold render, Analysis XLSX schema 5 restore, Selected Data XLSX schema 2 readback, overflow, network, and console status.

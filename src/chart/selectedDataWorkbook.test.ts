@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import { createDefaultChartScale } from "./chartScale";
 import { createStats, createSyntheticPcrDataset } from "../data/sampleData";
 import type { Curve, PcrWarning } from "../data/types";
+import { THRESHOLD_RULE_ID } from "../analysis/threshold";
 import {
   createSelectedDataWorkbook,
   inspectSelectedDataWorkbookRole,
+  PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
   SELECTED_DATA_ROLE_SHEET_NAME,
   SELECTED_DATA_WORKBOOK_MARKER,
+  THRESHOLD_EVENTS_SHEET_NAME,
+  THRESHOLD_RESULTS_SHEET_NAME,
   validateSelectedDataProjection
 } from "./selectedDataWorkbook";
 
@@ -44,9 +48,11 @@ describe("Selected Data XLSX writer", () => {
       "CurveInfo",
       "Warnings",
       "ExportInfo",
+      THRESHOLD_RESULTS_SHEET_NAME,
+      THRESHOLD_EVENTS_SHEET_NAME,
       SELECTED_DATA_ROLE_SHEET_NAME
     ]);
-    expect(inspectSelectedDataWorkbookRole(workbook)).toEqual({ kind: "selected-data", schemaVersion: 1 });
+    expect(inspectSelectedDataWorkbookRole(workbook)).toEqual({ kind: "selected-data", schemaVersion: 2 });
     expect(workbook.Workbook?.Sheets?.find((sheet) => sheet.name === SELECTED_DATA_ROLE_SHEET_NAME)?.Hidden).toBe(1);
 
     const plotted = workbook.Sheets.PlottedData;
@@ -68,6 +74,155 @@ describe("Selected Data XLSX writer", () => {
     expect(exportInfo.get("Y applied mode")).toBe("fixed");
     expect(exportInfo.get("Fluorescence transform")).toBe("None");
     expect(exportInfo.get("Exported rows")).toBe("Full common X range");
+    expect(exportInfo.get("Threshold enabled")).toBe(false);
+    expect(XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_RESULTS_SHEET_NAME], { header: 1, raw: true })).toHaveLength(2);
+    expect(XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_EVENTS_SHEET_NAME], { header: 1, raw: true })).toHaveLength(2);
+  });
+
+  it("writes ordered Threshold summaries and all crossing/gap events without changing raw rows", async () => {
+    const dataset = createSyntheticPcrDataset({
+      specimenLabels: ["Synthetic sample"],
+      reagentLabels: ["Condition A", "Condition B"],
+      cycleCount: 5
+    });
+    const crossed = withValues(dataset.curves[0], [0, 4, 6, 2, 7]);
+    const gap = withValues(dataset.curves[1], [0, null, 8, 9, 10]);
+    const result = await createSelectedDataWorkbook({
+      curves: [crossed, gap],
+      labelsByCurveId: { [crossed.curveId]: "Current A", [gap.curveId]: "Current B" },
+      analysisLabelsByCurveId: { [crossed.curveId]: "Analysis A", [gap.curveId]: "Analysis B" },
+      warnings: [],
+      analysisName: "Threshold evidence",
+      chartScale: createDefaultChartScale(),
+      thresholdSettings: {
+        enabled: true,
+        draftValue: "5",
+        applied: { value: 5, ruleId: THRESHOLD_RULE_ID },
+        showInPreview: false,
+        includeInPlotExport: false
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const workbook = readWorkbook(result.buffer);
+    const plottedRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.PlottedData, { header: 1, raw: true });
+    expect(plottedRows[1]).toEqual([1, 0, 0]);
+    expect(plottedRows[2]).toEqual([2, 4]);
+    expect(plottedRows).toHaveLength(6);
+
+    const resultRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_RESULTS_SHEET_NAME], {
+      header: 1,
+      raw: true
+    });
+    expect(resultRows[0]).toEqual(["Threshold status", "Applied"]);
+    expect(resultRows[2]).toEqual(expect.arrayContaining([1, crossed.curveId, "Analysis A", "Synthetic sample", "Condition A", 5, THRESHOLD_RULE_ID, "crossed", 2, true]));
+    expect(resultRows[2][14]).toBe(3);
+    expect(resultRows[2][15]).toBe(6);
+    expect(resultRows[2][17]).toBe(2.5);
+    expect(resultRows[3][10]).toBe("indeterminate-gap");
+    expect(resultRows[3][16]).toBeUndefined();
+    expect(resultRows[3][17]).toBeUndefined();
+
+    const eventRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_EVENTS_SHEET_NAME], {
+      header: 1,
+      raw: true
+    });
+    expect(eventRows.slice(2).map((row) => row[3])).toEqual(["crossing", "crossing", "indeterminate-gap"]);
+    expect(eventRows[2][14]).toBe(2.5);
+    expect(eventRows[4][12]).toBe(1);
+    expect(eventRows[4][13]).toBe(1);
+    expect(eventRows[2][22]).toEqual(expect.stringContaining('"cell"'));
+
+    const exportInfo = keyValueRows(workbook.Sheets.ExportInfo);
+    expect(exportInfo.get("Threshold enabled")).toBe(true);
+    expect(exportInfo.get("Threshold applied")).toBe(5);
+    expect(exportInfo.get("Threshold rule ID")).toBe(THRESHOLD_RULE_ID);
+    expect(exportInfo.get("Threshold data transform")).toContain("no baseline correction");
+  });
+
+  it("keeps edge outcomes blank in primary estimate columns and describes later events accurately", async () => {
+    const dataset = createSyntheticPcrDataset({
+      specimenLabels: ["Synthetic sample"],
+      reagentLabels: ["Starts above", "Starts at", "Leading gap", "Not reached", "Insufficient", "Multiple"],
+      cycleCount: 7
+    });
+    const curves = [
+      withValues(dataset.curves[0], [6, 1, 7, 1, 8, 1, 9]),
+      withValues(dataset.curves[1], [5, 1, 6, 1, 7, 1, 8]),
+      withValues(dataset.curves[2], [null, 6, 1, 7, 1, 8, 1]),
+      withValues(dataset.curves[3], [1, 2, null, 3, 4, 4, 1]),
+      withValues(dataset.curves[4], [null, null, null, null, null, null, null]),
+      withValues(dataset.curves[5], [1, 6, 1, 7, 1, 8, 1])
+    ];
+    const result = await createSelectedDataWorkbook({
+      curves,
+      warnings: [],
+      analysisName: "Threshold edge outcomes",
+      chartScale: createDefaultChartScale(),
+      thresholdSettings: {
+        enabled: true,
+        draftValue: "5",
+        applied: { value: 5, ruleId: THRESHOLD_RULE_ID },
+        showInPreview: true,
+        includeInPlotExport: true
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const workbook = readWorkbook(result.buffer);
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_RESULTS_SHEET_NAME], {
+      header: 1,
+      raw: true
+    });
+    const headers = new Map((rows[1] as string[]).map((header, index) => [header, index]));
+    const byOutcome = new Map(rows.slice(2).map((row) => [row[headers.get("Outcome") as number], row]));
+
+    for (const outcome of [
+      "starts-above-threshold",
+      "starts-at-threshold",
+      "indeterminate-leading-gap",
+      "not-reached",
+      "insufficient-data"
+    ]) {
+      expect(byOutcome.get(outcome)?.[headers.get("Primary Cycle-axis linear estimate") as number]).toBeUndefined();
+      expect(String(byOutcome.get(outcome)?.[headers.get("Note") as number])).not.toContain("shown");
+    }
+    expect(String(byOutcome.get("starts-above-threshold")?.[headers.get("Note") as number])).toContain("subsequent upward crossing");
+    expect(String(byOutcome.get("indeterminate-leading-gap")?.[headers.get("Note") as number])).toContain("ThresholdEvents");
+    expect(String(byOutcome.get("not-reached")?.[headers.get("Note") as number])).toBe("No observed upward crossing.");
+    expect(String(byOutcome.get("insufficient-data")?.[headers.get("Note") as number])).toContain("Insufficient finite raw points");
+
+    const crossedRows = rows.slice(2).filter((row) => row[headers.get("Outcome") as number] === "crossed");
+    expect(crossedRows).toHaveLength(1);
+    expect(crossedRows[0][headers.get("Primary Cycle-axis linear estimate") as number]).toBe(1.8);
+    expect(String(crossedRows[0][headers.get("Note") as number])).toContain("First upward crossing shown");
+
+    const events = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_EVENTS_SHEET_NAME], {
+      header: 1,
+      raw: true
+    });
+    expect(events.slice(2).some((row) => row[3] === "indeterminate-leading-gap")).toBe(true);
+    expect(events.slice(2).filter((row) => row[3] === "crossing").length).toBeGreaterThan(3);
+  });
+
+  it("rejects an enabled unapplied Threshold draft", async () => {
+    const dataset = createSyntheticPcrDataset({ specimenLabels: ["Synthetic"], reagentLabels: ["A"] });
+    const result = await createSelectedDataWorkbook({
+      curves: dataset.curves,
+      warnings: [],
+      analysisName: "Mismatched Threshold",
+      chartScale: createDefaultChartScale(),
+      thresholdSettings: {
+        enabled: true,
+        draftValue: "6",
+        applied: { value: 5, ruleId: THRESHOLD_RULE_ID },
+        showInPreview: true,
+        includeInPlotExport: true
+      }
+    });
+    expect(result).toMatchObject({ ok: false, reason: expect.stringContaining("적용") });
   });
 
   it("rejects empty, non-common-X, non-rectangular, and non-finite projections", async () => {
@@ -276,6 +431,18 @@ describe("Selected Data XLSX writer", () => {
     const corrupt = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(corrupt, XLSX.utils.aoa_to_sheet([["Wrong"], ["schemaVersion", 1]]), SELECTED_DATA_ROLE_SHEET_NAME);
     expect(inspectSelectedDataWorkbookRole(corrupt)).toMatchObject({ kind: "invalid-selected-data" });
+
+    const legacy = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      legacy,
+      XLSX.utils.aoa_to_sheet([
+        [SELECTED_DATA_WORKBOOK_MARKER],
+        ["schemaVersion", PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION],
+        ["role", "selected-data-output-only"]
+      ]),
+      SELECTED_DATA_ROLE_SHEET_NAME
+    );
+    expect(inspectSelectedDataWorkbookRole(legacy)).toEqual({ kind: "selected-data", schemaVersion: 1 });
   });
 });
 

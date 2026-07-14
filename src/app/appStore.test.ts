@@ -657,6 +657,28 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().exportMessage).toContain("저장 안 됨 상태를 유지");
   });
 
+  it("keeps the latest Threshold dirty when an older Analysis XLSX snapshot finishes saving", () => {
+    useAppStore.getState().loadDataset(createOneSpecimenEightReagentDataset());
+    useAppStore.getState().setThresholdDraftValue("100");
+    useAppStore.getState().applyThresholdDraft();
+    const target = useAppStore.getState();
+
+    useAppStore.getState().setThresholdDraftValue("200");
+    useAppStore.getState().applyThresholdDraft();
+    const result = useAppStore.getState().markAnalysisSaveSuccess({
+      analysisId: target.activeAnalysisId,
+      runtimeInstanceId: target.runtimeInstanceId,
+      expectedRevision: target.revision,
+      savedExportCounter: target.exportCounter + 1,
+      message: "Saved threshold snapshot.xlsx."
+    });
+
+    expect(result).toBe("changed");
+    expect(useAppStore.getState().thresholdSettings.applied?.value).toBe(200);
+    expect(useAppStore.getState().dirty).toBe(true);
+    expect(useAppStore.getState().revision).toBeGreaterThan(target.revision);
+  });
+
   it("routes a completed export to its starting analysis after switching tabs", () => {
     useAppStore.getState().loadDataset(createOneSpecimenEightReagentDataset());
     const firstId = useAppStore.getState().activeAnalysisId;
@@ -774,6 +796,9 @@ describe("app store style preset and legend order", () => {
 
   it("keeps source file summaries when appending Excel files to the active tab", async () => {
     await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
+    useAppStore.getState().setThresholdDraftValue("0.5");
+    useAppStore.getState().applyThresholdDraft();
+    useAppStore.getState().setThresholdShowInPreview(false);
     await useAppStore.getState().appendFile(createWorkbookFile("second.xlsx", "Specimen 2", "A2", 0.2));
 
     const state = useAppStore.getState();
@@ -784,6 +809,11 @@ describe("app store style preset and legend order", () => {
       "first.xlsx",
       "second.xlsx"
     ]);
+    expect(state.thresholdSettings).toMatchObject({
+      enabled: true,
+      applied: { value: 0.5 },
+      showInPreview: false
+    });
   });
 
   it("clears pending preset undo after appending data to avoid stale override restoration", async () => {
@@ -896,6 +926,8 @@ describe("app store style preset and legend order", () => {
 
   it("replaces a dirty analysis only through explicit replace confirmation mode", async () => {
     await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
+    useAppStore.getState().setThresholdDraftValue("0.5");
+    useAppStore.getState().applyThresholdDraft();
 
     await useAppStore.getState().importFileWithMode(createWorkbookFile("replacement.xlsx", "Specimen 9", "A9", 9), "replace");
 
@@ -905,6 +937,13 @@ describe("app store style preset and legend order", () => {
     expect(state.dataset?.curves[0].specimenLabel).toBe("Specimen 9");
     expect(state.dirty).toBe(true);
     expect(state.importError).toBeNull();
+    expect(state.thresholdSettings).toEqual({
+      enabled: false,
+      draftValue: "",
+      applied: null,
+      showInPreview: true,
+      includeInPlotExport: true
+    });
   });
 
   it("uses the confirmation-time target tab for explicit replace even if the active tab changes", async () => {
@@ -927,6 +966,8 @@ describe("app store style preset and legend order", () => {
   it("opens source Excel as a new analysis through explicit new-tab confirmation mode", async () => {
     await useAppStore.getState().importFile(createWorkbookFile("first.xlsx", "Specimen 1", "A1", 0.1));
     const firstTabId = useAppStore.getState().activeAnalysisId;
+    useAppStore.getState().setThresholdDraftValue("0.5");
+    useAppStore.getState().applyThresholdDraft();
 
     await useAppStore.getState().importFileWithMode(createWorkbookFile("second.xlsx", "Specimen 2", "A2", 0.2), "newTab");
 
@@ -938,6 +979,8 @@ describe("app store style preset and legend order", () => {
     expect(state.dataset?.sourceFileName).toBe("second.xlsx");
     expect(state.dataset?.curves[0].specimenLabel).toBe("Specimen 2");
     expect(state.dirty).toBe(true);
+    expect(state.thresholdSettings.applied).toBeNull();
+    expect(state.analyses[firstTabId].thresholdSettings.applied?.value).toBe(0.5);
   });
 
   it("drops a stale new-tab parse failure after its starting runtime is closed and recreated", async () => {
@@ -986,6 +1029,10 @@ describe("app store style preset and legend order", () => {
     useAppStore.getState().setCurveOverride(firstCurveId, { color: "#123456", lineType: "dotted" });
     useAppStore.getState().setLegendPreviewVisible(false);
     useAppStore.getState().setExportImageLayout("legendOnly");
+    useAppStore.getState().setThresholdDraftValue("0.5");
+    useAppStore.getState().applyThresholdDraft();
+    useAppStore.getState().setThresholdShowInPreview(false);
+    useAppStore.getState().setThresholdIncludeInPlotExport(false);
     useAppStore.getState().markExportSuccess("Saved plot1.png.");
     const analysisFile = await createCurrentAnalysisXlsxFile("saved-analysis.xlsx");
 
@@ -1003,6 +1050,13 @@ describe("app store style preset and legend order", () => {
     expect(state.curveOverrides[firstCurveId]).toMatchObject({ color: "#123456", lineType: "dotted" });
     expect(state.legendSettings.previewVisible).toBe(false);
     expect(state.exportSettings.imageLayout).toBe("legendOnly");
+    expect(state.thresholdSettings).toMatchObject({
+      enabled: true,
+      draftValue: "0.5",
+      applied: { value: 0.5 },
+      showInPreview: false,
+      includeInPlotExport: false
+    });
     expect(state.exportCounter).toBe(2);
     expect(state.dirty).toBe(false);
     expect(state.analyses[targetTabId].dataset).toBeNull();
@@ -1167,6 +1221,7 @@ async function createCurrentAnalysisXlsxFile(fileName: string) {
       curveOverrides: state.curveOverrides,
       legendSettings: state.legendSettings,
       exportSettings: state.exportSettings,
+      thresholdSettings: state.thresholdSettings,
       exportCounter: state.exportCounter,
       importFileName: state.importFileName,
       sourceFiles: state.sourceFiles,

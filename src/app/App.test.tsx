@@ -87,7 +87,7 @@ describe("App PCR workspace", () => {
   it("renders the upload-first PCR workspace shell", () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "IsoAmplar Plot Analysis" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "IsoAmplar Plot Analysis T" })).toBeInTheDocument();
     expect(screen.getByText("연구·개발용 시각화 · 임상 판독 기능 없음")).toBeInTheDocument();
     expect(screen.getByText("Developer Jang Si Un")).toBeInTheDocument();
     expect(screen.getByText("Browser-local analysis")).toBeInTheDocument();
@@ -918,5 +918,82 @@ describe("App PCR workspace", () => {
     await waitFor(() => expect(useAppStore.getState().dirty).toBe(false));
     expect(useAppStore.getState().saveStatus).toBe("saved");
     expect(useAppStore.getState().lastSavedAtIso).not.toBeNull();
+  });
+
+  it("keeps Threshold preview and plot-export visibility independent", async () => {
+    const user = userEvent.setup();
+    const dataset = createOneSpecimenEightReagentDataset();
+    act(() => {
+      useAppStore.getState().loadDataset(dataset);
+      useAppStore.getState().setCurvesSelected([dataset.curves[0].curveId], true);
+    });
+    render(<App />);
+
+    await user.click(getSettingsSummary("Threshold"));
+    const thresholdRegion = screen.getByRole("region", { name: "Threshold 설정" });
+    await user.type(within(thresholdRegion).getByRole("textbox", { name: "Raw fluorescence Threshold" }), "250000");
+    await user.click(within(thresholdRegion).getByRole("button", { name: "적용" }));
+    expect(useAppStore.getState().thresholdSettings).toMatchObject({
+      enabled: true,
+      applied: { value: 250000 },
+      showInPreview: true,
+      includeInPlotExport: true
+    });
+    expect(screen.getByText("Threshold 값 검토")).toBeInTheDocument();
+
+    await user.click(within(thresholdRegion).getByRole("checkbox", { name: "미리보기 표시" }));
+    expect(useAppStore.getState().thresholdSettings.showInPreview).toBe(false);
+    expect(useAppStore.getState().thresholdSettings.includeInPlotExport).toBe(true);
+
+    await user.click(getSettingsSummary("Export"));
+    await user.click(screen.getByRole("button", { name: "Save PNG" }));
+    await user.click(screen.getByRole("button", { name: "Copy selected layout PNG to clipboard" }));
+    await waitFor(() => expect(exportChartLayoutImageBlob).toHaveBeenCalledTimes(2));
+    const thresholdOptions = vi.mocked(exportChartLayoutImageBlob).mock.calls.map(
+      ([args]) => args.option as Record<string, any>
+    );
+    for (const option of thresholdOptions) {
+      expect(option.series.some((series: Record<string, unknown>) => "markLine" in series)).toBe(true);
+    }
+    expect(copyPngBlobToClipboard).toHaveBeenCalledTimes(1);
+
+    vi.mocked(exportChartLayoutImageBlob).mockClear();
+    await user.click(within(thresholdRegion).getByRole("checkbox", { name: "Plot Export 포함" }));
+    await user.click(screen.getByRole("button", { name: "Save PNG" }));
+    await waitFor(() => expect(exportChartLayoutImageBlob).toHaveBeenCalledTimes(1));
+    const withoutThreshold = vi.mocked(exportChartLayoutImageBlob).mock.calls[0][0].option as Record<string, any>;
+    expect(withoutThreshold.series.some((series: Record<string, unknown>) => "markLine" in series)).toBe(false);
+  });
+
+  it("blocks only outputs that would contain an unapplied Threshold draft", async () => {
+    const user = userEvent.setup();
+    const dataset = createOneSpecimenEightReagentDataset();
+    act(() => {
+      useAppStore.getState().loadDataset(dataset);
+      useAppStore.getState().setCurvesSelected([dataset.curves[0].curveId], true);
+    });
+    render(<App />);
+
+    await user.click(getSettingsSummary("Threshold"));
+    const thresholdRegion = screen.getByRole("region", { name: "Threshold 설정" });
+    const input = within(thresholdRegion).getByRole("textbox", { name: "Raw fluorescence Threshold" });
+    await user.type(input, "100");
+    await user.click(within(thresholdRegion).getByRole("button", { name: "적용" }));
+    await user.clear(input);
+    await user.type(input, "200");
+
+    await user.click(getSettingsSummary("Export"));
+    const savePng = screen.getByRole("button", { name: "Save PNG" });
+    const selectedData = screen.getByRole("button", { name: "선택 데이터 XLSX 저장" });
+    expect(savePng).toBeDisabled();
+    expect(selectedData).toBeDisabled();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Image export layout" }), "legendOnly");
+    expect(savePng).toBeEnabled();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Image export layout" }), "plotOnly");
+    await user.click(within(thresholdRegion).getByRole("checkbox", { name: "Plot Export 포함" }));
+    expect(savePng).toBeEnabled();
+    expect(selectedData).toBeDisabled();
   });
 });

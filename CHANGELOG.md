@@ -1,5 +1,19 @@
 # CHANGELOG.md
 
+## 2026-07-14 - User-set raw fluorescence Threshold (local candidate)
+
+- Separated this Threshold-capable build as `IsoAmplar Plot Analysis T` with its own package, repository, Pages base path, PWA identity, and user guide so the original non-T deployment remains unchanged.
+- Added one tab-local user-set raw fluorescence Threshold with strict decimal/scientific input, apply/restore/clear states, and independent preview and plot-export visibility controls.
+- Added versioned `raw-first-upward-linear-v1` crossing inspection over unmodified raw X/Y arrays, keeping Cycle-axis linear estimates separate from first observed at-or-above points and preserving null-gap, start-above, multiple-crossing, and source-cell evidence.
+- Rendered a single neutral Threshold line without adding a legend series or changing Auto/Fixed/P1/P2/Box zoom ranges; out-of-range values use an above/below chart annotation instead of expanding the axis.
+- Added a bounded curve-by-curve Threshold review panel with current legend order, Analysis labels, result filters, style samples, hover highlighting, and expandable event-level raw bracket, cell, source-instance, interpolation, and formula-cache evidence.
+- Advanced Analysis XLSX to schema 5 for Threshold configuration continuity while recomputing derived results from the complete raw dataset after restore; schemas 1-4 migrate to Threshold disabled.
+- Advanced Selected Data XLSX to schema 2 with fixed `ThresholdResults` and `ThresholdEvents` sheets while leaving raw `PlottedData` unchanged and continuing to reject the workbook as an app input/restore file.
+- Added synthetic-only preview/export raster parity, workbook download/readback, schema restore, numerical edge-case, state-isolation, and desktop layout regression coverage.
+- Classified multiple upward crossings as review-needed even when the primary outcome is crossed, and corrected Selected Data XLSX notes so start/gap outcomes with later candidates never claim a primary crossing was shown.
+- Updated the Korean first-user Markdown/PDF guide with synthetic Threshold settings/result screenshots and troubleshooting guidance.
+- This candidate is verified locally only; no commit, push, or GitHub Pages deployment is included in this work session.
+
 ## 2026-07-12 - Selection Sets and Selected Data XLSX
 
 - Added tab-local named Selection Sets with explicit apply, modified-state indication, update, rename, delete, and one-step return to the selection that existed before applying a set.

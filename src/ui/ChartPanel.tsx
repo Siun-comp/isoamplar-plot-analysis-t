@@ -1,10 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { calculateThresholdResults } from "../analysis/threshold";
 import { useAppStore } from "../app/appStore";
 import { buildPcrChartOption } from "../chart/chartConfig";
 import { hasVisibleCurveWarning } from "../chart/chartScale";
 import type { ChartBoxZoomRejectReason, ChartHoverReadout, ChartZoomBounds } from "../chart/ChartView";
 import { getMatchedCurveIds } from "../selection/searchCurves";
 import { CustomLegend } from "./CustomLegend";
+import { ThresholdResultsPanel } from "./ThresholdResultsPanel";
 
 const LazyChartView = lazy(() => import("../chart/ChartView").then((module) => ({ default: module.ChartView })));
 
@@ -16,6 +18,7 @@ export function ChartPanel() {
   const styleRules = useAppStore((state) => state.styleRules);
   const curveOverrides = useAppStore((state) => state.curveOverrides);
   const legendSettings = useAppStore((state) => state.legendSettings);
+  const thresholdSettings = useAppStore((state) => state.thresholdSettings);
   const searchQuery = useAppStore((state) => state.searchQuery);
   const setSelectionFilter = useAppStore((state) => state.setSelectionFilter);
   const setCurvesSelected = useAppStore((state) => state.setCurvesSelected);
@@ -42,11 +45,30 @@ export function ChartPanel() {
         labelMode: groupingMode,
         styleRules,
         curveOverrides,
-        legendSettings
+        legendSettings,
+        threshold:
+          thresholdSettings.enabled && thresholdSettings.showInPreview ? thresholdSettings.applied : null
       }),
-    [chartScale, curveOverrides, dataset, groupingMode, legendSettings, orderedCurveIds, selectedCurveSet, styleRules]
+    [
+      chartScale,
+      curveOverrides,
+      dataset,
+      groupingMode,
+      legendSettings,
+      orderedCurveIds,
+      selectedCurveSet,
+      styleRules,
+      thresholdSettings
+    ]
   );
   const selectedCount = buildResult.visibleCurves.length;
+  const thresholdResults = useMemo(
+    () =>
+      thresholdSettings.enabled && thresholdSettings.applied
+        ? calculateThresholdResults(buildResult.visibleCurves, thresholdSettings.applied.value)
+        : [],
+    [buildResult.visibleCurves, thresholdSettings.applied, thresholdSettings.enabled]
+  );
   const selectedCurveIds = buildResult.visibleCurves.map((curve) => curve.curveId);
   const matchedSearchCurveIds = useMemo(
     () => (dataset ? getMatchedCurveIds(dataset, searchQuery) : new Set<string>()),
@@ -184,6 +206,14 @@ export function ChartPanel() {
         )}
       </div>
       <ChartReadout readout={hoverReadout} />
+      <ThresholdResultsPanel
+        enabled={thresholdSettings.enabled}
+        threshold={thresholdSettings.applied?.value ?? null}
+        curves={buildResult.visibleCurves}
+        results={thresholdResults}
+        legendItems={buildResult.legendItems}
+        onHoverCurve={handleLegendHover}
+      />
       {hasVisibleCurveWarning(selectedCount) && (
         <div className="chart-warning" role="status">
           <span>20개를 초과해 표시 중입니다. 구분이 어려울 수 있습니다.</span>

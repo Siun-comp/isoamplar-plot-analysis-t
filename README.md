@@ -1,4 +1,4 @@
-# IsoAmplar Plot Analysis
+# IsoAmplar Plot Analysis T
 
 Desktop browser tool for reviewing and exporting IsoAmplar/LAMP amplification fluorescence plots. It is a static React application deployed on GitHub Pages; imported data is processed in the browser.
 
@@ -11,13 +11,14 @@ This tool is for research and kit-development visualization. It does not perform
 - Quick Paste Import for tab-separated or single-column comparison data, with read-only preview and warnings.
 - Reagent-first or specimen-first selection, full-dataset search, and stable `curveId` identity.
 - ECharts plot preview with Auto, Fixed, P1/P2, Box zoom, Previous scale, and raw point readout.
+- One user-set raw fluorescence Threshold per analysis, with independent preview/export visibility and auditable per-curve observed and Cycle-axis linear crossing evidence.
 - Specimen/reagent group styles, per-curve overrides, HEX colors, line types, and markers.
 - User-controlled legend order, Analysis labels, Auto compact labels, and separate plot/legend outputs.
-- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, Selected Data XLSX, and secondary conditional plotted-data CSV.
+- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, Selected Data XLSX schema 2 with separate Threshold result/event sheets, and secondary conditional plotted-data CSV.
 - Named Selection Sets for switching recurring curve combinations without changing scale, style, labels, or order.
-- Multiple analysis tabs and Analysis XLSX schema 4 save/restore containing the complete imported dataset, settings, and Selection Sets.
+- Multiple analysis tabs and Analysis XLSX schema 5 save/restore containing the complete imported dataset, settings, Selection Sets, and Threshold configuration.
 
-The app does not smooth, normalize, baseline-correct, log-transform, average, interpolate, or calculate threshold/Ct/Cq from fluorescence data.
+The app does not smooth, normalize, baseline-correct, log-transform, or average fluorescence data. Its optional user-set raw Threshold feature reports a versioned geometric crossing estimate together with observed raw evidence; it does not recommend a Threshold, bridge null gaps, calculate Ct/Cq/Tt/Tp, or make positive/negative or clinical interpretations.
 
 ## Input Contract
 
@@ -53,12 +54,14 @@ npm run build
 npm run test:e2e
 ```
 
-Playwright starts a fresh production preview on port `4174` and never reuses an existing server. CI builds once for `/isoamplar-plot-analysis/`, records the complete `dist` SHA-256 manifest, runs fresh Chromium, and rejects any pre/post-test byte difference.
+Playwright starts a fresh production preview on port `4174` and never reuses an existing server. CI builds once for `/isoamplar-plot-analysis-t/`, records the complete `dist` SHA-256 manifest, runs fresh Chromium, and rejects any pre/post-test byte difference.
 
 ## Deployment
 
 Pushes to `main` and manual workflow dispatch run the verified GitHub Pages workflow. The build job is read-only; only the deploy job receives Pages/OIDC write permissions.
 
-Public app: https://siun-comp.github.io/isoamplar-plot-analysis/
+Public app: https://siun-comp.github.io/isoamplar-plot-analysis-t/
+
+This `T` edition is maintained and deployed separately from the original `IsoAmplar Plot Analysis` application. The `T` suffix identifies the edition with user-set raw fluorescence Threshold analysis.
 
 Developer: Jang Si Un

@@ -29,6 +29,7 @@ export async function saveActiveAnalysis(): Promise<SaveActiveAnalysisResult> {
     searchQuery: snapshot.searchQuery,
     selectionFilter: snapshot.selectionFilter,
     chartScale: snapshot.chartScale,
+    thresholdSettings: snapshot.thresholdSettings,
     styleRules: snapshot.styleRules,
     curveOverrides: snapshot.curveOverrides,
     legendSettings: snapshot.legendSettings,

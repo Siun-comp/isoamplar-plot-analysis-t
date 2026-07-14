@@ -10,6 +10,7 @@ import { createStats } from "../data/normalizePcrData";
 import { createInitialSelectionState } from "../selection/selectionState";
 import { createGroupId } from "../selection/buildTrees";
 import { createAnalysisState, createSourceFileSummary, serializeAnalysisState } from "./analysisState";
+import { THRESHOLD_RULE_ID } from "./threshold";
 import {
   ANALYSIS_RESTORE_SHEET_NAME,
   createAnalysisWorkbookFileName,
@@ -19,6 +20,22 @@ import {
   readAnalysisWorkbookBuffer,
   sanitizeAnalysisFileNamePart
 } from "./analysisWorkbook";
+
+function createRestoreWorkbook(serialized: unknown, schemaVersion: number) {
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.aoa_to_sheet([
+      ["IsoAmplarAnalysis"],
+      ["schemaVersion", schemaVersion],
+      ["chunkCount", 1],
+      ["chunkIndex", "jsonChunk"],
+      [0, JSON.stringify(serialized)]
+    ]),
+    ANALYSIS_RESTORE_SHEET_NAME
+  );
+  return workbook;
+}
 
 describe("Analysis XLSX workbook", () => {
   it("exports visible review sheets, hidden restore JSON, and roundtrips full unselected dataset", async () => {
@@ -76,6 +93,13 @@ describe("Analysis XLSX workbook", () => {
         reportNameOverrides: { [dataset.curves[0].curveId]: "Report A1" }
       },
       exportSettings: { imageLayout: "legendOnly" },
+      thresholdSettings: {
+        enabled: true,
+        draftValue: "2.6e5",
+        applied: { value: 250_000, ruleId: THRESHOLD_RULE_ID },
+        showInPreview: false,
+        includeInPlotExport: true
+      },
       exportCounter: 3,
       importFileName: dataset.sourceFileName,
       sourceFiles: [createSourceFileSummary(dataset)],
@@ -92,6 +116,7 @@ describe("Analysis XLSX workbook", () => {
 
     const buffer = await exportAnalysisWorkbookBuffer(state);
     const workbook = XLSX.read(buffer, { type: "array", raw: true });
+    expect(workbook.Sheets.README.A1?.v).toBe("IsoAmplar Plot Analysis T restore file");
 
     expect(workbook.SheetNames).toEqual([
       "README",
@@ -147,6 +172,13 @@ describe("Analysis XLSX workbook", () => {
       "X-axis rule"
     ]);
     expect(settingsRows).toContainEqual(["Cycle generation rule", "Cycle 1..N"]);
+    expect(settingsRows).toContainEqual(["Threshold enabled", true]);
+    expect(settingsRows).toContainEqual(["Threshold draft", "2.6e5"]);
+    expect(settingsRows).toContainEqual(["Threshold applied value", 250_000]);
+    expect(settingsRows).toContainEqual(["Threshold rule ID", THRESHOLD_RULE_ID]);
+    expect(settingsRows).toContainEqual(["Threshold visible in preview", false]);
+    expect(settingsRows).toContainEqual(["Threshold included in plot export", true]);
+    expect(settingsRows).toContainEqual(["Threshold data basis", "Raw fluorescence / no baseline correction"]);
 
     const restored = await readAnalysisWorkbookBuffer(buffer);
     expect(restored.kind).toBe("analysis");
@@ -211,6 +243,7 @@ describe("Analysis XLSX workbook", () => {
     expect(restored.analysis.legendSettings.reportLabelMode).toBe("full");
     expect(restored.analysis.legendSettings.reportNameOverrides).toEqual({});
     expect(restored.analysis.exportSettings.imageLayout).toBe("legendOnly");
+    expect(restored.analysis.thresholdSettings).toEqual(state.thresholdSettings);
     expect(restored.analysis.exportCounter).toBe(3);
     expect(restored.analysis.dirty).toBe(false);
     expect(restored.analysis.analysisId).not.toBe("analysis-test");
@@ -490,6 +523,74 @@ describe("Analysis XLSX workbook", () => {
     expect(restored.analysis.dataset.curves[0].source.specimenHeader).toMatchObject({ cellType: "legacy" });
     expect(restored.analysis.dataset.warnings[0]).toMatchObject({ handling: "kept" });
     expect(restored.analysis.dataset.warnings[0].sourceRefs?.[0]).toMatchObject({ cell: "A1", columnLetter: "A" });
+  });
+
+  it.each([1, 2, 3, 4, 5])("reads Analysis XLSX schema %i with exact capability migration", (schemaVersion) => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const state = createAnalysisState({
+      analysisId: `analysis-schema-${schemaVersion}`,
+      analysisName: `Schema ${schemaVersion}`,
+      dataset,
+      selection: createInitialSelectionState(dataset),
+      searchQuery: "",
+      selectionFilter: "all",
+      chartScale: createDefaultChartScale(),
+      styleRules: createDefaultStyleRules(),
+      curveOverrides: {},
+      thresholdSettings: {
+        enabled: true,
+        draftValue: "123.5",
+        applied: { value: 123.5, ruleId: THRESHOLD_RULE_ID },
+        showInPreview: false,
+        includeInPlotExport: false
+      },
+      selectionSets: [
+        {
+          selectionSetId: "selection-set-schema",
+          name: "Schema selection",
+          curveIds: [dataset.curves[0].curveId]
+        }
+      ],
+      activeSelectionSetId: "selection-set-schema",
+      exportCounter: 1,
+      importFileName: dataset.sourceFileName
+    });
+    const serialized = JSON.parse(JSON.stringify(serializeAnalysisState(state)));
+    serialized.schemaVersion = schemaVersion;
+    if (schemaVersion < 5) delete serialized.thresholdSettings;
+    if (schemaVersion < 4) {
+      delete serialized.selectionSets;
+      delete serialized.activeSelectionSetId;
+    }
+
+    const restored = readAnalysisWorkbook(createRestoreWorkbook(serialized, schemaVersion), XLSX);
+
+    expect(restored.kind).toBe("analysis");
+    if (restored.kind !== "analysis") return;
+    if (schemaVersion >= 4) {
+      expect(restored.analysis.selectionSets).toEqual(state.selectionSets);
+      expect(restored.analysis.activeSelectionSetId).toBe("selection-set-schema");
+    } else {
+      expect(restored.analysis.selectionSets).toEqual([]);
+      expect(restored.analysis.activeSelectionSetId).toBeNull();
+    }
+    expect(restored.analysis.thresholdSettings).toEqual(
+      schemaVersion >= 5
+        ? state.thresholdSettings
+        : {
+            enabled: false,
+            draftValue: "",
+            applied: null,
+            showInPreview: true,
+            includeInPlotExport: true
+          }
+    );
+    if (schemaVersion >= 3) {
+      expect(restored.analysis.dataset.curves[0].source).toEqual(state.dataset.curves[0].source);
+    }
+    if (schemaVersion === 5) {
+      expect(serializeAnalysisState(restored.analysis)).toEqual(serialized);
+    }
   });
 
   it("detects missing restore sheets and corrupt restore chunks", () => {

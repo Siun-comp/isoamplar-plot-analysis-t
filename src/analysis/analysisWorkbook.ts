@@ -15,6 +15,8 @@ type XlsxModule = typeof import("xlsx");
 export const ANALYSIS_RESTORE_SHEET_NAME = "_IsoAmplarAnalysis";
 export const ANALYSIS_RESTORE_MARKER = "IsoAmplarAnalysis";
 const READ_ME_SHEET_NAME = "README";
+const ANALYSIS_README_MARKER = "IsoAmplar Plot Analysis T restore file";
+const LEGACY_ANALYSIS_README_MARKER = "IsoAmplar Plot Analysis restore file";
 const SETTINGS_SHEET_NAME = "Settings";
 const HEADER_PROVENANCE_SHEET_NAME = "HeaderProvenance";
 const IMPORTED_DATA_SHEET_NAME = "ImportedData";
@@ -148,8 +150,8 @@ function appendSheet(xlsx: XlsxModule, workbook: XLSX.WorkBook, sheetName: strin
 
 function createReadmeRows() {
   return [
-    ["IsoAmplar Plot Analysis restore file"],
-    ["Purpose", "Open this file in IsoAmplar Plot Analysis to restore the full imported dataset and analysis settings."],
+    [ANALYSIS_README_MARKER],
+    ["Purpose", "Open this file in IsoAmplar Plot Analysis T to restore the full imported dataset and analysis settings."],
     ["Native editable Excel chart", "Not included"],
     ["Restore source", ANALYSIS_RESTORE_SHEET_NAME]
   ];
@@ -187,6 +189,13 @@ function createSettingsRows(state: AnalysisState, metrics: AnalysisWorkbookMetri
     ["Y applied mode", state.chartScale.y.applied.mode],
     ["Y applied min", state.chartScale.y.applied.min ?? ""],
     ["Y applied max", state.chartScale.y.applied.max ?? ""],
+    ["Threshold enabled", state.thresholdSettings.enabled],
+    ["Threshold draft", state.thresholdSettings.draftValue],
+    ["Threshold applied value", state.thresholdSettings.applied?.value ?? ""],
+    ["Threshold rule ID", state.thresholdSettings.applied?.ruleId ?? ""],
+    ["Threshold visible in preview", state.thresholdSettings.showInPreview],
+    ["Threshold included in plot export", state.thresholdSettings.includeInPlotExport],
+    ["Threshold data basis", "Raw fluorescence / no baseline correction"],
     [],
     [
       "Source type",
@@ -431,7 +440,13 @@ function readSerializedAnalysisState(worksheet: XLSX.WorkSheet, xlsx: XlsxModule
   }
 
   const schemaVersion = rows.find((row) => row[0] === "schemaVersion")?.[1];
-  if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== 3 && schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION) {
+  if (
+    schemaVersion !== 1 &&
+    schemaVersion !== 2 &&
+    schemaVersion !== 3 &&
+    schemaVersion !== 4 &&
+    schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
+  ) {
     throw new Error("Unsupported Analysis XLSX schema version.");
   }
 
@@ -538,7 +553,8 @@ function hasIsoAmplarAnalysisMarker(workbook: XLSX.WorkBook) {
   const readme = workbook.Sheets[READ_ME_SHEET_NAME];
   if (!readme) return false;
   const cell = readme["A1"];
-  return String(cell?.v ?? "").includes("IsoAmplar Plot Analysis restore file");
+  const marker = String(cell?.v ?? "");
+  return marker.includes(ANALYSIS_README_MARKER) || marker.includes(LEGACY_ANALYSIS_README_MARKER);
 }
 
 function hasRestoreSheetMarker(worksheet: XLSX.WorkSheet) {

@@ -73,7 +73,7 @@ Parser policy:
 CSV import is not part of the MVP. If added later, it must map into the same PCR curve model or require explicit specimen/reagent row confirmation.
 
 ## Analysis XLSX Rules
-Analysis XLSX is a project/session restore file for IsoAmplar Plot Analysis. It is not a report workbook and does not contain a native editable Excel chart.
+Analysis XLSX is a project/session restore file for IsoAmplar Plot Analysis T. It is not a report workbook and does not contain a native editable Excel chart. The T edition continues to recognize the legacy non-T README marker before schema validation.
 
 - Filename convention is `YYMMDD_<sanitizedAnalysisName>_analysisN.xlsx`, using browser-local date, the current analysis name, and the per-analysis export counter.
 - If no usable analysis name is available, the safe name segment falls back to `analysis`.
@@ -307,13 +307,14 @@ This structure may be refined during implementation but must preserve curveId-ba
 
 | ID | Output | Initial Rule | Related Requirements | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
-| IO-101 | Chart preview | Reflect current dataset, filters, mappings, layout, legend, fixed scales, and Box zoom-applied Fixed X/Y bounds. | FR-006 to FR-010 | AC-004 to AC-008, AC-PCR-044 |
+| IO-101 | Chart preview | Reflect current dataset, filters, mappings, layout, legend, fixed scales, Box zoom-applied Fixed X/Y bounds, and the applied raw-fluorescence Threshold when its independent preview toggle is enabled. Threshold display never changes scale or calculation input. | FR-006 to FR-010, FR-023 | AC-004 to AC-008, AC-PCR-044, AC-PCR-056 |
 | IO-102 | Image download | Export the current chart preview as PNG or JPEG with white background. | FR-011 | AC-009, AC-PCR-010 |
 | IO-103 | Clipboard output | Copy the selected chart image layout where supported, provide report legend-only PNG clipboard copy, provide rich Excel-cell report legend clipboard copy where supported, and show fallback on failure. | FR-012, FR-019 | AC-010, AC-PCR-031, AC-PCR-041 |
 | IO-104 | Static build | Produce static assets that work on GitHub Pages. | FR-013 | AC-011 |
 | IO-105 | Plotted data export | Export only currently plotted data when the current chart projection is simple and rectangular; otherwise disable with a clear reason. | FR-016 | AC-PCR-021, AC-PCR-022 |
-| IO-106 | Analysis XLSX export | Export a full analysis restore workbook containing the complete imported dataset and settings. | FR-017 | AC-PCR-033, AC-PCR-034, AC-PCR-037 |
-| IO-107 | Selected Data XLSX export | Export the current non-empty rectangular common-X selection in current user order as an `.xlsx` workbook with visible `PlottedData`, `CurveInfo`, `Warnings`, and `ExportInfo` sheets plus a hidden role marker. Numeric fluorescence remains numeric, null remains blank, strings remain non-formula/non-hyperlink cells, and all common-X rows are exported regardless of visible scale. | FR-021 | AC-PCR-054, AC-PCR-055 |
+| IO-106 | Analysis XLSX export | Export a full analysis restore workbook containing the complete imported dataset and settings, including Threshold enabled/draft/applied/rule and independent preview/export visibility options. Derived Threshold results are recomputed from raw data after restore. | FR-017, FR-023 | AC-PCR-033, AC-PCR-034, AC-PCR-037, AC-PCR-058 |
+| IO-107 | Selected Data XLSX export | Export the current non-empty rectangular common-X selection in current user order as an `.xlsx` workbook. Schema 2 keeps visible raw `PlottedData`, `CurveInfo`, `Warnings`, and `ExportInfo`, adds separate `ThresholdResults` and `ThresholdEvents` evidence sheets, and carries a hidden role marker. Numeric fluorescence remains numeric, null remains blank, strings remain non-formula/non-hyperlink cells, and all common-X rows are exported regardless of visible scale. | FR-021, FR-023 | AC-PCR-054, AC-PCR-055, AC-PCR-058 |
+| IO-108 | Threshold derived projection | Calculate the current selected curves over complete raw X/Y arrays with versioned `raw-first-upward-linear-v1`. Scale and preview/export visibility do not crop or alter calculation. The first observed at-or-above point, Cycle-axis linear estimate, all crossing events, gap uncertainty, source/formula-cache evidence, and outcome remain distinguishable. | FR-023 | AC-PCR-056, AC-PCR-057, AC-PCR-058 |
 
 ## Image Download Rules
 - Formats: PNG, JPEG.
@@ -355,7 +356,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 - `PlottedData` contains `Cycle` plus one numeric/blank column per selected curve in current user order. All common-X rows are exported even when Box zoom or a fixed Scale displays only part of the range.
 - `CurveInfo` preserves curve ID, Analysis label, original specimen/reagent identity, source instance/name/column, finite/null counts, and source range.
 - `Warnings` includes warning evidence related to the exported curves; `ExportInfo` records export time, analysis name, applied display Scale, and an explicit `None` data-transform statement.
-- Fluorescence values remain numbers and `null` remains blank. No smoothing, normalization, interpolation, baseline correction, thresholding, or scale-based cropping is applied.
+- Fluorescence values remain numbers and `null` remains blank. No smoothing, normalization, source-value interpolation, baseline correction, automatic thresholding, or scale-based cropping is applied. User-set Threshold crossing estimates are written only to separate derived result sheets and never inserted into `PlottedData`.
 - User/source strings are written as literal string cells without formulas or hyperlinks. Duplicate visible labels are deterministically source-disambiguated for column identity without changing live Analysis labels.
 - A hidden `_IsoAmplarSelectedData` marker identifies the workbook as output-only. Original open, append, and saved-analysis restore reject this role before analysis mutation.
 

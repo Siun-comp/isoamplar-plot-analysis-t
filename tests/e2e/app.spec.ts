@@ -121,7 +121,7 @@ test("renders the upload-first PCR workspace", async ({ page }) => {
   const configuredPath = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:4174").pathname;
   if (configuredPath !== "/") expect(new URL(page.url()).pathname).toBe(configuredPath);
 
-  await expect(page.getByRole("heading", { name: "IsoAmplar Plot Analysis" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "IsoAmplar Plot Analysis T" })).toBeVisible();
   await expect(page.getByText("Developer Jang Si Un")).toBeVisible();
   await expect(page.getByRole("heading", { name: "데이터 가져오기" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "데이터 선택" })).toBeVisible();
@@ -697,7 +697,7 @@ test("preserves formatted Excel identity and exposes actionable warning provenan
   const exportedWorkbook = XLSX.read(readFileSync(downloadPath as string), { type: "buffer", raw: true });
   expect(exportedWorkbook.SheetNames).toContain("HeaderProvenance");
   expect(exportedWorkbook.SheetNames).toContain("Warnings");
-  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(4);
+  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
   const warningRows = XLSX.utils.sheet_to_json<unknown[]>(exportedWorkbook.Sheets.Warnings, { header: 1, blankrows: false });
   expect(warningRows[0]).toEqual(expect.arrayContaining(["Handling", "Source ID", "Display value", "Formula cache"]));
 });
@@ -840,7 +840,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
   const analysisDownload = await savePromise;
   await analysisDownload.saveAs(analysisPath);
   const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
-  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(4);
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
   expect(analysisWorkbook.SheetNames).toContain("SelectionSets");
 
   await page.getByTestId("analysis-restore-input").setInputFiles(analysisPath);
@@ -867,14 +867,134 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
     "CurveInfo",
     "Warnings",
     "ExportInfo",
+    "ThresholdResults",
+    "ThresholdEvents",
     "_IsoAmplarSelectedData"
   ]);
   expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.A1?.v).toBe("IsoAmplarSelectedData");
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(2);
   expect(selectedWorkbook.Sheets.PlottedData["!ref"]).toBe("A1:B13");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.getByTestId("append-excel-input").setInputFiles(selectedDataPath);
   await expect(page.getByText("선택 데이터 XLSX는 Excel 후속 분석용이며 원본 입력 또는 분석 복원 파일이 아닙니다.")).toBeVisible();
+});
+
+test("keeps Threshold calculation, preview/export visibility, and workbook evidence consistent", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const sourcePath = testInfo.outputPath("synthetic-threshold-source.xlsx");
+  const selectedDataPath = testInfo.outputPath("synthetic-threshold-selected-data.xlsx");
+  const analysisPath = testInfo.outputPath("synthetic-threshold-analysis.xlsx");
+  writeThresholdWorkbookFixture(sourcePath);
+
+  await page.goto("./");
+  await page.getByTestId("original-data-input").setInputFiles(sourcePath);
+  await page.getByRole("button", { name: "표시 선택" }).click();
+  await expect(page.locator(".selection-meta span").nth(1)).toHaveText(/3$/u);
+
+  const yAxis = page.getByRole("region", { name: "Y axis" });
+  const autoRangeBefore = await yAxis.locator(".scale-auto-domain").textContent();
+  const thresholdSummary = page.locator(".settings-accordion > details > summary", { hasText: "Threshold" });
+  const thresholdDetails = thresholdSummary.locator("..");
+  if ((await thresholdDetails.getAttribute("open")) === null) await thresholdSummary.click();
+  await page.getByRole("textbox", { name: "Raw fluorescence Threshold" }).fill("5");
+  await page.getByRole("button", { name: "적용", exact: true }).click();
+  await expect(page.getByText("적용값: ")).toContainText("5");
+  await expect(page.getByText("선택 3 · 교차 1 · 검토 필요 2")).toBeVisible();
+  expect(await yAxis.locator(".scale-auto-domain").textContent()).toBe(autoRangeBefore);
+
+  const resultsPanel = page.locator(".threshold-results-panel");
+  await resultsPanel.locator("summary").first().click();
+  await expect(resultsPanel).toContainText("C3.5");
+  await expect(resultsPanel).toContainText("C4");
+  await expect(resultsPanel).toContainText("결측 구간");
+  await expect(resultsPanel).toContainText("시작점 초과");
+
+  const chartSurface = page.locator(".echarts-surface");
+  await expect(chartSurface).toBeVisible();
+  const previewOn = await chartSurface.screenshot({ animations: "disabled" });
+  await page.getByRole("checkbox", { name: "미리보기 표시" }).uncheck();
+  const previewOff = await chartSurface.screenshot({ animations: "disabled" });
+  expect(await countDifferentRasterPixels(page, previewOn, previewOff)).toBeGreaterThan(100);
+  await expect(page.getByRole("checkbox", { name: "Plot Export 포함" })).toBeChecked();
+
+  await page.getByRole("textbox", { name: "Raw fluorescence Threshold" }).fill("100");
+  await page.getByRole("button", { name: "적용", exact: true }).click();
+  expect(await yAxis.locator(".scale-auto-domain").textContent()).toBe(autoRangeBefore);
+
+  const exportSummary = page.locator(".settings-accordion > details > summary", { hasText: "Export" });
+  await exportSummary.click();
+  await page.getByLabel("Image export layout").selectOption("plotOnly");
+  const exportWithThresholdPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save PNG" }).click();
+  const exportWithThreshold = await exportWithThresholdPromise;
+  const exportWithThresholdPath = testInfo.outputPath("threshold-export-on.png");
+  await exportWithThreshold.saveAs(exportWithThresholdPath);
+
+  if ((await thresholdDetails.getAttribute("open")) === null) await thresholdSummary.click();
+  await page.getByRole("checkbox", { name: "Plot Export 포함" }).uncheck();
+  const exportWithoutThresholdPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save PNG" }).click();
+  const exportWithoutThreshold = await exportWithoutThresholdPromise;
+  const exportWithoutThresholdPath = testInfo.outputPath("threshold-export-off.png");
+  await exportWithoutThreshold.saveAs(exportWithoutThresholdPath);
+  expect(
+    await countDifferentRasterPixels(
+      page,
+      readFileSync(exportWithThresholdPath),
+      readFileSync(exportWithoutThresholdPath)
+    )
+  ).toBeGreaterThan(500);
+
+  if ((await thresholdDetails.getAttribute("open")) === null) await thresholdSummary.click();
+  await page.getByRole("checkbox", { name: "Plot Export 포함" }).check();
+  await page.getByRole("textbox", { name: "Raw fluorescence Threshold" }).fill("5");
+  await page.getByRole("button", { name: "적용", exact: true }).click();
+  const selectedDataPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "선택 데이터 XLSX 저장" }).click();
+  const selectedDataDownload = await selectedDataPromise;
+  await selectedDataDownload.saveAs(selectedDataPath);
+  const selectedWorkbook = XLSX.read(readFileSync(selectedDataPath), { type: "buffer", raw: true });
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(2);
+  expect(selectedWorkbook.SheetNames).toContain("ThresholdResults");
+  expect(selectedWorkbook.SheetNames).toContain("ThresholdEvents");
+  const thresholdResultRows = XLSX.utils.sheet_to_json<unknown[]>(selectedWorkbook.Sheets.ThresholdResults, {
+    header: 1,
+    blankrows: false
+  });
+  expect(thresholdResultRows[0]).toEqual(["Threshold status", "Applied"]);
+  expect(thresholdResultRows.slice(2).map((row) => row[10])).toEqual([
+    "crossed",
+    "indeterminate-gap",
+    "starts-above-threshold"
+  ]);
+  expect(thresholdResultRows[2][14]).toBe(4);
+  expect(thresholdResultRows[2][15]).toBe(6);
+  expect(thresholdResultRows[2][17]).toBe(3.5);
+  const eventRows = XLSX.utils.sheet_to_json<unknown[]>(selectedWorkbook.Sheets.ThresholdEvents, {
+    header: 1,
+    blankrows: false
+  });
+  expect(eventRows.slice(2).some((row) => row[3] === "indeterminate-gap")).toBe(true);
+  expect(eventRows.slice(2).some((row) => row[3] === "crossing")).toBe(true);
+
+  const analysisDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "분석 저장" }).click();
+  const analysisDownload = await analysisDownloadPromise;
+  await analysisDownload.saveAs(analysisPath);
+  const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
+
+  await page.getByTestId("analysis-restore-input").setInputFiles(analysisPath);
+  await expect(page.locator(".analysis-tab-button")).toHaveCount(2);
+  const restoredThresholdSummary = page.locator(".settings-accordion > details > summary", { hasText: "Threshold" });
+  const restoredThresholdDetails = restoredThresholdSummary.locator("..");
+  if ((await restoredThresholdDetails.getAttribute("open")) === null) await restoredThresholdSummary.click();
+  await expect(page.getByRole("textbox", { name: "Raw fluorescence Threshold" })).toHaveValue("5");
+  await expect(page.getByRole("checkbox", { name: "미리보기 표시" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Plot Export 포함" })).toBeChecked();
+  await expect(page.getByText("선택 3 · 교차 1 · 검토 필요 2")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test("creates and switches internal analysis tabs", async ({ page }, testInfo) => {
@@ -935,6 +1055,21 @@ function writeAnalysisRoundtripWorkbookFixture(filePath: string, specimenLabel: 
   ];
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "SyntheticRoundtrip");
   mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer);
+}
+
+function writeThresholdWorkbookFixture(filePath: string) {
+  const workbook = XLSX.utils.book_new();
+  const rows: Array<Array<string | number | null>> = [
+    ["Synthetic crossing", "Synthetic gap", "Synthetic starts above"],
+    ["Assay 01", "Assay 02", "Assay 03"],
+    [0, 0, 7],
+    [2, null, 6],
+    [4, 6, 5],
+    [6, 4, 4],
+    [8, 7, 3]
+  ];
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "SyntheticThreshold");
   writeFileSync(filePath, XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer);
 }
 
@@ -1071,6 +1206,40 @@ async function countNonWhiteCanvasPixels(canvasLocator: Locator) {
     }
 
     return count;
+  });
+}
+
+async function countDifferentRasterPixels(page: Page, left: Buffer, right: Buffer) {
+  return page.evaluate(async ({ leftDataUrl, rightDataUrl }) => {
+    const load = async (source: string) => {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("Canvas 2D context is unavailable.");
+      context.drawImage(image, 0, 0);
+      return { width: canvas.width, height: canvas.height, data: context.getImageData(0, 0, canvas.width, canvas.height).data };
+    };
+    const [leftImage, rightImage] = await Promise.all([load(leftDataUrl), load(rightDataUrl)]);
+    if (leftImage.width !== rightImage.width || leftImage.height !== rightImage.height) {
+      throw new Error("Raster dimensions differ.");
+    }
+    let changed = 0;
+    for (let index = 0; index < leftImage.data.length; index += 4) {
+      const delta =
+        Math.abs(leftImage.data[index] - rightImage.data[index]) +
+        Math.abs(leftImage.data[index + 1] - rightImage.data[index + 1]) +
+        Math.abs(leftImage.data[index + 2] - rightImage.data[index + 2]) +
+        Math.abs(leftImage.data[index + 3] - rightImage.data[index + 3]);
+      if (delta > 24) changed += 1;
+    }
+    return changed;
+  }, {
+    leftDataUrl: `data:image/png;base64,${left.toString("base64")}`,
+    rightDataUrl: `data:image/png;base64,${right.toString("base64")}`
   });
 }
 

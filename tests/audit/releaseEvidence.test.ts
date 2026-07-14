@@ -50,8 +50,8 @@ describe("GPT-5.6 audit remediation evidence", () => {
     expect(appE2e).toContain("routeWebSocket");
 
     for (const workflow of [branchCi, pages]) {
-      expect(workflow).toContain('E2E_BASE_URL: "http://127.0.0.1:4174/isoamplar-plot-analysis/"');
-      expect(workflow).toContain('VITE_BASE_PATH: "/isoamplar-plot-analysis/"');
+      expect(workflow).toContain('E2E_BASE_URL: "http://127.0.0.1:4174/isoamplar-plot-analysis-t/"');
+      expect(workflow).toContain('VITE_BASE_PATH: "/isoamplar-plot-analysis-t/"');
       expect(workflow).toContain("npm audit --omit=dev --audit-level=high");
       expect(workflow).toContain("npm run check:dist:before");
       expect(workflow).toContain("npm run check:dist:unchanged");

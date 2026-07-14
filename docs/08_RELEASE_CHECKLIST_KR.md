@@ -4,7 +4,25 @@
 Active release gate
 
 ## 최종 갱신
-2026-07-11
+2026-07-14
+
+## Threshold 로컬 후보 게이트
+- [x] raw fluorescence 불변 및 `null` 비연결 계산 규칙 검증
+- [x] 미리보기 표시와 Plot Export 포함 독립 제어
+- [x] Analysis XLSX schema 5 저장·복원·재계산
+- [x] Selected Data XLSX schema 2 결과/event sheet와 raw `PlottedData` 분리
+- [x] `npm run test`: 41 files / 336 tests
+- [x] `npm run test:audit`: 1 audit probe
+- [x] `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities
+- [x] production build
+- [x] fresh Chromium `13/13`
+- [x] T Pages base-path exact `dist` pre/post Playwright equality: `1fccad63a0182049c6d266b99642fb03b0b5be68e7e319ebd5fb17d0f8585224`
+- [x] synthetic Threshold preview/export raster difference, Y범위 밖 export 안내, workbook download/readback
+- [x] 다중 교차 검토 분류와 curve별 raw point/cell/source/formula-cache event 근거
+- [x] 로컬 데스크톱 화면: 문서 가로 overflow 없음, 고정 chart 높이, 한글 깨짐/console error 없음
+- [x] 최종 독립 재감사: prior P1/P2 4건 해소, release-blocking finding 없음, GO
+- [x] 사용자 로컬 검수 및 T 에디션 별도 배포 승인
+- [ ] `isoamplar-plot-analysis-t` commit/push/GitHub Pages 배포 및 공개 smoke
 
 ## 자동 게이트
 - [x] `git diff --check`

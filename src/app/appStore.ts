@@ -31,6 +31,11 @@ import type {
 } from "../data/types";
 import { parseExcelFile } from "../data/parseExcel";
 import { appendPcrDataset } from "../data/mergeDatasets";
+import {
+  THRESHOLD_RULE_ID,
+  createDefaultThresholdSettings,
+  parseThresholdInput
+} from "../analysis/threshold";
 import { createAllMajorGroupIds } from "../selection/buildTrees";
 import {
   createInitialSelectionState,
@@ -83,6 +88,7 @@ type SelectionSetUndoSnapshot = {
 };
 
 export type SelectionSetMutationResult = { ok: true; selectionSetId?: string } | { ok: false; message: string };
+export type ThresholdMutationResult = { ok: true } | { ok: false; message: string };
 
 export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
   runtimeInstanceId: string;
@@ -164,6 +170,13 @@ type AppStore = AppState & {
   returnFromBoxZoom: () => void;
   resetScaleToAuto: () => void;
   setAxisPresetValue: (axis: AxisId, preset: ScalePresetId, field: "label" | "min" | "max", value: string) => void;
+  setThresholdEnabled: (enabled: boolean) => ThresholdMutationResult;
+  setThresholdDraftValue: (value: string) => void;
+  applyThresholdDraft: () => ThresholdMutationResult;
+  revertThresholdDraft: () => void;
+  clearThreshold: () => void;
+  setThresholdShowInPreview: (visible: boolean) => void;
+  setThresholdIncludeInPlotExport: (included: boolean) => void;
   setStyleGroupingTarget: (field: "colorBy" | "lineTypeBy" | "markerBy", target: StyleGroupingTarget) => void;
   setGroupColor: (target: StyleGroupingTarget, entityId: string, color: string) => void;
   setGroupLineType: (target: StyleGroupingTarget, entityId: string, lineType: LineType) => void;
@@ -220,6 +233,7 @@ export const useAppStore = create<AppStore>()(
         state.selectionFilter = "all";
         state.chartScale = createDefaultChartScale();
         state.chartScaleReturnStack = [];
+        state.thresholdSettings = createDefaultThresholdSettings();
         state.styleRules = createDefaultStyleRules();
         state.curveOverrides = {};
         state.legendSettings = createDefaultLegendSettings();
@@ -698,6 +712,70 @@ export const useAppStore = create<AppStore>()(
         state.chartScale[axis][preset][field] = value;
         applyValidAxisDraft(state.chartScale[axis]);
         state.chartScaleReturnStack = [];
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setThresholdEnabled: (enabled) => {
+      let result: ThresholdMutationResult = { ok: true };
+      set((state) => {
+        if (enabled && !state.thresholdSettings.applied) {
+          result = { ok: false, message: "Apply a valid raw fluorescence Threshold before enabling it." };
+          return;
+        }
+        state.thresholdSettings.enabled = enabled;
+        markDirtyAndPersistActive(state);
+      });
+      return result;
+    },
+    setThresholdDraftValue: (value) => {
+      set((state) => {
+        state.thresholdSettings.draftValue = value;
+        markDirtyAndPersistActive(state);
+      });
+    },
+    applyThresholdDraft: () => {
+      let result: ThresholdMutationResult = { ok: true };
+      set((state) => {
+        const parsed = parseThresholdInput(state.thresholdSettings.draftValue);
+        if (!parsed.ok) {
+          result = {
+            ok: false,
+            message:
+              parsed.reason === "empty"
+                ? "Enter a raw fluorescence Threshold."
+                : "Threshold must use a finite decimal or exponent number."
+          };
+          return;
+        }
+        state.thresholdSettings.applied = { value: parsed.value, ruleId: THRESHOLD_RULE_ID };
+        state.thresholdSettings.enabled = true;
+        markDirtyAndPersistActive(state);
+      });
+      return result;
+    },
+    revertThresholdDraft: () => {
+      set((state) => {
+        const applied = state.thresholdSettings.applied;
+        if (!applied) return;
+        state.thresholdSettings.draftValue = applied.value.toString();
+        markDirtyAndPersistActive(state);
+      });
+    },
+    clearThreshold: () => {
+      set((state) => {
+        state.thresholdSettings = createDefaultThresholdSettings();
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setThresholdShowInPreview: (visible) => {
+      set((state) => {
+        state.thresholdSettings.showInPreview = visible;
+        markDirtyAndPersistActive(state);
+      });
+    },
+    setThresholdIncludeInPlotExport: (included) => {
+      set((state) => {
+        state.thresholdSettings.includeInPlotExport = included;
         markDirtyAndPersistActive(state);
       });
     },
@@ -1260,6 +1338,7 @@ function createEmptyAnalysisTab(analysisId: string, analysisName: string): Analy
     selectionFilter: "all",
     chartScale: createDefaultChartScale(),
     chartScaleReturnStack: [],
+    thresholdSettings: createDefaultThresholdSettings(),
     styleRules: createDefaultStyleRules(),
     curveOverrides: {},
     legendSettings: createDefaultLegendSettings(),
@@ -1353,6 +1432,7 @@ function replaceAnalysisDataset(
     selectionFilter: "all",
     chartScale: createDefaultChartScale(),
     chartScaleReturnStack: [],
+    thresholdSettings: createDefaultThresholdSettings(),
     styleRules: createDefaultStyleRules(),
     curveOverrides: {},
     legendSettings: createDefaultLegendSettings(),
@@ -1532,6 +1612,7 @@ function createTabFromAnalysisState(analysis: AnalysisState): AnalysisTabState {
     selectionFilter: analysis.selectionFilter,
     chartScale: clonePlain(analysis.chartScale),
     chartScaleReturnStack: [],
+    thresholdSettings: clonePlain(analysis.thresholdSettings),
     styleRules: clonePlain(analysis.styleRules),
     curveOverrides: clonePlain(analysis.curveOverrides),
     legendSettings: clonePlain(analysis.legendSettings),
@@ -1566,6 +1647,7 @@ function snapshotAdapterAsAnalysis(state: AppState): AnalysisTabState {
     selectionFilter: state.selectionFilter,
     chartScale: clonePlain(state.chartScale),
     chartScaleReturnStack: clonePlain(state.chartScaleReturnStack),
+    thresholdSettings: clonePlain(state.thresholdSettings),
     styleRules: clonePlain(state.styleRules),
     curveOverrides: clonePlain(state.curveOverrides),
     legendSettings: clonePlain(state.legendSettings),
@@ -1597,6 +1679,7 @@ function applyAnalysisToAdapter(state: AppState, analysis: AnalysisTabState) {
   state.selectionFilter = adapterState.selectionFilter;
   state.chartScale = adapterState.chartScale;
   state.chartScaleReturnStack = adapterState.chartScaleReturnStack;
+  state.thresholdSettings = adapterState.thresholdSettings;
   state.styleRules = adapterState.styleRules;
   state.curveOverrides = adapterState.curveOverrides;
   state.legendSettings = adapterState.legendSettings;
@@ -1631,6 +1714,7 @@ function analysisToAdapterState(analysis: AnalysisTabState): ActiveAnalysisAdapt
     selectionFilter: analysis.selectionFilter,
     chartScale: clonePlain(analysis.chartScale),
     chartScaleReturnStack: clonePlain(analysis.chartScaleReturnStack),
+    thresholdSettings: clonePlain(analysis.thresholdSettings),
     styleRules: clonePlain(analysis.styleRules),
     curveOverrides: clonePlain(analysis.curveOverrides),
     legendSettings: clonePlain(analysis.legendSettings),

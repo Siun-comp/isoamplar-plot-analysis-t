@@ -68,10 +68,10 @@ Active
 Apply and release the shared 9.5 cm report-readable plot export profile and Plot-only default to both original and T editions while preserving their separate repositories and deployments.
 
 ## Current Milestone
-M13 dual-edition export readability patch: T implementation and local release gates complete; T deployment and original-edition port remain.
+M13 dual-edition export readability patch: both editions pass independent local release gates; final corrective T deployment and original deployment remain.
 
 ## Last Completed Step
-Completed the T-edition local release gate for the report-readable export patch: 42 Vitest files / 337 tests, audit probe 1/1, production dependency audit 0 vulnerabilities, T Pages-base build, fresh Chromium 13/13, and byte-identical pre/post Playwright `dist` hash `72999c9b01d582a7478e4bda7565af48ce106750c57e232b68a47dfd1c6d6c79`. The regenerated 19-page T guide PDF Export page passed Poppler render review.
+Completed the corrected T-edition local release gate after independent review: proportional line-width scaling preserves style distinctions, Plot + Legend samples use matching geometry, and out-of-range Threshold export annotations use the report font size. The gate passed 42 Vitest files / 337 tests, audit probe 1/1, production dependency audit 0 vulnerabilities, T Pages-base build, fresh Chromium 13/13 including a real 2400 x 1520 Plot PNG check, and byte-identical pre/post Playwright `dist` hash `2f2da701e1fd4c8412eb17ff80ba34516f995777909f2271526ab7ff585f7632`. The regenerated 19-page T guide PDF Export page passed Poppler render review.
 
 ## Latest Changed Files
 - `src/chart/exportProfile.ts`
@@ -698,6 +698,6 @@ Completed the T-edition local release gate for the report-readable export patch:
 - Original non-T public Pages: `https://siun-comp.github.io/isoamplar-plot-analysis/`
 
 ## Next 3 Tasks
-1. Commit the verified T patch, push only to `threshold/main`, wait for Pages, and complete a public synthetic smoke.
-2. Port only the shared export profile and Plot-only default to a separate original-repository worktree, then rerun its complete release gates.
-3. Commit and deploy the original patch, smoke both public URLs, and record final SHAs/workflow runs without storing sensitive data.
+1. Commit and push the independent-review corrections to `threshold/main`, wait for the final Pages run, and complete a public synthetic smoke.
+2. Commit the independently gated original worktree and push only to `origin/main`, then wait for its Pages run.
+3. Smoke both public URLs and record final SHAs/workflow runs without storing sensitive data.

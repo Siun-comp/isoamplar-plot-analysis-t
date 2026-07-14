@@ -142,6 +142,8 @@ Released - post-deploy smoke passed
 - `npm audit --omit=dev --audit-level=high`: 0 vulnerabilities
 - T Pages base-path build: pass
 - Fresh Chromium: 13/13
-- Exact `dist` pre/post Playwright SHA-256: `72999c9b01d582a7478e4bda7565af48ce106750c57e232b68a47dfd1c6d6c79`, byte-identical
+- Exact `dist` pre/post Playwright SHA-256: `2f2da701e1fd4c8412eb17ff80ba34516f995777909f2271526ab7ff585f7632`, byte-identical
+- Independent audit follow-up: proportional line widths retain 2.25/3 distinctions, Plot + Legend samples match plot geometry, out-of-range Threshold annotation uses 36px export text, and a downloaded 2400 x 1520 Plot PNG is now a Chromium regression gate
+- Final independent re-audit: all prior P2/P3 findings resolved; no release blocker, GO
 - 19-page T user guide: regenerated; Export page Poppler render QA pass
-- Status: local gate complete; commit, T Pages deployment, public smoke pending
+- Initial product commit `35e10da` and Pages run `29315096289` succeeded; independent-audit correction commit, final Pages deployment, and public smoke pending

@@ -43,6 +43,12 @@ describe("Threshold chart rendering", () => {
     expect(applyRenderedThresholdAnnotation(chart, createOption(20))).toBe("above");
     expect(applyRenderedThresholdAnnotation(chart, createOption(-20))).toBe("below");
     expect(setOption).toHaveBeenCalledWith(expect.objectContaining({ graphic: expect.any(Array) }), expect.any(Object));
+    setOption.mockClear();
+    expect(applyRenderedThresholdAnnotation(chart, createOption(20), { rangeAnnotationFontSize: 36 })).toBe("above");
+    expect(setOption).toHaveBeenCalledWith(
+      expect.objectContaining({ graphic: [expect.objectContaining({ style: expect.objectContaining({ font: "36px Arial, sans-serif" }) })] }),
+      expect.any(Object)
+    );
   });
 
   it("reports no-data instead of drawing a misleading Auto-scale line", () => {

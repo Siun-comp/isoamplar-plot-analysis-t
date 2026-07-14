@@ -7,6 +7,7 @@
 - Added one tab-local user-set raw fluorescence Threshold with strict decimal/scientific input, apply/restore/clear states, and independent preview and plot-export visibility controls.
 - Added versioned `raw-first-upward-linear-v1` crossing inspection over unmodified raw X/Y arrays, keeping Cycle-axis linear estimates separate from first observed at-or-above points and preserving null-gap, start-above, multiple-crossing, and source-cell evidence.
 - Rendered a single neutral Threshold line without adding a legend series or changing Auto/Fixed/P1/P2/Box zoom ranges; out-of-range values use an above/below chart annotation instead of expanding the axis.
+- Preserved relative line-width differences in report exports, matched Plot + Legend samples to the plot geometry, enlarged out-of-range Threshold export annotations, and added an actual 2400 x 1520 Plot PNG browser regression.
 - Added a bounded curve-by-curve Threshold review panel with current legend order, Analysis labels, result filters, style samples, hover highlighting, and expandable event-level raw bracket, cell, source-instance, interpolation, and formula-cache evidence.
 - Advanced Analysis XLSX to schema 5 for Threshold configuration continuity while recomputing derived results from the complete raw dataset after restore; schemas 1-4 migrate to Threshold disabled.
 - Advanced Selected Data XLSX to schema 2 with fixed `ThresholdResults` and `ThresholdEvents` sheets while leaving raw `PlottedData` unchanged and continuing to reject the workbook as an app input/restore file.

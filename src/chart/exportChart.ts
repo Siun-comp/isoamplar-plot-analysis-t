@@ -3,7 +3,12 @@ import { applyRenderedThresholdAnnotation } from "./thresholdRender";
 import type { ImageExportType } from "./exportFilenames";
 import type { LegendItem } from "./chartProjection";
 import type { ImageExportLayout } from "../data/types";
-import { createReportExportChartOption, REPORT_EXPORT_HEIGHT, REPORT_EXPORT_WIDTH } from "./exportProfile";
+import {
+  createReportExportChartOption,
+  REPORT_EXPORT_HEIGHT,
+  REPORT_EXPORT_WIDTH,
+  scaleReportLineWidth
+} from "./exportProfile";
 import {
   assertLegendIdentity,
   assertLegendLabelsUnique,
@@ -18,7 +23,7 @@ type EchartsCoreModule = typeof import("echarts/core");
 export const exportPixelRatio = 2;
 const EXPORT_PIXEL_RATIO = exportPixelRatio;
 let echartsPromise: Promise<EchartsCoreModule> | null = null;
-type LegendImageVariant = "standard" | "report";
+type LegendImageVariant = "standard" | "report" | "plot";
 type LegendGeometry = {
   columns: number;
   columnWidth: number;
@@ -63,7 +68,7 @@ export async function exportChartLayoutImageBlob(args: {
   }
 
   const chartDataUrl = await exportChartImageDataUrl({ option: args.option, type: "png", width, height: chartHeight });
-  const legendDataUrl = await exportLegendImageDataUrl({ items: args.legendItems, type: "png", width });
+  const legendDataUrl = await exportLegendImageDataUrl({ items: args.legendItems, type: "png", width, variant: "plot" });
   const [chartImage, legendImage] = await Promise.all([loadImage(chartDataUrl), loadImage(legendDataUrl)]);
   const canvas = document.createElement("canvas");
   const outputWidth = width * EXPORT_PIXEL_RATIO;
@@ -243,7 +248,7 @@ export async function exportChartImageDataUrl(args: {
 
   try {
     chart.setOption(exportOption, true);
-    applyRenderedThresholdAnnotation(chart, exportOption);
+    applyRenderedThresholdAnnotation(chart, exportOption, { rangeAnnotationFontSize: 36 });
     await new Promise((resolve) => requestAnimationFrame(resolve));
     const dataUrl = chart.getDataURL({
       type: args.type,
@@ -371,8 +376,13 @@ function createLegendSvgItem(
   const sampleLength = geometry.sampleLength;
   const markerX = x + sampleLength / 2;
   const textX = x + geometry.textOffset;
-  const marker = createLegendSvgMarker(item, markerX, y, variant === "report" ? 7 : 4.5);
-  const strokeWidth = variant === "report" ? Math.max(3.5, item.lineWidth * 1.35) : Math.max(2, item.lineWidth);
+  const marker = createLegendSvgMarker(item, markerX, y, variant === "report" ? 7 : variant === "plot" ? 6 : 4.5);
+  const strokeWidth =
+    variant === "report"
+      ? Math.max(3.5, item.lineWidth * 1.35)
+      : variant === "plot"
+        ? scaleReportLineWidth(item.lineWidth)
+        : Math.max(2, item.lineWidth);
   const text = createMeasuredLegendText(entry, textX, y, variant);
 
   return `<g data-curve-id="${escapeHtml(item.curveId)}" data-rendered-label="${escapeHtml(entry.renderedLabel)}" data-truncated="${entry.truncated}" data-sample-left="${x}" data-sample-right="${x + sampleLength}" data-text-left="${textX}" data-text-right="${textX + geometry.maxTextWidth}" data-row-top="${y - geometry.rowHeight / 2}" data-row-bottom="${y + geometry.rowHeight / 2}">

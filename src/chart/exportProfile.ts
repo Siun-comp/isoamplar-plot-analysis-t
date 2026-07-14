@@ -2,6 +2,7 @@ import type { EChartsCoreOption } from "echarts/core";
 
 export const REPORT_EXPORT_WIDTH = 1200;
 export const REPORT_EXPORT_HEIGHT = 760;
+export const REPORT_LINE_WIDTH_SCALE = 2.4;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -84,7 +85,7 @@ function createReportSeries(series: UnknownRecord): UnknownRecord {
     ...series,
     lineStyle: {
       ...lineStyle,
-      width: Math.max(5.2, width * 1.7)
+      width: scaleReportLineWidth(width)
     },
     ...(symbolSize > 0 ? { symbolSize: Math.max(10, symbolSize * 1.5) } : {}),
     ...(series.markLine
@@ -93,7 +94,7 @@ function createReportSeries(series: UnknownRecord): UnknownRecord {
             ...markLine,
             lineStyle: {
               ...markLineStyle,
-              width: Math.max(3.2, numericOr(markLineStyle.width, 1.5) * 1.7)
+              width: scaleReportLineWidth(numericOr(markLineStyle.width, 1.5))
             },
             label: {
               ...markLineLabel,
@@ -104,6 +105,10 @@ function createReportSeries(series: UnknownRecord): UnknownRecord {
         }
       : {})
   };
+}
+
+export function scaleReportLineWidth(width: number) {
+  return Math.round(width * REPORT_LINE_WIDTH_SCALE * 100) / 100;
 }
 
 function mapOptionValue(value: unknown, transform: (entry: UnknownRecord) => UnknownRecord): unknown {

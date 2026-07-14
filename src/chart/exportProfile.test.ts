@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { EChartsCoreOption } from "echarts/core";
-import { createReportExportChartOption, REPORT_EXPORT_HEIGHT, REPORT_EXPORT_WIDTH } from "./exportProfile";
+import {
+  createReportExportChartOption,
+  REPORT_EXPORT_HEIGHT,
+  REPORT_EXPORT_WIDTH,
+  scaleReportLineWidth
+} from "./exportProfile";
 
 describe("report chart export profile", () => {
   it("keeps a high-resolution canvas while enlarging plot geometry for a 9.5 cm report placement", () => {
@@ -32,9 +37,11 @@ describe("report chart export profile", () => {
     expect(yAxis.nameTextStyle).toMatchObject({ fontSize: 40 });
     expect(xAxis.splitNumber).toBe(6);
     expect(yAxis.splitNumber).toBe(5);
-    expect(series.lineStyle).toMatchObject({ width: 5.2 });
+    expect(series.lineStyle).toMatchObject({ width: 5.4 });
     expect(series.symbolSize).toBe(10);
-    expect(series.markLine).toMatchObject({ lineStyle: { width: 3.2 }, label: { fontSize: 36 } });
+    expect(series.markLine).toMatchObject({ lineStyle: { width: 3.6 }, label: { fontSize: 36 } });
+    expect(scaleReportLineWidth(3)).toBe(7.2);
+    expect(scaleReportLineWidth(3)).toBeGreaterThan(scaleReportLineWidth(2.25));
 
     expect(option.grid).toEqual({ left: 88, right: 24, top: 30, bottom: 54 });
     expect((option.series as Array<Record<string, unknown>>)[0].lineStyle).toEqual({ width: 2.25 });

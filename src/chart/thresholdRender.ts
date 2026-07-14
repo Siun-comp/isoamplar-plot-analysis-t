@@ -38,7 +38,11 @@ export function createThresholdMarkLine(threshold: AppliedThreshold) {
   };
 }
 
-export function applyRenderedThresholdAnnotation(chart: RenderedChart, option: EChartsCoreOption): RenderedThresholdState {
+export function applyRenderedThresholdAnnotation(
+  chart: RenderedChart,
+  option: EChartsCoreOption,
+  renderProfile: { rangeAnnotationFontSize?: number } = {}
+): RenderedThresholdState {
   const threshold = findThresholdValue(option);
   if (threshold === null) {
     replaceThresholdGraphic(chart, []);
@@ -47,7 +51,7 @@ export function applyRenderedThresholdAnnotation(chart: RenderedChart, option: E
   const hasFinitePoint = hasFiniteSeriesPoint(option);
   const explicitRange = getExplicitYAxisRange(option);
   if (!hasFinitePoint && !explicitRange) {
-    replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, "no-data")]);
+    replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, "no-data", renderProfile)]);
     return "no-data";
   }
 
@@ -59,13 +63,13 @@ export function applyRenderedThresholdAnnotation(chart: RenderedChart, option: E
       return "line";
     }
     const direction = yPixel < bounds.top ? "above" : "below";
-    replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, direction)]);
+    replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, direction, renderProfile)]);
     return direction;
   }
 
   const renderedRange = getRenderedYAxisRange(chart, bounds) ?? explicitRange;
   if (!renderedRange) {
-    replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, "no-data")]);
+    replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, "no-data", renderProfile)]);
     return "no-data";
   }
   if (threshold >= renderedRange.min && threshold <= renderedRange.max) {
@@ -73,7 +77,7 @@ export function applyRenderedThresholdAnnotation(chart: RenderedChart, option: E
     return "line";
   }
   const direction = threshold > renderedRange.max ? "above" : "below";
-  replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, direction)]);
+  replaceThresholdGraphic(chart, [createRangeAnnotation(threshold, direction, renderProfile)]);
   return direction;
 }
 
@@ -106,7 +110,12 @@ function hasFiniteSeriesPoint(option: EChartsCoreOption) {
   });
 }
 
-function createRangeAnnotation(threshold: number, direction: "above" | "below" | "no-data") {
+function createRangeAnnotation(
+  threshold: number,
+  direction: "above" | "below" | "no-data",
+  renderProfile: { rangeAnnotationFontSize?: number }
+) {
+  const fontSize = renderProfile.rangeAnnotationFontSize ?? 11;
   const directionText = direction === "no-data" ? "no Y-axis data" : `${direction} Y range`;
   return {
     id: THRESHOLD_ANNOTATION_ID,
@@ -118,9 +127,9 @@ function createRangeAnnotation(threshold: number, direction: "above" | "below" |
     style: {
       text: `Threshold ${formatThresholdValue(threshold)} · ${directionText}`,
       fill: "#374151",
-      font: "11px Arial, sans-serif",
+      font: `${fontSize}px Arial, sans-serif`,
       backgroundColor: "rgba(255,255,255,0.96)",
-      padding: [3, 5],
+      padding: fontSize > 11 ? [6, 10] : [3, 5],
       borderColor: "#cbd5e1",
       borderWidth: 1,
       borderRadius: 2

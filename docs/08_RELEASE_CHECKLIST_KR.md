@@ -33,7 +33,10 @@ Active release gate
 - [x] T판 Threshold 수치 중심 annotation과 Y범위 밖 안내
 - [x] T판 42 files / 337 tests, audit 1/1, dependency vulnerabilities 0
 - [x] T Pages base-path build와 fresh Chromium 13/13
-- [x] T판 exact `dist` pre/post Playwright equality: `72999c9b01d582a7478e4bda7565af48ce106750c57e232b68a47dfd1c6d6c79`
+- [x] proportional line-width distinction and matching Plot + Legend sample geometry
+- [x] T판 out-of-range Threshold export annotation 36px profile
+- [x] downloaded Plot PNG 2400 x 1520/white/opaque/nonblank raster regression
+- [x] T판 exact `dist` pre/post Playwright equality: `2f2da701e1fd4c8412eb17ff80ba34516f995777909f2271526ab7ff585f7632`
 - [x] T 사용자 가이드 PDF 재생성과 Export page render QA
 - [ ] T판 commit/push/Pages/public smoke
 - [ ] 원본판 공통 변경 이식과 독립 전체 게이트

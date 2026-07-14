@@ -146,4 +146,8 @@ Released - post-deploy smoke passed
 - Independent audit follow-up: proportional line widths retain 2.25/3 distinctions, Plot + Legend samples match plot geometry, out-of-range Threshold annotation uses 36px export text, and a downloaded 2400 x 1520 Plot PNG is now a Chromium regression gate
 - Final independent re-audit: all prior P2/P3 findings resolved; no release blocker, GO
 - 19-page T user guide: regenerated; Export page Poppler render QA pass
-- Initial product commit `35e10da` and Pages run `29315096289` succeeded; independent-audit correction commit, final Pages deployment, and public smoke pending
+- Initial product commit `35e10da` and Pages run `29315096289` succeeded
+- Final independent-audit correction commit: `274260b394d6b9af395a60f5d38e759d926a4ffb`
+- Final Pages workflow: `29317052614` - success
+- Public smoke: HTTP 200, correct T title, subpath assets loaded, zero console/page errors
+- Original counterpart: `95c297705632d1bffb4f5b01eae6329872a20538`, Pages run `29317061923` - success

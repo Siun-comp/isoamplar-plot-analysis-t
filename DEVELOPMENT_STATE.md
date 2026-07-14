@@ -14,8 +14,8 @@ Active
 - Active branch: `codex/audit-remediation`; it does not trigger the Pages deploy workflow.
 - Current working extension: Selection Sets and Selected Data XLSX are implemented, independently reviewed, and deployed from `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md` at product source SHA `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`.
 - Current published product artifact source: `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`. The prior tagged release `release-20260711-audit-remediation-r1` at `eae3281fb8f9bbbd900fab528be3e094b93b555a` remains the documented rollback anchor.
-- Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is complete and published as the separately managed `IsoAmplar Plot Analysis T` repository/Pages project. Product source is `3b6c6a1ba79793979780a44b10edd9760874b8c0`; rollback tag is `release-20260714-threshold-edition`; Pages run `29302909343` succeeded. The original non-T deployment remains unchanged.
-- Pending dual-edition release: plot-bearing PNG/JPEG/clipboard output now uses a 1200 x 760 logical report profile at 2x raster resolution, with enlarged axis labels, margins, grid, curves, markers, and Threshold annotation for readability near 9.5 cm physical width. New analyses default Chart image layout to `Plot only`; explicitly saved Analysis XLSX layout values remain authoritative. The same generic profile is scheduled for the original edition, while the shortened numeric Threshold annotation remains T-only.
+- Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is complete and published as the separately managed `IsoAmplar Plot Analysis T` repository/Pages project. Current T product source is `274260b394d6b9af395a60f5d38e759d926a4ffb`; rollback tag is `release-20260714-threshold-edition`; Pages run `29317052614` succeeded.
+- Dual-edition M13 release is complete: plot-bearing PNG/JPEG/clipboard output uses a 1200 x 760 logical report profile at 2x raster resolution, with enlarged axis labels, margins, grid, curves, markers, and T-only Threshold annotation for readability near 9.5 cm physical width. New analyses default Chart image layout to `Plot only`; explicitly saved Analysis XLSX layout values remain authoritative. The original edition product source is `95c297705632d1bffb4f5b01eae6329872a20538`, with Pages run `29317061923` successful.
 - Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
@@ -68,10 +68,10 @@ Active
 Apply and release the shared 9.5 cm report-readable plot export profile and Plot-only default to both original and T editions while preserving their separate repositories and deployments.
 
 ## Current Milestone
-M13 dual-edition export readability patch: both editions pass independent local release gates; final corrective T deployment and original deployment remain.
+M13 dual-edition export readability patch: implemented, independently gated, committed, and deployed to both public Pages projects.
 
 ## Last Completed Step
-Completed the corrected T-edition local release gate after independent review: proportional line-width scaling preserves style distinctions, Plot + Legend samples use matching geometry, and out-of-range Threshold export annotations use the report font size. The gate passed 42 Vitest files / 337 tests, audit probe 1/1, production dependency audit 0 vulnerabilities, T Pages-base build, fresh Chromium 13/13 including a real 2400 x 1520 Plot PNG check, and byte-identical pre/post Playwright `dist` hash `2f2da701e1fd4c8412eb17ff80ba34516f995777909f2271526ab7ff585f7632`. The regenerated 19-page T guide PDF Export page passed Poppler render review.
+Deployed T commit `274260b394d6b9af395a60f5d38e759d926a4ffb` through successful Pages run `29317052614` and original commit `95c297705632d1bffb4f5b01eae6329872a20538` through successful Pages run `29317061923`. Public-origin smoke returned HTTP 200 with the correct title for both apps, loaded subpath assets without failure, and produced zero console/page errors. The local release gates remain 42 files / 337 tests plus Chromium 13/13 for T and 38 files / 294 tests plus Chromium 12/12 for original, including actual 2400 x 1520 white/opaque/nonblank Plot PNG checks and byte-identical pre/post E2E `dist` trees.
 
 ## Latest Changed Files
 - `src/chart/exportProfile.ts`
@@ -698,6 +698,6 @@ Completed the corrected T-edition local release gate after independent review: p
 - Original non-T public Pages: `https://siun-comp.github.io/isoamplar-plot-analysis/`
 
 ## Next 3 Tasks
-1. Commit and push the independent-review corrections to `threshold/main`, wait for the final Pages run, and complete a public synthetic smoke.
-2. Commit the independently gated original worktree and push only to `origin/main`, then wait for its Pages run.
-3. Smoke both public URLs and record final SHAs/workflow runs without storing sensitive data.
+1. Perform user report-placement validation near 9.5 cm width in the target Excel/report workflow.
+2. Continue long-term use and record only reproducible usability or data-integrity defects for future patches.
+3. Re-run both independent release gates before any later shared export-profile change.

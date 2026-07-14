@@ -38,9 +38,9 @@ Active release gate
 - [x] downloaded Plot PNG 2400 x 1520/white/opaque/nonblank raster regression
 - [x] T판 exact `dist` pre/post Playwright equality: `2f2da701e1fd4c8412eb17ff80ba34516f995777909f2271526ab7ff585f7632`
 - [x] T 사용자 가이드 PDF 재생성과 Export page render QA
-- [ ] T판 commit/push/Pages/public smoke
-- [ ] 원본판 공통 변경 이식과 독립 전체 게이트
-- [ ] 원본판 commit/push/Pages/public smoke
+- [x] T판 commit/push/Pages/public smoke: `274260b`, run `29317052614`
+- [x] 원본판 공통 변경 이식과 독립 전체 게이트
+- [x] 원본판 commit/push/Pages/public smoke: `95c2977`, run `29317061923`
 
 ## 자동 게이트
 - [x] `git diff --check`

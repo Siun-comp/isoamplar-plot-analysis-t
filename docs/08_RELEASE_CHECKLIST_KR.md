@@ -42,6 +42,21 @@ Active release gate
 - [x] 원본판 공통 변경 이식과 독립 전체 게이트
 - [x] 원본판 commit/push/Pages/public smoke: `95c2977`, run `29317061923`
 
+## M14 T판 Threshold Excel 클립보드
+
+- [x] 현재 상태 필터 결과만 현재 curve 순서로 복사
+- [x] `검체 / 시약 / 추정 교차 Cycle / 결과 상태` 4열 rich HTML + TSV
+- [x] 유효 추정값 숫자, 추정 불가 빈 셀, 다중 교차 검토 문구 보존
+- [x] formula-like label 보호와 clipboard 실패 안내
+- [x] 복사 아이콘 접근성·빈 필터 결과 비활성화·성공 상태 표시
+- [x] Vitest 43 files / 339 tests, audit 1/1, dependency vulnerabilities 0
+- [x] T Pages-base build와 fresh Chromium 13/13
+- [x] Chromium `text/html` / `text/plain` 실제 clipboard readback
+- [x] exact `dist` pre/post Playwright equality: `e8e7846cc589bc091239be322ac387c4cb6d66b575b6e709e0fc1ad2e1fbd839`
+- [x] 19-page 사용자 가이드 PDF 재생성과 Threshold page render QA
+- [x] 원본 non-T worktree 변경 없음
+- [ ] T판 commit/push/Pages/public smoke
+
 ## 자동 게이트
 - [x] `git diff --check`
 - [x] `npm run test`: 32 files / 265 tests

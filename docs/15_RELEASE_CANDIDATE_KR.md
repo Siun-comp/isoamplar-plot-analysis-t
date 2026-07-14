@@ -151,3 +151,19 @@ Released - post-deploy smoke passed
 - Final Pages workflow: `29317052614` - success
 - Public smoke: HTTP 200, correct T title, subpath assets loaded, zero console/page errors
 - Original counterpart: `95c297705632d1bffb4f5b01eae6329872a20538`, Pages run `29317061923` - success
+
+## M14 T판 Threshold Excel 클립보드 - 로컬 후보
+
+- 범위: `Threshold 값 검토` 상태 필터 옆 복사 아이콘, 현재 필터 결과와 curve 순서만 복사
+- Excel projection: `검체`, `시약`, `추정 교차 Cycle`, `결과 상태`; rich HTML + TSV
+- 데이터 계약: valid primary estimate는 숫자, unavailable estimate는 blank, multiple crossing은 review wording 유지, formula-like label 보호
+- 원본 영향: raw fluorescence, Threshold 계산, 설정, 선택, 순서, dirty state 비변이; non-T worktree 변경 없음
+- Vitest: 43 files / 339 tests
+- Audit probe: 1/1
+- Production dependency audit: 0 vulnerabilities
+- T Pages-base build: pass
+- Fresh Chromium: 13/13, actual `text/html` / `text/plain` clipboard readback 포함
+- Exact pre/post Playwright `dist` SHA-256: `e8e7846cc589bc091239be322ac387c4cb6d66b575b6e709e0fc1ad2e1fbd839`, byte-identical
+- Visual evidence: compact status-filter/copy toolbar, no overlap or clipped result rows
+- User guide: regenerated 19-page PDF, Threshold pages Poppler render QA pass
+- Status: local gate complete; T commit, Pages deployment, and public smoke pending

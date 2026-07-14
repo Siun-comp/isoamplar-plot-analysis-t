@@ -2,6 +2,7 @@
 
 ## 2026-07-14 - IsoAmplar Plot Analysis T
 
+- Added a T-only Excel clipboard action beside the Threshold result status filter. It copies the currently filtered curve rows in current order as rich HTML and TSV cells with specimen, reagent, numeric estimated crossing Cycle, and non-clinical result status; missing estimates stay blank and multiple crossings retain review wording.
 - Added a plot-export-only report profile for approximately 9.5 cm Excel placement: 2400 px output is retained while axis text, titles, margins, major ticks, curves, markers, and Threshold styling are enlarged. New analyses now default Chart image layout to Plot only, and the in-range Threshold line label shows only its numeric value.
 - Separated this Threshold-capable build as `IsoAmplar Plot Analysis T` with its own package, repository, Pages base path, PWA identity, and user guide so the original non-T deployment remains unchanged.
 - Added one tab-local user-set raw fluorescence Threshold with strict decimal/scientific input, apply/restore/clear states, and independent preview and plot-export visibility controls.

@@ -379,6 +379,10 @@ index 0의 첫 유효값이 T 이상인 곡선이 이후 다시 내려갔다가 
 - 각 대상의 표시 toggle이 켜져 있고 applied Threshold가 실제 Y축 밖이면 preview/image/clipboard에 실제 선 대신 값과 above/below 방향을 포함한 범위 밖 주석을 반드시 포함한다.
 - 표준 clipboard PNG: 선택된 plot layout과 동일.
 - Legend only, report legend PNG/JPEG/clipboard, rich Excel legend clipboard: Threshold 미포함.
+- T판 Threshold 값 검토 패널은 상태 필터 옆 복사 아이콘으로 현재 필터 결과를 Excel 표로 복사한다. 일반 Export 패널에는 중복 버튼을 추가하지 않는다.
+- 표 열은 `검체`, `시약`, `추정 교차 Cycle`, `결과 상태` 순서다. 유효한 대표 추정값은 숫자로, 추정 불가 상태는 빈 셀로 기록한다.
+- 복사 순서는 현재 curve/범례 순서를 따르고, 다중 교차는 `교차 (다중 교차 검토)`로 보존한다. `판정`이나 양성/음성 표현을 사용하지 않는다.
+- rich HTML과 TSV를 함께 제공하며 label-like text는 Excel 수식으로 실행되지 않도록 보호한다. 이 동작은 원본판에는 추가하지 않는다.
 - 이미지 export는 preview와 동일한 `buildPcrChartOption` 결과를 사용한다.
 - white background, 파일명, export counter 규칙은 변경하지 않는다.
 - threshold line nonblank/pixel evidence와 preview/download parity를 Playwright에서 확인한다.
@@ -929,7 +933,7 @@ release gate:
 기능은 다음 조건을 모두 만족할 때만 완료로 본다.
 
 1. 사용자 결정 UD-TH-01/02/03이 기록되어 있다.
-2. D051, FR-023, IO-108, AC-PCR-056~058과 기존 금지 문구가 모순 없이 갱신되어 있다.
+2. D051/D054, FR-023/FR-024, IO-108/IO-109, AC-PCR-056~060과 기존 금지 문구가 모순 없이 갱신되어 있다.
 3. 모든 결과가 versioned raw first-upward rule로 재현된다.
 4. 원본 fluorescence/null/source/warning이 변경되지 않는다.
 5. preview와 plot-bearing image output이 동일한 Threshold를 표시한다.

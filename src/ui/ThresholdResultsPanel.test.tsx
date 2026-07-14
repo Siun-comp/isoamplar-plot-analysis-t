@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { calculateThresholdResult } from "../analysis/threshold";
 import type { LegendItem } from "../chart/chartProjection";
+import * as thresholdClipboard from "../chart/thresholdClipboard";
 import { createStats, createSyntheticPcrDataset } from "../data/sampleData";
 import type { Curve, PcrWarning } from "../data/types";
 import { ThresholdResultsPanel } from "./ThresholdResultsPanel";
@@ -10,6 +11,9 @@ import { ThresholdResultsPanel } from "./ThresholdResultsPanel";
 describe("ThresholdResultsPanel", () => {
   it("shows auditable event evidence and keeps multiple crossings in the review filter", async () => {
     const user = userEvent.setup();
+    const copySpy = vi
+      .spyOn(thresholdClipboard, "copyThresholdResultsExcelTableToClipboard")
+      .mockResolvedValue(undefined);
     const base = createSyntheticPcrDataset({
       specimenLabels: ["Synthetic specimen"],
       reagentLabels: ["Synthetic assay"],
@@ -83,5 +87,12 @@ describe("ThresholdResultsPanel", () => {
     expect(evidence).toHaveTextContent("수식 캐시 근거: 사용됨");
     expect(evidence).toHaveTextContent("synthetic-source-01 · synthetic-threshold.xlsx · SyntheticData");
     expect(screen.getByText(/상승 교차 후보: 2 \(다중 교차 검토\)/u)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "현재 표시된 Threshold 결과를 Excel 표로 복사" }));
+    expect(copySpy).toHaveBeenCalledWith({ curves: [curve], results: [result] });
+    expect(screen.getByRole("status")).toHaveTextContent("1개 결과를 복사했습니다.");
+
+    await user.selectOptions(filter, "not-reached");
+    expect(screen.getByRole("button", { name: "현재 표시된 Threshold 결과를 Excel 표로 복사" })).toBeDisabled();
   });
 });

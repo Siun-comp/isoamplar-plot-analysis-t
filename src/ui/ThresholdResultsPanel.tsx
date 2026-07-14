@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   thresholdResultRequiresReview,
   type ThresholdEvent,
@@ -7,6 +7,7 @@ import {
   type ThresholdSourceReference
 } from "../analysis/threshold";
 import { formatThresholdValue } from "../chart/thresholdRender";
+import { copyThresholdResultsExcelTableToClipboard } from "../chart/thresholdClipboard";
 import type { LegendItem } from "../chart/chartProjection";
 import type { Curve } from "../data/types";
 import { LegendSample } from "./CustomLegend";
@@ -29,9 +30,26 @@ export function ThresholdResultsPanel({
   onHoverCurve: (curveId: string | null) => void;
 }) {
   const [filter, setFilter] = useState<ResultFilter>("all");
+  const [clipboardMessage, setClipboardMessage] = useState("");
   const curvesById = useMemo(() => new Map(curves.map((curve) => [curve.curveId, curve])), [curves]);
   const legendById = useMemo(() => new Map(legendItems.map((item) => [item.curveId, item])), [legendItems]);
   const visibleResults = results.filter((result) => matchesFilter(result, filter));
+
+  useEffect(() => {
+    setClipboardMessage("");
+  }, [results]);
+
+  async function copyVisibleResults() {
+    setClipboardMessage("");
+    try {
+      await copyThresholdResultsExcelTableToClipboard({ curves, results: visibleResults });
+      setClipboardMessage(`${visibleResults.length}개 결과를 복사했습니다.`);
+    } catch (error) {
+      setClipboardMessage(
+        `${error instanceof Error ? error.message : "Threshold 결과를 복사하지 못했습니다."} 브라우저의 클립보드 권한을 확인하십시오.`
+      );
+    }
+  }
 
   return (
     <details className="threshold-results-panel">
@@ -48,20 +66,40 @@ export function ThresholdResultsPanel({
           <>
             <div className="threshold-results-toolbar">
               <span>적용값 {formatThresholdValue(threshold)} · raw fluorescence</span>
-              <label>
-                상태
-                <select
-                  aria-label="Threshold 결과 상태 필터"
-                  value={filter}
-                  onChange={(event) => setFilter(event.currentTarget.value as ResultFilter)}
+              <div className="threshold-results-actions">
+                <label>
+                  상태
+                  <select
+                    aria-label="Threshold 결과 상태 필터"
+                    value={filter}
+                    onChange={(event) => {
+                      setFilter(event.currentTarget.value as ResultFilter);
+                      setClipboardMessage("");
+                    }}
+                  >
+                    <option value="all">전체</option>
+                    <option value="crossed">교차</option>
+                    <option value="review">검토 필요</option>
+                    <option value="not-reached">미도달</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="threshold-copy-button"
+                  aria-label="현재 표시된 Threshold 결과를 Excel 표로 복사"
+                  title="현재 표시된 Threshold 결과를 Excel 표로 복사"
+                  disabled={visibleResults.length === 0}
+                  onClick={() => void copyVisibleResults()}
                 >
-                  <option value="all">전체</option>
-                  <option value="crossed">교차</option>
-                  <option value="review">검토 필요</option>
-                  <option value="not-reached">미도달</option>
-                </select>
-              </label>
+                  <span aria-hidden="true">⧉</span>
+                </button>
+              </div>
             </div>
+            {clipboardMessage && (
+              <p className="threshold-clipboard-message" role="status">
+                {clipboardMessage}
+              </p>
+            )}
             <div className="threshold-results-list" role="list" aria-label="Threshold 곡선별 결과">
               {visibleResults.map((result) => {
                 const curve = curvesById.get(result.curveId);

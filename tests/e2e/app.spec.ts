@@ -899,7 +899,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
   await expect(page.getByText("선택 데이터 XLSX는 Excel 후속 분석용이며 원본 입력 또는 분석 복원 파일이 아닙니다.")).toBeVisible();
 });
 
-test("keeps Threshold calculation, preview/export visibility, and workbook evidence consistent", async ({ page }, testInfo) => {
+test("keeps Threshold calculation, preview/export visibility, and workbook evidence consistent", async ({ page, context }, testInfo) => {
   test.setTimeout(90_000);
   const sourcePath = testInfo.outputPath("synthetic-threshold-source.xlsx");
   const selectedDataPath = testInfo.outputPath("synthetic-threshold-selected-data.xlsx");
@@ -928,6 +928,30 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   await expect(resultsPanel).toContainText("C4");
   await expect(resultsPanel).toContainText("결측 구간");
   await expect(resultsPanel).toContainText("시작점 초과");
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  await page.getByRole("button", { name: "현재 표시된 Threshold 결과를 Excel 표로 복사" }).click();
+  await expect(resultsPanel.getByRole("status")).toHaveText("3개 결과를 복사했습니다.");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    [
+      "검체\t시약\t추정 교차 Cycle\t결과 상태",
+      "Synthetic crossing\tAssay 01\t3.5\t교차",
+      "Synthetic gap\tAssay 02\t\t결측 구간",
+      "Synthetic starts above\tAssay 03\t\t시작점 초과"
+    ].join("\r\n")
+  );
+  const richClipboard = await page.evaluate(async () => {
+    const [item] = await navigator.clipboard.read();
+    const html = item.types.includes("text/html") ? await (await item.getType("text/html")).text() : "";
+    return { types: item.types, html };
+  });
+  expect(richClipboard.types).toEqual(expect.arrayContaining(["text/html", "text/plain"]));
+  expect(richClipboard.html).toContain("<table");
+  expect(richClipboard.html).toContain("추정 교차 Cycle");
+  expect(richClipboard.html).toContain("Malgun Gothic");
+  await resultsPanel.screenshot({
+    path: testInfo.outputPath("threshold-excel-clipboard.png"),
+    animations: "disabled"
+  });
 
   const chartSurface = page.locator(".echarts-surface");
   await expect(chartSurface).toBeVisible();

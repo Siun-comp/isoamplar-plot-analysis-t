@@ -16,6 +16,7 @@ Active
 - Current published product artifact source: `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`. The prior tagged release `release-20260711-audit-remediation-r1` at `eae3281fb8f9bbbd900fab528be3e094b93b555a` remains the documented rollback anchor.
 - Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is complete and published as the separately managed `IsoAmplar Plot Analysis T` repository/Pages project. Current T product source is `274260b394d6b9af395a60f5d38e759d926a4ffb`; rollback tag is `release-20260714-threshold-edition`; Pages run `29317052614` succeeded.
 - Dual-edition M13 release is complete: plot-bearing PNG/JPEG/clipboard output uses a 1200 x 760 logical report profile at 2x raster resolution, with enlarged axis labels, margins, grid, curves, markers, and T-only Threshold annotation for readability near 9.5 cm physical width. New analyses default Chart image layout to `Plot only`; explicitly saved Analysis XLSX layout values remain authoritative. The original edition product source is `95c297705632d1bffb4f5b01eae6329872a20538`, with Pages run `29317061923` successful.
+- Pending T-only M14 release: the Threshold review panel copies the currently filtered results in current curve order as a rich Excel/TSV four-column table. The original non-T worktree and repository remain unchanged.
 - Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
@@ -65,13 +66,13 @@ Active
 - Threshold remains absent from the original non-T public runtime and is available in the separately deployed T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and positive/negative interpretation.
 
 ## Current Goal
-Apply and release the shared 9.5 cm report-readable plot export profile and Plot-only default to both original and T editions while preserving their separate repositories and deployments.
+Release the T-only filtered Threshold result Excel clipboard action without changing the original non-T edition.
 
 ## Current Milestone
-M13 dual-edition export readability patch: implemented, independently gated, committed, and deployed to both public Pages projects.
+M14 T-only Threshold Excel clipboard: implementation, documentation, and local release gates are complete; commit and Pages deployment remain.
 
 ## Last Completed Step
-Deployed T commit `274260b394d6b9af395a60f5d38e759d926a4ffb` through successful Pages run `29317052614` and original commit `95c297705632d1bffb4f5b01eae6329872a20538` through successful Pages run `29317061923`. Public-origin smoke returned HTTP 200 with the correct title for both apps, loaded subpath assets without failure, and produced zero console/page errors. The local release gates remain 42 files / 337 tests plus Chromium 13/13 for T and 38 files / 294 tests plus Chromium 12/12 for original, including actual 2400 x 1520 white/opaque/nonblank Plot PNG checks and byte-identical pre/post E2E `dist` trees.
+Completed the M14 local gate. The T review toolbar now copies `검체 / 시약 / 추정 교차 Cycle / 결과 상태` as rich HTML and TSV, follows the active result filter and current curve order, leaves unavailable estimates blank, and retains multiple-crossing review wording. Vitest passed 43 files / 339 tests, audit 1/1, production dependency audit found 0 vulnerabilities, T Pages-base build passed, and fresh Chromium passed 13/13 with actual clipboard `text/html`/`text/plain` readback. Complete pre/post Playwright `dist` hash was byte-identical at `e8e7846cc589bc091239be322ac387c4cb6d66b575b6e709e0fc1ad2e1fbd839`. The regenerated 19-page guide PDF Threshold pages passed Poppler render review.
 
 ## Latest Changed Files
 - `src/chart/exportProfile.ts`
@@ -80,6 +81,8 @@ Deployed T commit `274260b394d6b9af395a60f5d38e759d926a4ffb` through successful 
 - `src/analysis/threshold.test.ts`
 - `src/chart/thresholdRender.ts`
 - `src/chart/thresholdRender.test.ts`
+- `src/chart/thresholdClipboard.ts`
+- `src/chart/thresholdClipboard.test.ts`
 - `src/ui/ThresholdSettingsPanel.tsx`
 - `src/ui/ThresholdResultsPanel.tsx`
 - `src/ui/ThresholdResultsPanel.test.tsx`
@@ -698,6 +701,6 @@ Deployed T commit `274260b394d6b9af395a60f5d38e759d926a4ffb` through successful 
 - Original non-T public Pages: `https://siun-comp.github.io/isoamplar-plot-analysis/`
 
 ## Next 3 Tasks
-1. Perform user report-placement validation near 9.5 cm width in the target Excel/report workflow.
-2. Continue long-term use and record only reproducible usability or data-integrity defects for future patches.
-3. Re-run both independent release gates before any later shared export-profile change.
+1. Commit the M14 T-only clipboard candidate and push only to `threshold/main`.
+2. Wait for the T Pages workflow and smoke the public Threshold clipboard UI with synthetic data only.
+3. Manually paste the rich table into the target desktop Excel workflow and confirm local formatting preference.

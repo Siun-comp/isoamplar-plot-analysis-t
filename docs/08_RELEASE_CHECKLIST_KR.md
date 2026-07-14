@@ -55,7 +55,7 @@ Active release gate
 - [x] exact `dist` pre/post Playwright equality: `e8e7846cc589bc091239be322ac387c4cb6d66b575b6e709e0fc1ad2e1fbd839`
 - [x] 19-page 사용자 가이드 PDF 재생성과 Threshold page render QA
 - [x] 원본 non-T worktree 변경 없음
-- [ ] T판 commit/push/Pages/public smoke
+- [x] T판 commit/push/Pages/public smoke: source `18505c9`, run `29323723239`
 
 ## 자동 게이트
 - [x] `git diff --check`

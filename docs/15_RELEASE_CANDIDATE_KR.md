@@ -166,4 +166,7 @@ Released - post-deploy smoke passed
 - Exact pre/post Playwright `dist` SHA-256: `e8e7846cc589bc091239be322ac387c4cb6d66b575b6e709e0fc1ad2e1fbd839`, byte-identical
 - Visual evidence: compact status-filter/copy toolbar, no overlap or clipped result rows
 - User guide: regenerated 19-page PDF, Threshold pages Poppler render QA pass
-- Status: local gate complete; T commit, Pages deployment, and public smoke pending
+- Product commit: `18505c95eb0921d6c5c4f0987628296eba1db8db`
+- Pages workflow: `29323723239` - success
+- Public HTTPS smoke: synthetic 3-curve import, Threshold apply, 4-row x 4-column clipboard, `text/html` + `text/plain`, correct title, zero failed resources, zero console/page errors
+- Status: deployed; original non-T repository unchanged; rollback not required

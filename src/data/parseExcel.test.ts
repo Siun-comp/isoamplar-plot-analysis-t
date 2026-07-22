@@ -95,6 +95,23 @@ describe("parseExcelWorkbook", () => {
     });
   });
 
+  it("does not report specimen merge inheritance when the merged continuation has no active curve", () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([["Specimen 1"], ["R1"], [0.1]]);
+    worksheet["!merges"] = [XLSX.utils.decode_range("A1:B1")];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    const result = parseWorkbook(workbook, "inactive-merged-specimen.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.warnings.find((warning) => warning.code === "MERGED_HEADER_CELL")).toMatchObject({
+      severity: "warning",
+      message: "Merged header cells were detected; reagent and cross-row headers are not auto-filled."
+    });
+  });
+
   it("uses worksheet index 0 only and warns about ignored later worksheets", async () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["검체 1"], ["A1"], [0.1]]), "First");
@@ -414,6 +431,29 @@ describe("parseExcelWorkbook", () => {
       "FORMATTED_HEADER_EMPTY",
       "MISSING_SPECIMEN_LABEL"
     ]);
+    expect(result.dataset.warnings.some((warning) => warning.code === "INHERITED_SPECIMEN_LABEL")).toBe(false);
+  });
+
+  it("does not inherit a nonblank raw specimen whose number format displays empty", () => {
+    const worksheet: XLSX.WorkSheet = {
+      A1: { t: "s", v: "Specimen 1" },
+      A2: { t: "s", v: "R1" },
+      A3: { t: "n", v: 1 },
+      B1: { t: "n", v: 123, z: ";;;" },
+      B2: { t: "s", v: "R2" },
+      B3: { t: "n", v: 2 },
+      "!ref": "A1:B3"
+    };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    const result = parseWorkbook(workbook, "formatted-empty-header.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves[1].specimenLabel).toBe("");
+    expect(result.dataset.curves[1].source.specimenHeader).toMatchObject({ rawValue: 123, displayValue: "" });
+    expect(result.dataset.curves[1].warnings.map((warning) => warning.code)).toContain("FORMATTED_HEADER_EMPTY");
     expect(result.dataset.warnings.some((warning) => warning.code === "INHERITED_SPECIMEN_LABEL")).toBe(false);
   });
 

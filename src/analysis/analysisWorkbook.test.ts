@@ -43,6 +43,7 @@ describe("Analysis XLSX workbook", () => {
     const dataset = createOneSpecimenEightReagentDataset();
     dataset.curves[0].x = [1, 2, 3, 4];
     dataset.curves[0].y = [-1.25, null, 1.2e-9, 950_000_000];
+    dataset.curves[0].source.dataEndCell = `${dataset.curves[0].source.columnLetter}6`;
     dataset.curves[0].stats = createStats(dataset.curves[0].y);
     const selection = createInitialSelectionState(dataset);
     selection.selectedCurveIds.add(dataset.curves[0].curveId);

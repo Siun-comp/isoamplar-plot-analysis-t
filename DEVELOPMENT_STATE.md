@@ -67,13 +67,13 @@ Active
 - Threshold remains absent from the original non-T public runtime and is available in the separately deployed T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and positive/negative interpretation.
 
 ## Current Goal
-Release source-local blank specimen-header inheritance to both the original and T editions without changing raw fluorescence or allowing inheritance across import sources.
+Maintain the released source-local blank specimen-header inheritance in both editions and collect only real-use regression findings for later patches.
 
 ## Current Milestone
-M15 shared input refinement: both editions have completed implementation, documentation, guide, integrity-hardening, and local release gates; dual Pages promotion remains.
+M15 shared input refinement is complete and active on both GitHub Pages deployments.
 
 ## Last Completed Step
-Completed the hardened T-edition local M15 gate: 43 files / 352 Vitest tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build, and fresh Chromium 13/13. The complete `dist` tree remained byte-identical before and after Playwright at SHA-256 `f4e023d30318fae112b8d0611c15353ac60dbd473ef53b592735bfba4ad01878`. The regenerated 19-page guide PDF was rendered with Poppler and visually reviewed. Independent review prompted strict same-source nearest-anchor/intentional-target restore validation, indexed wide-source checks, merged-header truthfulness, fixture policy, and append isolation tests before promotion.
+Released M15 to the T edition as commits `9da1891` and `eec8b77`. GitHub Pages workflow `29936999379` completed successfully with Chromium 13/13. Public-origin smoke at `https://siun-comp.github.io/isoamplar-plot-analysis-t/` confirmed the app loads without browser errors and a synthetic full-table preview inherits the second blank specimen header from the first explicit specimen. The hardened local gate passed 43 files / 352 Vitest tests, audit 1/1, production dependency vulnerabilities 0, Pages-base build, and byte-identical pre/post-Playwright `dist` SHA-256 `f4e023d30318fae112b8d0611c15353ac60dbd473ef53b592735bfba4ad01878`.
 
 ## Latest Changed Files
 - `src/data/resolveSpecimenHeaders.ts`
@@ -726,6 +726,6 @@ Completed the hardened T-edition local M15 gate: 43 files / 352 Vitest tests, au
 - Original non-T public Pages: `https://siun-comp.github.io/isoamplar-plot-analysis/`
 
 ## Next 3 Tasks
-1. Commit the verified M15 changes in both edition worktrees.
-2. Push each verified edition to its own `main` and confirm both Pages workflows.
-3. Run synthetic public-origin import/continuation smoke checks and record final deployment evidence.
+1. Use the released parser with representative non-sensitive workbooks and record any reproducible regression.
+2. Preserve Analysis XLSX continuation files when testing long-running analyses.
+3. Update requirements, tests, guide, and changelog together before the next user-visible release.

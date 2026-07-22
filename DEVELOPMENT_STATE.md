@@ -7,7 +7,7 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-07-14
+2026-07-22
 
 ## CURRENT TRUTH
 
@@ -17,6 +17,7 @@ Active
 - Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is complete and published as the separately managed `IsoAmplar Plot Analysis T` repository/Pages project. Current T product source is `18505c95eb0921d6c5c4f0987628296eba1db8db`; rollback tag is `release-20260714-threshold-edition`; Pages run `29323723239` succeeded.
 - Dual-edition M13 release is complete: plot-bearing PNG/JPEG/clipboard output uses a 1200 x 760 logical report profile at 2x raster resolution, with enlarged axis labels, margins, grid, curves, markers, and T-only Threshold annotation for readability near 9.5 cm physical width. New analyses default Chart image layout to `Plot only`; explicitly saved Analysis XLSX layout values remain authoritative. The original edition product source is `95c297705632d1bffb4f5b01eae6329872a20538`, with Pages run `29317061923` successful.
 - T-only M14 release is complete: the Threshold review panel copies the currently filtered results in current curve order as a rich Excel/TSV four-column table. The original non-T worktree and repository remain unchanged.
+- Source-local specimen-header inheritance is implemented and locally verified for both Excel and full-table Quick Paste on the T branch. A blank first usable specimen blocks the source; later true blanks inherit only within that source. Original blank provenance, source/target evidence, append isolation, merged-header behavior, and Analysis XLSX continuity are covered. Promotion to both repositories is in progress.
 - Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
@@ -66,15 +67,39 @@ Active
 - Threshold remains absent from the original non-T public runtime and is available in the separately deployed T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and positive/negative interpretation.
 
 ## Current Goal
-Release the T-only filtered Threshold result Excel clipboard action without changing the original non-T edition.
+Release source-local blank specimen-header inheritance to both the original and T editions without changing raw fluorescence or allowing inheritance across import sources.
 
 ## Current Milestone
-M14 T-only Threshold Excel clipboard: implemented, documented, committed, and deployed with public-origin clipboard smoke complete.
+M15 shared input refinement: T implementation, documentation, fixture regeneration, guide regeneration, and local release gates complete; original-edition integration and dual Pages promotion remain.
 
 ## Last Completed Step
-Deployed M14 product commit `18505c95eb0921d6c5c4f0987628296eba1db8db` through successful T Pages run `29323723239`. Public HTTPS smoke used only a generated three-curve workbook and verified HTTP 200, the T product title, a 4-row x 4-column clipboard projection, both `text/html` and `text/plain`, success feedback, zero failed resources, and zero console/page errors. The local gate passed 43 files / 339 tests, audit 1/1, dependency vulnerabilities 0, Pages-base build, Chromium 13/13, and byte-identical pre/post E2E `dist` hash `e8e7846cc589bc091239be322ac387c4cb6d66b575b6e709e0fc1ad2e1fbd839`. The regenerated 19-page guide PDF passed render review.
+Completed the T-edition local M15 gate: 43 files / 348 Vitest tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build, and fresh Chromium 13/13. The complete `dist` tree remained byte-identical before and after Playwright at SHA-256 `3f5452fd0bebf0edc780e5f5da3be0e96450d9d0cbde1306c93c00bf4d42d0f6`. The regenerated 19-page guide PDF was rendered with Poppler and visually reviewed. An independent data-integrity review identified and prompted fixes for Analysis XLSX header semantics, structured anchor/target provenance, merged-header truthfulness, fixture policy, append isolation, and wide-paste complexity.
 
 ## Latest Changed Files
+- `src/data/resolveSpecimenHeaders.ts`
+- `src/data/parseExcel.ts`
+- `src/data/parsePastedTable.ts`
+- `src/data/types.ts`
+- `src/data/parseExcel.test.ts`
+- `src/data/parsePastedTable.test.ts`
+- `src/analysis/analysisState.ts`
+- `src/analysis/analysisState.test.ts`
+- `src/analysis/analysisWorkbook.test.ts`
+- `src/app/appStore.test.ts`
+- `src/ui/WarningInspector.tsx`
+- `tests/fixtures/generateFixtures.mjs`
+- `tests/fixtures/source/FX-004-warning-cells.xlsx`
+- `tests/fixtures/expected/FX-004-warning-cells.json`
+- `tests/fixtures/manifest.json`
+- `tests/e2e/app.spec.ts`
+- `README.md`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+- `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`
+- `docs/03_INPUT_OUTPUT_SPEC_EN.md`
+- `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`
+- `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.md`
+- `output/pdf/IsoAmplar_Plot_Analysis_T_User_Guide_KR.pdf`
 - `src/chart/exportProfile.ts`
 - `src/chart/exportProfile.test.ts`
 - `src/analysis/threshold.ts`
@@ -701,6 +726,6 @@ Deployed M14 product commit `18505c95eb0921d6c5c4f0987628296eba1db8db` through s
 - Original non-T public Pages: `https://siun-comp.github.io/isoamplar-plot-analysis/`
 
 ## Next 3 Tasks
-1. Manually paste the rich table into the target desktop Excel workflow and confirm local formatting preference.
-2. Continue long-term use and record only reproducible Threshold or clipboard defects for future patches.
-3. Re-run the T release gate before any later Threshold result-projection change.
+1. Commit the verified shared/T changes and integrate the same input contract into the original non-T worktree.
+2. Run the original edition full unit, audit, dependency, Pages-base build, and fresh Chromium gates and regenerate its user guide.
+3. Push each verified edition to its own `main`, confirm both Pages workflows, and run synthetic public-origin import smoke checks.

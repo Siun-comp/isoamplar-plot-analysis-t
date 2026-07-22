@@ -564,6 +564,10 @@ describe("analysis state serialization", () => {
     wrongSource.sourceFiles[0].curveCount -= 1;
     expect(() => deserializeAnalysisState(wrongSource)).toThrow("curve count");
 
+    const wrongHeaderProvenance = createPayload();
+    wrongHeaderProvenance.dataset.curves[0].source.specimenHeader.displayValue = "";
+    expect(() => deserializeAnalysisState(wrongHeaderProvenance)).toThrow("header provenance");
+
     const wrongWarning = createPayload();
     wrongWarning.dataset.warnings = [
       {

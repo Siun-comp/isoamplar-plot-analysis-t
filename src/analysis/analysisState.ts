@@ -1072,10 +1072,10 @@ function validateDatasetRelationships(dataset: PcrDataset) {
     }
     validateCurveStatsRelationship(curve, `dataset.curves[${index}]`);
     if (curve.source.sourceKind === "excel") {
-      if (
-        curve.source.specimenHeader?.displayValue !== curve.specimenLabel ||
-        curve.source.reagentHeader?.displayValue !== curve.reagentLabel
-      ) {
+      const specimenProvenanceMatches =
+        curve.source.specimenHeader?.displayValue === curve.specimenLabel ||
+        hasValidInheritedSpecimenProvenance(dataset, curve);
+      if (!specimenProvenanceMatches || curve.source.reagentHeader?.displayValue !== curve.reagentLabel) {
         throw new Error(`dataset.curves[${index}] header provenance does not match its labels.`);
       }
     }
@@ -1089,6 +1089,24 @@ function validateDatasetRelationships(dataset: PcrDataset) {
   if (dataset.sourceKind !== expectedSourceKind) {
     throw new Error("dataset.sourceKind does not match curve provenance.");
   }
+}
+
+function hasValidInheritedSpecimenProvenance(dataset: PcrDataset, curve: Curve) {
+  if (curve.source.specimenHeader?.displayValue.trim() || !curve.specimenLabel.trim()) return false;
+  return dataset.warnings.some(
+    (warning) =>
+      warning.code === "INHERITED_SPECIMEN_LABEL" &&
+      warning.severity === "info" &&
+      warning.handling === "kept" &&
+      warning.curveIds?.includes(curve.curveId) &&
+      warning.labels?.includes(curve.specimenLabel) &&
+      warning.sourceRefs?.some(
+        (sourceRef) =>
+          sourceRef.sourceInstanceId === curve.source.sourceInstanceId &&
+          sourceRef.cell === curve.source.specimenCell &&
+          !sourceRef.displayValue?.trim()
+      )
+  );
 }
 
 function validateCurveStatsRelationship(curve: Curve, path: string) {

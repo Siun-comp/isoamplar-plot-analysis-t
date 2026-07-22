@@ -1,5 +1,12 @@
 # CHANGELOG.md
 
+## 2026-07-22 - Specimen header inheritance
+
+- Added source-local left-to-right specimen inheritance for truly blank later row-1 cells in Excel and full-table Quick Paste, reducing repeated entry for one-specimen/multi-reagent runs.
+- Blocked Excel or paste sources whose first usable curve column has no specimen label; failed append attempts leave the open analysis unchanged and never borrow a specimen from another source.
+- Preserved blank header provenance and added grouped informational evidence with explicit source and target cells; reagent headers, formula-without-cache headers, and formatted-display-empty headers are not inherited.
+- Updated horizontal merged-specimen handling, fixed fixtures, append coverage, and Analysis XLSX semantic validation so inherited labels and original blank cells roundtrip without weakening unrelated header-integrity checks.
+
 ## 2026-07-14 - IsoAmplar Plot Analysis T
 
 - Added a T-only Excel clipboard action beside the Threshold result status filter. It copies the currently filtered curve rows in current order as rich HTML and TSV cells with specimen, reagent, numeric estimated crossing Cycle, and non-clinical result status; missing estimates stay blank and multiple crossings retain review wording.

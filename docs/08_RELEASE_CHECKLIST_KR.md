@@ -16,7 +16,7 @@ Active release gate
 - [x] 전체 Vitest 45 files / 381 tests 및 audit 1/1 gate
 - [x] T Pages base-path production build와 fresh Chromium 13/13
 - [x] 사용자 가이드 20-page PDF 재생성 및 시각 검수
-- [ ] GitHub Pages 배포와 최신/보관 URL 공개 smoke
+- [x] GitHub Pages 배포와 최신/보관 URL 공개 smoke: source `60b9414`, run `30802527069`
 
 ## Threshold 로컬 후보 게이트
 - [x] raw fluorescence 불변 및 `null` 비연결 계산 규칙 검증

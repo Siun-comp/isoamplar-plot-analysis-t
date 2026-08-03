@@ -18,6 +18,7 @@ Active
 - Analysis XLSX remains schema 5 and preserves full dataset/settings/Selection Sets/Threshold configuration. Its visible Settings sheet now records the generating app version; old supported schemas still migrate before semantic validation.
 - Source-local specimen-header inheritance remains authoritative for Excel and full-table Quick Paste. The first included curve must resolve to a same-source explicit specimen; ignored reagent columns never create curves but may supply an explicit inheritance anchor for later included columns.
 - The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
+- Release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` is tagged `v1.1.0` and deployed by successful Pages run `30802527069`. Public smoke confirmed the latest v1.1.0 UI and executable archived v1.0.0 runtime with no browser console warning/error.
 - Pre-release rollback anchors remain the immutable `v1.0.0` runtime and historical Git tags. No user workbook, real specimen label, or real fluorescence data is committed.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
@@ -67,13 +68,13 @@ Active
 - Threshold is part of the sole maintained T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and clinical interpretation. `Positive`/`ND` are explicitly user-set Threshold crossing-status labels, not clinical classifications.
 
 ## Current Goal
-Promote the fully verified v1.1.0 T-only maintenance release and confirm both latest and archived v1.0.0 Pages URLs.
+Operate the deployed v1.1.0 T-only release and collect real-use feedback for future patches.
 
 ## Current Milestone
-M16 versioned single-product maintenance and input/workflow refinement is implemented locally; commit, tag, Pages deployment, and public smoke remain.
+M16 versioned single-product maintenance and input/workflow refinement is released; latest and archived v1.0.0 Pages runtimes are publicly verified.
 
 ## Last Completed Step
-Completed local v1.1.0 implementation, documentation, PDF regeneration, immutable archive hardening, full Vitest 381/381, audit 1/1, dependency audit 0, Pages build, fresh Chromium 13/13, exact-dist verification, and final independent data-integrity and release/UX expert GO verdicts. Commit and deployment are next.
+Committed and tagged v1.1.0, pushed only to the maintained T repository, completed Pages run `30802527069`, and smoke-tested the latest and archived v1.0.0 URLs without browser console warning/error.
 
 ## Latest Changed Files
 - `package.json`, `package-lock.json`
@@ -532,6 +533,7 @@ Completed local v1.1.0 implementation, documentation, PDF regeneration, immutabl
 
 ## Verification Status
 - 2026-08-03 v1.1.0 final local gate: `npm test` passed 45 files / 381 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; Pages-base production build passed; fresh Chromium passed 13/13 with `--fail-on-flaky-tests`; complete `dist` SHA-256 `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c` was byte-identical after Playwright. The 20-page PDF was regenerated, rendered through Poppler, inspected as a complete contact sheet and at full resolution on the changed troubleshooting pages, and contained no replacement characters. Independent data-integrity and release/UX re-audits returned GO after the last excluded-column warning provenance regression was fixed and tested.
+- 2026-08-03 v1.1.0 deployment: release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` and annotated `v1.0.0`/`v1.1.0` tags were pushed only to `threshold`; Pages run `30802527069` passed all jobs including 13 Chromium tests. Public latest and archived v1.0.0 smoke passed with correct version/preset UI and no console warning/error.
 - 2026-07-14 Threshold final local gate: `npm run test` passed 41 files / 336 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; production build passed; fresh Chromium passed 13/13. The complete `dist` tree remained byte-identical before/after Playwright at `e178d3bf3e95be3a64f04959968a39c3995ee9e1c459139598424588b64c2d8c`.
 - Threshold browser evidence uses synthetic data only and covers Auto Y non-expansion, independent preview/export visibility, out-of-range downloaded PNG raster difference, crossed/multiple/internal-gap/starts-above results, Selected Data XLSX schema 2 sheet/readback, Analysis XLSX schema 5 restore, no document horizontal overflow, and no unexpected browser/network errors.
 - Final audit remediation exposes every event's raw bracket values, exact source cells, source instance ID, interpolation status, and formula-cache evidence in the bounded result panel; multiple crossings share the review filter/count predicate; non-primary XLSX notes remain consistent with blank primary columns. Edge outcome and enabled mismatched-draft roundtrip regressions are covered.

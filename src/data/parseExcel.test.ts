@@ -73,7 +73,7 @@ describe("parseExcelWorkbook", () => {
     expect(result.dataset.warnings.map((warning) => warning.code)).toContain("INHERITED_SPECIMEN_LABEL");
   });
 
-  it("does not inherit a horizontally merged reagent header", () => {
+  it("excludes a horizontally merged reagent continuation with no reagent information", () => {
     const worksheet = XLSX.utils.aoa_to_sheet([
       ["Specimen 1", ""],
       ["R1", ""],
@@ -87,8 +87,11 @@ describe("parseExcelWorkbook", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.dataset.curves[1]).toMatchObject({ specimenLabel: "Specimen 1", reagentLabel: "" });
-    expect(result.dataset.curves[1].warnings.map((warning) => warning.code)).toContain("MISSING_REAGENT_LABEL");
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.warnings.find((warning) => warning.sourceCell === "B2")).toMatchObject({
+      code: "MISSING_REAGENT_LABEL",
+      handling: "ignored"
+    });
     expect(result.dataset.warnings.find((warning) => warning.code === "MERGED_HEADER_CELL")).toMatchObject({
       severity: "warning",
       sourceRange: "A2:B2"
@@ -381,21 +384,22 @@ describe("parseExcelWorkbook", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.dataset.curves).toHaveLength(4);
+    expect(result.dataset.curves).toHaveLength(3);
     expect(result.dataset.curves.map((curve) => curve.specimenLabel)).toEqual([
       "Specimen 1",
       "Specimen 1",
-      "Specimen 2",
       "Specimen 2"
     ]);
     expect(result.dataset.curves.map((curve) => curve.y)).toEqual([
       [0.2, 1.2],
       [0.25, 1.4],
-      [0.3, 1.6],
       [0.35, 1.8]
     ]);
     expect(result.dataset.curves[1].source.specimenHeader).toMatchObject({ rawValue: "", displayValue: "" });
-    expect(result.dataset.curves[2].warnings.map((warning) => warning.code)).toContain("MISSING_REAGENT_LABEL");
+    expect(result.dataset.warnings.find((warning) => warning.sourceCell === "C2")).toMatchObject({
+      code: "MISSING_REAGENT_LABEL",
+      handling: "ignored"
+    });
     expect(result.dataset.warnings.some((warning) => warning.code === "MISSING_SPECIMEN_LABEL")).toBe(false);
     const inherited = result.dataset.warnings.filter((warning) => warning.code === "INHERITED_SPECIMEN_LABEL");
     expect(inherited).toHaveLength(2);
@@ -406,6 +410,184 @@ describe("parseExcelWorkbook", () => {
       "C1",
       "D1"
     ]);
+  });
+
+  it("excludes blank and literal-hyphen reagent columns without changing retained fluorescence", () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["Specimen 1", "Specimen 2", "Specimen 3", "Specimen 4"],
+      ["R1", "", " - ", "R-4"],
+      [1, 200, 300, 4],
+      [2, 201, 301, 5]
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    const result = parseWorkbook(workbook, "reagent-placeholders.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves.map((curve) => curve.reagentLabel)).toEqual(["R1", "R-4"]);
+    expect(result.dataset.curves.map((curve) => curve.y)).toEqual([[1, 2], [4, 5]]);
+    const exclusions = result.dataset.warnings.filter(
+      (warning) => warning.code === "MISSING_REAGENT_LABEL" && warning.handling === "ignored"
+    );
+    expect(exclusions.map((warning) => warning.sourceCell)).toEqual(["B2", "C2"]);
+  });
+
+  it("does not extend the shared Cycle range from a longer excluded reagent column", () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["Specimen 1", "Specimen 2"],
+      ["R1", "-"],
+      [1, 100],
+      [2, 101],
+      [undefined, 102],
+      [undefined, 103]
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    const result = parseWorkbook(workbook, "excluded-long-column.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.cycleCount).toBe(2);
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.curves[0].y).toEqual([1, 2]);
+  });
+
+  it("does not auto-exclude a formula-backed hyphen reagent label", () => {
+    const worksheet: XLSX.WorkSheet = {
+      A1: { t: "s", v: "Specimen 1" },
+      A2: { t: "s", v: "-", f: '"-"' },
+      A3: { t: "n", v: 42 },
+      "!ref": "A1:A3"
+    };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Formula");
+
+    const result = parseWorkbook(workbook, "formula-reagent.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.curves[0].reagentLabel).toBe("-");
+    expect(result.dataset.warnings.map((warning) => warning.code)).toContain("FORMULA_CACHED_VALUE_USED");
+  });
+
+  it("uses an explicit specimen on an excluded reagent column as the next curve inheritance anchor", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet([["S1", "S2", ""], ["R1", "-", "R2"], [1, 200, 2]]),
+      "Sheet1"
+    );
+
+    const result = parseWorkbook(workbook, "excluded-anchor.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves.map((curve) => [curve.specimenLabel, curve.reagentLabel])).toEqual([
+      ["S1", "R1"],
+      ["S2", "R2"]
+    ]);
+    expect(result.dataset.warnings.find((warning) => warning.curveIds?.includes("sheet0_col_C"))?.sourceRefs?.map(
+      (source) => source.cell
+    )).toEqual(["B1", "C1"]);
+  });
+
+  it("keeps formula-cache provenance when an excluded column anchors a retained curve", () => {
+    const worksheet: XLSX.WorkSheet = {
+      A1: { t: "s", v: "S1" },
+      B1: { t: "s", v: "S2", f: '"S2"' },
+      C1: { t: "s", v: "" },
+      A2: { t: "s", v: "R1" },
+      B2: { t: "s", v: "-" },
+      C2: { t: "s", v: "R2" },
+      A3: { t: "n", v: 1 },
+      B3: { t: "n", v: 100 },
+      C3: { t: "n", v: 2 },
+      "!ref": "A1:C3"
+    };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Formula anchor");
+
+    const result = parseWorkbook(workbook, "formula-anchor.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves.map((curve) => [curve.specimenLabel, curve.reagentLabel])).toEqual([
+      ["S1", "R1"],
+      ["S2", "R2"]
+    ]);
+    expect(result.dataset.warnings.find(
+      (warning) => warning.code === "FORMULA_CACHED_VALUE_USED" && warning.sourceCell === "B1"
+    )).toMatchObject({ curveIds: ["sheet0_col_C"] });
+  });
+
+  it("binds excluded-column header warnings even when the column is not an inheritance anchor", () => {
+    const worksheet: XLSX.WorkSheet = {
+      A1: { t: "s", v: "S1" },
+      B1: { t: "s", v: "Unused", f: '"Unused"' },
+      C1: { t: "s", v: "S3" },
+      A2: { t: "s", v: "R1" },
+      B2: { t: "s", v: "-" },
+      C2: { t: "s", v: "R3" },
+      A3: { t: "n", v: 1 },
+      B3: { t: "n", v: 100 },
+      C3: { t: "n", v: 3 },
+      "!ref": "A1:C3"
+    };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Formula excluded");
+
+    const result = parseWorkbook(workbook, "formula-excluded.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const warning = result.dataset.warnings.find(
+      (candidate) => candidate.code === "FORMULA_CACHED_VALUE_USED" && candidate.sourceCell === "B1"
+    );
+    expect(warning?.curveIds).toBeUndefined();
+    expect(warning?.sourceRefs?.[0]).toMatchObject({
+      sourceInstanceId: expect.any(String),
+      sourceName: "formula-excluded.xlsx",
+      worksheet: "Formula excluded",
+      cell: "B1"
+    });
+  });
+
+  it("retains a numeric reagent whose Excel number format displays a hyphen", () => {
+    const worksheet: XLSX.WorkSheet = {
+      A1: { t: "s", v: "S1" },
+      A2: { t: "n", v: 0, z: "0;-0;-" },
+      A3: { t: "n", v: 1 },
+      "!ref": "A1:A3"
+    };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Formatted reagent");
+
+    const result = parseWorkbook(workbook, "formatted-reagent.xlsx", XLSX);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.curves[0].reagentLabel).toBe("-");
+  });
+
+  it("blocks import when every reagent column is a placeholder", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet([["S1", "S2"], ["", "-"], [1, 2]]),
+      "Sheet1"
+    );
+
+    const result = parseWorkbook(workbook, "no-reagents.xlsx", XLSX);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.message).toContain("no usable PCR data columns");
+    expect(result.warnings.filter((warning) => warning.handling === "ignored")).toHaveLength(2);
   });
 
   it("does not treat an empty-display specimen formula as intentional inheritance", () => {

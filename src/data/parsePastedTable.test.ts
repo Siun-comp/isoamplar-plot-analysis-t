@@ -108,7 +108,7 @@ describe("parsePastedTable", () => {
     expect(result.error.message).toContain("검체명");
   });
 
-  it("represents uneven tab rows as null warnings and ignores trailing blank rows", () => {
+  it("excludes an uneven tab column when its reagent header is blank", () => {
     const result = parsePastedTable("Specimen 1\t\nA1\t\n0.1\ttext\n\t0.3\n1.1\n\n", {
       mode: "fullTable",
       sourceName: "Warnings"
@@ -118,12 +118,73 @@ describe("parsePastedTable", () => {
     if (!result.ok) return;
     expect(result.dataset.cycleCount).toBe(3);
     expect(result.dataset.curves[0].y).toEqual([0.1, null, 1.1]);
-    expect(result.dataset.curves[1].y).toEqual([null, 0.3, null]);
-    expect(result.dataset.curves[1].specimenLabel).toBe("Specimen 1");
-    expect(result.dataset.warnings.map((warning) => warning.code)).toContain("INHERITED_SPECIMEN_LABEL");
-    expect(result.dataset.curves[1].warnings.map((warning) => warning.code)).toContain("MISSING_REAGENT_LABEL");
-    expect(result.dataset.curves[1].warnings.map((warning) => warning.code)).toContain("NON_NUMERIC_FLUORESCENCE");
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.warnings.find((warning) => warning.sourceCell === "B2")).toMatchObject({
+      code: "MISSING_REAGENT_LABEL",
+      handling: "ignored"
+    });
     expect(result.dataset.curves[0].warnings.map((warning) => warning.code)).toContain("EMPTY_FLUORESCENCE_CELL");
+  });
+
+  it("excludes blank and literal-hyphen reagent columns while retaining valid labels", () => {
+    const result = parsePastedTable("S1\tS2\tS3\tS4\nR1\t\t - \tR-4\n1\t200\t300\t4\n2\t201\t301\t5", {
+      mode: "fullTable",
+      sourceName: "Reagent placeholders",
+      sourceInstanceId: "paste-placeholder"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves.map((curve) => curve.reagentLabel)).toEqual(["R1", "R-4"]);
+    expect(result.dataset.curves.map((curve) => curve.y)).toEqual([[1, 2], [4, 5]]);
+    expect(result.summary.curveCount).toBe(2);
+    const exclusions = result.dataset.warnings.filter(
+      (warning) => warning.code === "MISSING_REAGENT_LABEL" && warning.handling === "ignored"
+    );
+    expect(exclusions.map((warning) => warning.sourceCell)).toEqual(["B2", "C2"]);
+  });
+
+  it("does not extend the shared Cycle range from a longer excluded pasted column", () => {
+    const result = parsePastedTable("S1\tS2\nR1\t-\n1\t100\n2\t101\n\t102\n\t103", {
+      mode: "fullTable",
+      sourceName: "Excluded long column"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.cycleCount).toBe(2);
+    expect(result.dataset.curves).toHaveLength(1);
+    expect(result.dataset.curves[0].y).toEqual([1, 2]);
+  });
+
+  it("blocks pasted import when every reagent header is a placeholder", () => {
+    const result = parsePastedTable("S1\tS2\n\t-\n1\t2", {
+      mode: "fullTable",
+      sourceName: "No reagents"
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.message).toContain("사용할 수 있는 curve 열이 없습니다");
+    expect(result.warnings.filter((warning) => warning.handling === "ignored")).toHaveLength(2);
+  });
+
+  it("uses an excluded column's explicit specimen as the next pasted curve inheritance anchor", () => {
+    const result = parsePastedTable("S1\tS2\t\nR1\t-\tR2\n1\t200\t2", {
+      mode: "fullTable",
+      sourceName: "Excluded anchor",
+      sourceInstanceId: "paste-excluded-anchor"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.dataset.curves.map((curve) => [curve.specimenLabel, curve.reagentLabel])).toEqual([
+      ["S1", "R1"],
+      ["S2", "R2"]
+    ]);
+    expect(result.dataset.warnings.find((warning) => warning.curveIds?.includes("paste0_col_C"))?.sourceRefs?.map(
+      (source) => source.cell
+    )).toEqual(["B1", "C1"]);
   });
 
   it("rejects a whitespace-only specimen in the first usable curve column", () => {

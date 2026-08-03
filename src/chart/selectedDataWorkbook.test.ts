@@ -7,6 +7,7 @@ import { THRESHOLD_RULE_ID } from "../analysis/threshold";
 import {
   createSelectedDataWorkbook,
   inspectSelectedDataWorkbookRole,
+  LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
   PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
   SELECTED_DATA_ROLE_SHEET_NAME,
   SELECTED_DATA_WORKBOOK_MARKER,
@@ -52,7 +53,7 @@ describe("Selected Data XLSX writer", () => {
       THRESHOLD_EVENTS_SHEET_NAME,
       SELECTED_DATA_ROLE_SHEET_NAME
     ]);
-    expect(inspectSelectedDataWorkbookRole(workbook)).toEqual({ kind: "selected-data", schemaVersion: 2 });
+    expect(inspectSelectedDataWorkbookRole(workbook)).toEqual({ kind: "selected-data", schemaVersion: 3 });
     expect(workbook.Workbook?.Sheets?.find((sheet) => sheet.name === SELECTED_DATA_ROLE_SHEET_NAME)?.Hidden).toBe(1);
 
     const plotted = workbook.Sheets.PlottedData;
@@ -116,13 +117,13 @@ describe("Selected Data XLSX writer", () => {
       raw: true
     });
     expect(resultRows[0]).toEqual(["Threshold status", "Applied"]);
-    expect(resultRows[2]).toEqual(expect.arrayContaining([1, crossed.curveId, "Analysis A", "Synthetic sample", "Condition A", 5, THRESHOLD_RULE_ID, "crossed", 2, true]));
-    expect(resultRows[2][14]).toBe(3);
-    expect(resultRows[2][15]).toBe(6);
-    expect(resultRows[2][17]).toBe(2.5);
+    expect(resultRows[2]).toEqual(expect.arrayContaining([1, crossed.curveId, "Analysis A", "Synthetic sample", "Condition A", 5, THRESHOLD_RULE_ID, "crossed", "Positive (다중 교차 검토)", 2, true]));
+    expect(resultRows[2][15]).toBe(3);
+    expect(resultRows[2][16]).toBe(6);
+    expect(resultRows[2][18]).toBe(2.5);
     expect(resultRows[3][10]).toBe("indeterminate-gap");
-    expect(resultRows[3][16]).toBeUndefined();
     expect(resultRows[3][17]).toBeUndefined();
+    expect(resultRows[3][18]).toBeUndefined();
 
     const eventRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_EVENTS_SHEET_NAME], {
       header: 1,
@@ -192,10 +193,12 @@ describe("Selected Data XLSX writer", () => {
     expect(String(byOutcome.get("starts-above-threshold")?.[headers.get("Note") as number])).toContain("subsequent upward crossing");
     expect(String(byOutcome.get("indeterminate-leading-gap")?.[headers.get("Note") as number])).toContain("ThresholdEvents");
     expect(String(byOutcome.get("not-reached")?.[headers.get("Note") as number])).toBe("No observed upward crossing.");
+    expect(byOutcome.get("not-reached")?.[headers.get("Analysis status") as number]).toBe("ND");
     expect(String(byOutcome.get("insufficient-data")?.[headers.get("Note") as number])).toContain("Insufficient finite raw points");
 
     const crossedRows = rows.slice(2).filter((row) => row[headers.get("Outcome") as number] === "crossed");
     expect(crossedRows).toHaveLength(1);
+    expect(crossedRows[0][headers.get("Analysis status") as number]).toBe("Positive (다중 교차 검토)");
     expect(crossedRows[0][headers.get("Primary Cycle-axis linear estimate") as number]).toBe(1.8);
     expect(String(crossedRows[0][headers.get("Note") as number])).toContain("First upward crossing shown");
 
@@ -432,17 +435,22 @@ describe("Selected Data XLSX writer", () => {
     XLSX.utils.book_append_sheet(corrupt, XLSX.utils.aoa_to_sheet([["Wrong"], ["schemaVersion", 1]]), SELECTED_DATA_ROLE_SHEET_NAME);
     expect(inspectSelectedDataWorkbookRole(corrupt)).toMatchObject({ kind: "invalid-selected-data" });
 
-    const legacy = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      legacy,
-      XLSX.utils.aoa_to_sheet([
-        [SELECTED_DATA_WORKBOOK_MARKER],
-        ["schemaVersion", PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION],
-        ["role", "selected-data-output-only"]
-      ]),
-      SELECTED_DATA_ROLE_SHEET_NAME
-    );
-    expect(inspectSelectedDataWorkbookRole(legacy)).toEqual({ kind: "selected-data", schemaVersion: 1 });
+    for (const schemaVersion of [
+      LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
+      PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION
+    ]) {
+      const legacy = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(
+        legacy,
+        XLSX.utils.aoa_to_sheet([
+          [SELECTED_DATA_WORKBOOK_MARKER],
+          ["schemaVersion", schemaVersion],
+          ["role", "selected-data-output-only"]
+        ]),
+        SELECTED_DATA_ROLE_SHEET_NAME
+      );
+      expect(inspectSelectedDataWorkbookRole(legacy)).toEqual({ kind: "selected-data", schemaVersion });
+    }
   });
 });
 

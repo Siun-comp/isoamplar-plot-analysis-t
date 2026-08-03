@@ -4,6 +4,7 @@ import type { Curve, PcrWarning, WarningSourceRef } from "../data/types";
 import {
   calculateThresholdResults,
   createDefaultThresholdSettings,
+  formatThresholdAnalysisStatus,
   isThresholdDraftApplied,
   type ThresholdResult,
   type ThresholdSettings
@@ -14,8 +15,9 @@ type WorkbookCellValue = string | number | boolean | undefined;
 
 export const SELECTED_DATA_ROLE_SHEET_NAME = "_IsoAmplarSelectedData";
 export const SELECTED_DATA_WORKBOOK_MARKER = "IsoAmplarSelectedData";
-export const SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 2;
-export const PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 1;
+export const SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 3;
+export const PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 2;
+export const LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 1;
 
 const PLOTTED_DATA_SHEET_NAME = "PlottedData";
 const CURVE_INFO_SHEET_NAME = "CurveInfo";
@@ -45,7 +47,7 @@ export type SelectedDataWorkbookResult =
   | { ok: false; reason: string };
 
 export type SelectedDataWorkbookRole =
-  | { kind: "selected-data"; schemaVersion: 1 | 2 }
+  | { kind: "selected-data"; schemaVersion: 1 | 2 | 3 }
   | { kind: "not-selected-data" }
   | { kind: "invalid-selected-data"; message: string };
 
@@ -143,7 +145,9 @@ export function inspectSelectedDataWorkbookRole(workbook: XLSX.WorkBook): Select
   const schemaVersion = roleSheet.B2?.v;
   if (
     roleSheet.A2?.v !== "schemaVersion" ||
-    (schemaVersion !== PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION && schemaVersion !== SELECTED_DATA_WORKBOOK_SCHEMA_VERSION)
+    schemaVersion !== LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION &&
+      schemaVersion !== PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION &&
+      schemaVersion !== SELECTED_DATA_WORKBOOK_SCHEMA_VERSION
   ) {
     return { kind: "invalid-selected-data", message: "Selected Data XLSX schema version is unsupported." };
   }
@@ -342,6 +346,7 @@ function createThresholdResultRows(
       "Threshold",
       "Rule ID",
       "Outcome",
+      "Analysis status",
       "Candidate count",
       "Multiple upward crossings",
       "First observed index",
@@ -374,6 +379,7 @@ function createThresholdResultRows(
       result.threshold,
       result.ruleId,
       result.outcome,
+      formatThresholdAnalysisStatus(result.outcome, result.multipleUpwardCrossings),
       result.candidateCount,
       result.multipleUpwardCrossings,
       observed?.index,

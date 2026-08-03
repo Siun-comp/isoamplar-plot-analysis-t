@@ -128,7 +128,6 @@ function writeWarningFixture() {
     cycleCount: 3,
     curves: [
       { curveId: "sheet0_col_A", y: [0.1, null, 0.6], warningCodes: ["NON_NUMERIC_FLUORESCENCE"] },
-      { curveId: "sheet0_col_B", y: [0.2, 0.4, 0.7], warningCodes: ["MISSING_REAGENT_LABEL"] },
       {
         curveId: "sheet0_col_C",
         y: [0.3, 0.5, null],
@@ -137,7 +136,7 @@ function writeWarningFixture() {
     ],
     requiredWarningEvidence: [
       { code: "INHERITED_SPECIMEN_LABEL", curveId: "sheet0_col_C", handling: "kept" },
-      { code: "MISSING_REAGENT_LABEL", sourceCell: "B2", curveId: "sheet0_col_B", handling: "kept" },
+      { code: "MISSING_REAGENT_LABEL", sourceCell: "B2", handling: "ignored" },
       {
         code: "NON_NUMERIC_FLUORESCENCE",
         sourceCell: "A4",

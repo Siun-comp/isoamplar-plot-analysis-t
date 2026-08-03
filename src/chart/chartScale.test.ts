@@ -8,6 +8,22 @@ import {
 } from "./chartScale";
 
 describe("chart scale draft and applied state", () => {
+  it("preconfigures editable FAM and HEX Y presets while keeping both axes in Auto", () => {
+    const scale = createDefaultChartScale();
+
+    expect(scale.x).toMatchObject({
+      mode: "auto",
+      preset1: { label: "P1", min: "", max: "" },
+      preset2: { label: "P2", min: "", max: "" }
+    });
+    expect(scale.y).toMatchObject({
+      mode: "auto",
+      preset1: { label: "FAM", min: "-200000", max: "1600000" },
+      preset2: { label: "HEX", min: "-100000", max: "600000" },
+      applied: { mode: "auto", min: null, max: null }
+    });
+  });
+
   it("keeps the last valid applied bounds while the active fixed draft is incomplete", () => {
     const curve = createOneSpecimenEightReagentDataset().curves[0];
     const axis = createDefaultChartScale().y;

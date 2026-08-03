@@ -1,5 +1,16 @@
 # CHANGELOG.md
 
+## 2026-08-03 - v1.1.0 maintained T release
+
+- Consolidated ongoing maintenance on `IsoAmplar Plot Analysis T`; the original non-T app is now a historical rollback artifact rather than a second patch target.
+- Added an in-app semantic version and release-history dialog. Archived the verified pre-change T build as immutable `v1.0.0` static assets with a SHA-256 manifest and a direct reproduction link.
+- Excluded truly blank or literal `-` reagent columns from Excel and full-table Quick Paste analysis while preserving source diagnostics and left-to-right specimen inheritance anchors. Non-empty hyphenated and formula-backed reagent identities remain included.
+- Removed only the final `.xls`/`.xlsx` extension from default analysis names and simplified Analysis XLSX names to `<analysisName>_analysisN.xlsx` without a second date prefix.
+- Added editable Y-axis defaults `FAM -200000..1600000` and `HEX -100000..600000`; original Excel import still starts in Auto mode and restored Analysis XLSX presets remain authoritative.
+- Changed user-facing Threshold crossing statuses to `Positive` and `ND`, with an explicit non-clinical interpretation note and one common projection across the UI, rich Excel clipboard, and Selected Data XLSX.
+- Advanced Selected Data XLSX to schema 3, preserving the raw outcome while adding an `Analysis status` column. Analysis XLSX remains schema 5 and now records the generating app version in its visible Settings sheet.
+- Preserved source-instance provenance for formula/format warnings on excluded reagent columns even when those columns are not used as specimen inheritance anchors, preventing false `unknown source ID` rejection on Analysis XLSX restore.
+
 ## 2026-07-22 - Specimen header inheritance
 
 - Added source-local left-to-right specimen inheritance for truly blank later row-1 cells in Excel and full-table Quick Paste, reducing repeated entry for one-specimen/multi-reagent runs.

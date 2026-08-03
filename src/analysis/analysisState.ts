@@ -1063,7 +1063,8 @@ function validateSourceFiles(value: unknown): asserts value is SourceFileSummary
 
 type InheritedSpecimenEvidence = {
   warning: PcrWarning;
-  anchorCurveId: string;
+  anchorSourceInstanceId: string;
+  anchorColumnIndex: number;
 };
 
 type DatasetRelationshipIndex = {
@@ -1179,6 +1180,7 @@ function validateInheritedSpecimenEvidence(
     const label = warning.labels![0];
     const targetCurveIds = new Set(warning.curveIds!);
     const referencedCurves = new Map<string, { curve: Curve; sourceRef: WarningSourceRef }>();
+    const unplottedSourceRefs: WarningSourceRef[] = [];
 
     for (const sourceRef of warning.sourceRefs!) {
       if (!sourceRef.sourceInstanceId || !sourceRef.columnLetter || !sourceRef.cell) {
@@ -1187,8 +1189,11 @@ function validateInheritedSpecimenEvidence(
       const curve = index.curvesBySourceColumn.get(
         createSourceColumnKey(sourceRef.sourceInstanceId, sourceRef.columnLetter)
       );
+      if (!curve) {
+        unplottedSourceRefs.push(sourceRef);
+        continue;
+      }
       if (
-        !curve ||
         sourceRef.cell !== curve.source.specimenCell ||
         sourceRef.sourceName !== curve.source.fileName ||
         sourceRef.sourceKind !== curve.source.sourceKind ||
@@ -1200,35 +1205,53 @@ function validateInheritedSpecimenEvidence(
       referencedCurves.set(curve.curveId, { curve, sourceRef });
     }
 
-    if (referencedCurves.size !== targetCurveIds.size + 1) {
+    if (
+      warning.sourceRefs!.length !== targetCurveIds.size + 1 ||
+      referencedCurves.size + unplottedSourceRefs.length !== targetCurveIds.size + 1
+    ) {
       throw new Error("Inherited specimen evidence must contain one anchor and every target cell.");
     }
-    const anchors = [...referencedCurves.values()].filter(({ curve }) => !targetCurveIds.has(curve.curveId));
-    if (anchors.length !== 1) {
+    const plottedAnchors = [...referencedCurves.values()].filter(({ curve }) => !targetCurveIds.has(curve.curveId));
+    if (plottedAnchors.length + unplottedSourceRefs.length !== 1) {
       throw new Error("Inherited specimen evidence must contain exactly one anchor cell.");
     }
-    const anchor = anchors[0];
+    const plottedAnchor = plottedAnchors[0];
+    const anchorSourceRef = plottedAnchor?.sourceRef ?? unplottedSourceRefs[0];
+    const anchorSourceInstanceId = anchorSourceRef.sourceInstanceId!;
+    const anchorColumnIndex = decodeCanonicalColumnLetter(anchorSourceRef.columnLetter!);
+    const firstTarget = index.curvesById.get(warning.curveIds![0]);
     if (
-      anchor.curve.specimenLabel !== label ||
-      anchor.sourceRef.displayValue !== label ||
-      isBlankPortableHeaderValue(anchor.sourceRef.rawValue)
+      anchorColumnIndex === null ||
+      anchorSourceRef.cell !== `${anchorSourceRef.columnLetter}1` ||
+      anchorSourceRef.displayValue !== label ||
+      isBlankPortableHeaderValue(anchorSourceRef.rawValue) ||
+      !firstTarget ||
+      anchorSourceInstanceId !== firstTarget.source.sourceInstanceId ||
+      anchorSourceRef.sourceName !== firstTarget.source.fileName ||
+      anchorSourceRef.sourceKind !== firstTarget.source.sourceKind ||
+      anchorSourceRef.worksheet !== firstTarget.source.sheetName
     ) {
-      throw new Error("Inherited specimen anchor does not match the explicit specimen label.");
+      throw new Error("Inherited specimen anchor does not match the explicit specimen label or source provenance.");
+    }
+    if (plottedAnchor) {
+      if (plottedAnchor.curve.specimenLabel !== label) {
+        throw new Error("Inherited specimen anchor does not match the explicit specimen label.");
+      }
+      if (
+        plottedAnchor.curve.source.sourceKind === "excel" &&
+        !warningRefMatchesHeaderProvenance(anchorSourceRef, plottedAnchor.curve.source.specimenHeader)
+      ) {
+        throw new Error("Inherited specimen anchor does not match Excel header provenance.");
+      }
     }
     if (
-      anchor.curve.source.sourceKind === "paste" &&
-      (anchor.sourceRef.rawValue !== label ||
-        Boolean(anchor.sourceRef.formulaText?.trim()) ||
-        (anchor.sourceRef.formulaCacheStatus !== undefined &&
-          anchor.sourceRef.formulaCacheStatus !== "not-formula"))
+      anchorSourceRef.sourceKind === "paste" &&
+      (anchorSourceRef.rawValue !== label ||
+        Boolean(anchorSourceRef.formulaText?.trim()) ||
+        (anchorSourceRef.formulaCacheStatus !== undefined &&
+          anchorSourceRef.formulaCacheStatus !== "not-formula"))
     ) {
       throw new Error("Inherited pasted specimen anchor raw value does not match its label.");
-    }
-    if (
-      anchor.curve.source.sourceKind === "excel" &&
-      !warningRefMatchesHeaderProvenance(anchor.sourceRef, anchor.curve.source.specimenHeader)
-    ) {
-      throw new Error("Inherited specimen anchor does not match Excel header provenance.");
     }
 
     for (const curveId of targetCurveIds) {
@@ -1238,9 +1261,8 @@ function validateInheritedSpecimenEvidence(
         throw new Error("Inherited specimen evidence is missing a target curve or cell.");
       }
       if (
-        target.source.sourceInstanceId !== anchor.curve.source.sourceInstanceId ||
-        target.source.sourceKind !== anchor.curve.source.sourceKind ||
-        target.source.columnIndex <= anchor.curve.source.columnIndex ||
+        target.source.sourceInstanceId !== anchorSourceInstanceId ||
+        target.source.columnIndex <= anchorColumnIndex ||
         target.specimenLabel !== label ||
         !isIntentionalBlankSourceRef(referencedTarget.sourceRef)
       ) {
@@ -1253,23 +1275,46 @@ function validateInheritedSpecimenEvidence(
       ) {
         throw new Error("Inherited specimen target is not an intentional blank Excel header.");
       }
-      evidenceByCurveId.set(curveId, { warning, anchorCurveId: anchor.curve.curveId });
+      evidenceByCurveId.set(curveId, { warning, anchorSourceInstanceId, anchorColumnIndex });
     }
+  }
+
+  const explicitColumnsBySource = new Map<string, Set<number>>();
+  for (const sourceCurves of index.curvesBySource.values()) {
+    const orderedCurves = isStrictlyIncreasingByColumn(sourceCurves)
+      ? sourceCurves
+      : [...sourceCurves].sort((left, right) => left.source.columnIndex - right.source.columnIndex);
+    const sourceInstanceId = orderedCurves[0]?.source.sourceInstanceId;
+    if (!sourceInstanceId) continue;
+    const explicitColumns = explicitColumnsBySource.get(sourceInstanceId) ?? new Set<number>();
+    for (const curve of orderedCurves) {
+      if (!evidenceByCurveId.has(curve.curveId) && isExplicitSpecimenCurve(curve)) {
+        explicitColumns.add(curve.source.columnIndex);
+      }
+    }
+    explicitColumnsBySource.set(sourceInstanceId, explicitColumns);
+  }
+  for (const evidence of evidenceByCurveId.values()) {
+    const explicitColumns = explicitColumnsBySource.get(evidence.anchorSourceInstanceId) ?? new Set<number>();
+    explicitColumns.add(evidence.anchorColumnIndex);
+    explicitColumnsBySource.set(evidence.anchorSourceInstanceId, explicitColumns);
   }
 
   for (const sourceCurves of index.curvesBySource.values()) {
     const orderedCurves = isStrictlyIncreasingByColumn(sourceCurves)
       ? sourceCurves
       : [...sourceCurves].sort((left, right) => left.source.columnIndex - right.source.columnIndex);
-    let nearestExplicitCurveId: string | null = null;
+    const sourceInstanceId = orderedCurves[0]?.source.sourceInstanceId;
+    const explicitColumns = sourceInstanceId ? [...(explicitColumnsBySource.get(sourceInstanceId) ?? [])] : [];
     for (const curve of orderedCurves) {
       const evidence = evidenceByCurveId.get(curve.curveId);
       if (evidence) {
-        if (evidence.anchorCurveId !== nearestExplicitCurveId) {
+        const nearestExplicitColumn = explicitColumns
+          .filter((columnIndex) => columnIndex < curve.source.columnIndex)
+          .reduce<number | null>((nearest, columnIndex) => nearest === null || columnIndex > nearest ? columnIndex : nearest, null);
+        if (evidence.anchorColumnIndex !== nearestExplicitColumn) {
           throw new Error("Inherited specimen anchor is not the nearest explicit specimen to the left.");
         }
-      } else if (isExplicitSpecimenCurve(curve)) {
-        nearestExplicitCurveId = curve.curveId;
       }
     }
   }

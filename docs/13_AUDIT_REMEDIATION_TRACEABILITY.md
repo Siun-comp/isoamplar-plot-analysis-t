@@ -4,7 +4,7 @@
 
 - Phase: S11 released on GitHub Pages
 - Updated: 2026-07-14
-- Product acceptance state: Passing S11 release plus locally verified Threshold candidate; Threshold commit/deployment remains pending user review
+- Product acceptance state: Passing S11 baseline plus locally verified v1.1.0 sole-maintained T candidate; v1.1.0 commit/deployment remains pending
 - Data policy: synthetic-only fixtures and generated values
 
 ## Status Vocabulary
@@ -165,7 +165,7 @@ S1 completes when fixed hashes, passing baseline tests, isolated known-red probe
 - Evidence includes schema 1-4 migration/roundtrip/corruption and wrong-type rejection, append/replace/tab-isolation tests, 20-set/120-character compact-selector coverage, frozen management targets and focus restoration, numeric/null/formula/hyperlink workbook readback, related-warning counts, current-order browser download checks, role-safe re-import rejection, production build, and fresh Chromium verification. Final local gates passed 293/293 Vitest, 1/1 audit, 12/12 Chromium, and 0 production dependency vulnerabilities; three independent re-audits returned GO.
 ## Threshold Extension Traceability - 2026-07-14 Local Candidate
 
-The Threshold extension is published as the separately managed `IsoAmplar Plot Analysis T` edition under the `/isoamplar-plot-analysis-t/` Pages base path. Historical non-T release evidence above remains unchanged.
+The Threshold extension is published as `IsoAmplar Plot Analysis T` under the `/isoamplar-plot-analysis-t/` Pages base path and is now the sole maintained product. Historical non-T release evidence above remains unchanged.
 
 | Scope | Requirement / decision | Acceptance | Implementation evidence | Verification |
 |---|---|---|---|---|
@@ -173,9 +173,17 @@ The Threshold extension is published as the separately managed `IsoAmplar Plot A
 | Preview and plot output | FR-023, D051 | AC-PCR-057 | `src/chart/thresholdRender.ts`, `src/chart/chartConfig.ts`, `src/chart/ChartView.tsx`, `src/chart/exportChart.ts`; one silent markLine or range annotation; no pseudo-series | Unit renderer tests plus Chromium preview/export raster difference, Auto-domain non-expansion, independent toggles |
 | Desktop review workflow | FR-023 | AC-PCR-056, AC-PCR-057 | `src/ui/ThresholdSettingsPanel.tsx`, `src/ui/ThresholdResultsPanel.tsx`; compact accordion, bounded results, current order/labels/styles, hover/focus linkage, expandable per-event raw bracket/cell/source/formula-cache evidence | Dedicated component test, 1280/1366/1920 desktop E2E coverage, local synthetic screenshots |
 | Analysis continuity | D051, IO-106, IO-108 | AC-PCR-058 | Analysis XLSX schema 5 stores Threshold configuration only and recomputes results after restore; schemas 1-4 migrate disabled | State/workbook/store tests, including enabled mismatched draft/applied roundtrip, and Chromium save/restore/readback |
-| Selected evidence workbook | D051, IO-107, IO-108 | AC-PCR-058 | Selected Data XLSX schema 2 adds fixed `ThresholdResults`/`ThresholdEvents`; raw `PlottedData` unchanged; schema 1 remains recognized output-only | Writer tests cover crossed/multiple, starts-at/above, leading/internal gap, not-reached, insufficient; Chromium download/readback |
+| Selected evidence workbook | D051, D059, IO-107, IO-108 | AC-PCR-058 | Selected Data XLSX schema 3 adds fixed `ThresholdResults`/`ThresholdEvents` plus a separate user-facing Analysis status; raw `PlottedData` unchanged; schemas 1-3 remain recognized output-only | Writer tests cover Positive/ND, crossed/multiple, starts-at/above, leading/internal gap, not-reached, insufficient; Chromium download/readback |
 | Privacy and release integrity | FR-013, D049, D051 | AC-PCR-002 | Browser-local calculation, synthetic-only guide/evidence, no new network path | Network guard, dependency audit 0, fresh Chromium 13/13, byte-identical dist `e178d3bf3e95be3a64f04959968a39c3995ee9e1c459139598424588b64c2d8c` |
 
 The final independent re-audit returned GO after verifying the four prior evidence, workbook-note, review-classification, and coverage findings. No release-blocking correctness, UX, accessibility, density, or data-integrity issue remains in the local candidate.
 
 This entry describes a locally verified candidate. Commit, push, Pages deployment, and public smoke remain intentionally pending user review.
+
+## v1.1.0 Single-Product Maintenance Candidate - 2026-08-03
+
+- Input integrity: blank/whitespace and literal non-formula `-` reagent columns are excluded without fluorescence transformation; physical specimen anchors and their formula/format provenance remain traceable through Analysis XLSX roundtrip and append.
+- Continuity: Analysis XLSX remains schema 5 and restores all curves, unselected data, settings, Selection Sets, Threshold configuration, warnings, and legacy blank presets; Selected Data XLSX schema 3 remains output-only and preserves raw outcomes alongside user-facing status.
+- Version integrity: `v1.0.0` records its source commit, Pages base path, complete static-file set, per-file SHA-256, and a manifest hash pinned by the current release; archive creation refuses overwrite and requires HEAD to match the declared source revision.
+- Verification: Vitest 45 files / 381 tests, audit 1/1, dependency vulnerabilities 0, Pages-base build, fresh Chromium 13/13, exact pre/post Playwright dist SHA-256 `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`, and 20-page synthetic-only PDF render QA all pass locally. Final independent data-integrity and release/UX re-audits returned GO with no remaining severity finding.
+- Deployment status: commit, `v1.0.0`/`v1.1.0` tag promotion, Pages workflow, and public latest/archive smoke remain pending.

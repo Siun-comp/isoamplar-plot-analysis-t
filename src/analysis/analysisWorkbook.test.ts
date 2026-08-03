@@ -183,7 +183,7 @@ describe("Analysis XLSX workbook", () => {
     expect(settingsRows).toContainEqual(["Threshold data basis", "Raw fluorescence / no baseline correction"]);
 
     const restored = await readAnalysisWorkbookBuffer(buffer);
-    expect(restored.kind).toBe("analysis");
+    expect(restored.kind, restored.kind === "invalid-analysis" ? restored.message : "").toBe("analysis");
     if (restored.kind !== "analysis") return;
     expect(restored.analysis.analysisName).toBe("Run A");
     expect(restored.analysis.dataset.curves).toHaveLength(dataset.curves.length);
@@ -383,6 +383,103 @@ describe("Analysis XLSX workbook", () => {
     expect(inherited?.sourceRefs?.map((source) => source.cell)).toEqual(["A1", "B1"]);
   });
 
+  it("roundtrips ignored reagent-column evidence and keeps it after a later append", async () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet([["S1", "S2", ""], ["R1", "-", "R2"], [1, 100, 2]]),
+      "Sheet1"
+    );
+    const parsed = parseWorkbook(workbook, "ignored-reagent.xlsx", XLSX);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const state = createAnalysisState({
+      analysisId: "analysis-ignored-reagent",
+      analysisName: "Ignored reagent",
+      dataset: parsed.dataset,
+      selection: createInitialSelectionState(parsed.dataset),
+      searchQuery: "",
+      selectionFilter: "all",
+      chartScale: createDefaultChartScale(),
+      styleRules: createDefaultStyleRules(),
+      curveOverrides: {},
+      exportCounter: 1,
+      importFileName: "ignored-reagent.xlsx",
+      sourceFiles: [createSourceFileSummary(parsed.dataset)]
+    });
+
+    const restored = await readAnalysisWorkbookBuffer(await exportAnalysisWorkbookBuffer(state));
+
+    expect(restored.kind, restored.kind === "invalid-analysis" ? restored.message : "").toBe("analysis");
+    if (restored.kind !== "analysis") return;
+    const ignored = restored.analysis.dataset.warnings.find(
+      (warning) => warning.code === "MISSING_REAGENT_LABEL" && warning.sourceCell === "B2"
+    );
+    expect(ignored).toMatchObject({ handling: "ignored" });
+    expect(ignored?.curveIds).toBeUndefined();
+    expect(ignored?.sourceRefs?.[0]).toMatchObject({ cell: "B2", displayValue: "-" });
+    expect(restored.analysis.dataset.curves.map((curve) => [curve.specimenLabel, curve.reagentLabel])).toEqual([
+      ["S1", "R1"],
+      ["S2", "R2"]
+    ]);
+
+    const appended = parsePastedTable("S3\nR3\n3", { mode: "fullTable", sourceName: "Later append" });
+    expect(appended.ok).toBe(true);
+    if (!appended.ok) return;
+    const merged = appendPcrDataset(restored.analysis.dataset, appended.dataset);
+    expect(merged.dataset.warnings.find(
+      (warning) => warning.code === "MISSING_REAGENT_LABEL" && warning.sourceCell === "B2"
+    )).toMatchObject({ handling: "ignored" });
+  });
+
+  it("roundtrips an unused excluded-column header warning without an unknown source rejection", async () => {
+    const worksheet: XLSX.WorkSheet = {
+      A1: { t: "s", v: "S1" },
+      B1: { t: "s", v: "Unused", f: '"Unused"' },
+      C1: { t: "s", v: "S3" },
+      A2: { t: "s", v: "R1" },
+      B2: { t: "s", v: "-" },
+      C2: { t: "s", v: "R3" },
+      A3: { t: "n", v: 1 },
+      B3: { t: "n", v: 100 },
+      C3: { t: "n", v: 3 },
+      "!ref": "A1:C3"
+    };
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Formula excluded");
+    const parsed = parseWorkbook(workbook, "formula-excluded.xlsx", XLSX);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const state = createAnalysisState({
+      analysisId: "analysis-unused-excluded-warning",
+      analysisName: "Unused excluded warning",
+      dataset: parsed.dataset,
+      selection: createInitialSelectionState(parsed.dataset),
+      searchQuery: "",
+      selectionFilter: "all",
+      chartScale: createDefaultChartScale(),
+      styleRules: createDefaultStyleRules(),
+      curveOverrides: {},
+      exportCounter: 1,
+      importFileName: "formula-excluded.xlsx",
+      sourceFiles: [createSourceFileSummary(parsed.dataset)]
+    });
+
+    const restored = await readAnalysisWorkbookBuffer(await exportAnalysisWorkbookBuffer(state));
+
+    expect(restored.kind, restored.kind === "invalid-analysis" ? restored.message : "").toBe("analysis");
+    if (restored.kind !== "analysis") return;
+    const warning = restored.analysis.dataset.warnings.find(
+      (candidate) => candidate.code === "FORMULA_CACHED_VALUE_USED" && candidate.sourceCell === "B1"
+    );
+    expect(warning?.curveIds).toBeUndefined();
+    expect(warning?.sourceRefs?.[0]).toMatchObject({
+      sourceInstanceId: expect.any(String),
+      sourceName: "formula-excluded.xlsx",
+      cell: "B1"
+    });
+  });
+
   it("roundtrips current analysis labels and legend/export settings without relying on legacy report names", async () => {
     const dataset = createOneSpecimenEightReagentDataset();
     const selection = createInitialSelectionState(dataset);
@@ -577,6 +674,9 @@ describe("Analysis XLSX workbook", () => {
 
   it.each([1, 2, 3, 4, 5])("reads Analysis XLSX schema %i with exact capability migration", (schemaVersion) => {
     const dataset = createOneSpecimenEightReagentDataset();
+    const legacyScale = createDefaultChartScale();
+    legacyScale.y.preset1 = { label: "P1", min: "", max: "" };
+    legacyScale.y.preset2 = { label: "P2", min: "", max: "" };
     const state = createAnalysisState({
       analysisId: `analysis-schema-${schemaVersion}`,
       analysisName: `Schema ${schemaVersion}`,
@@ -584,7 +684,7 @@ describe("Analysis XLSX workbook", () => {
       selection: createInitialSelectionState(dataset),
       searchQuery: "",
       selectionFilter: "all",
-      chartScale: createDefaultChartScale(),
+      chartScale: legacyScale,
       styleRules: createDefaultStyleRules(),
       curveOverrides: {},
       thresholdSettings: {
@@ -617,6 +717,8 @@ describe("Analysis XLSX workbook", () => {
 
     expect(restored.kind).toBe("analysis");
     if (restored.kind !== "analysis") return;
+    expect(restored.analysis.chartScale.y.preset1).toEqual({ label: "P1", min: "", max: "" });
+    expect(restored.analysis.chartScale.y.preset2).toEqual({ label: "P2", min: "", max: "" });
     if (schemaVersion >= 4) {
       expect(restored.analysis.selectionSets).toEqual(state.selectionSets);
       expect(restored.analysis.activeSelectionSetId).toBe("selection-set-schema");
@@ -765,8 +867,9 @@ describe("Analysis XLSX workbook", () => {
     if (result.kind === "invalid-analysis") {
       expect(result.message).toBe("Unsupported Analysis XLSX schema version.");
     }
-    expect(createAnalysisWorkbookFileName(2, new Date("2026-07-08T00:00:00"))).toBe("260708_analysis2.xlsx");
-    expect(createAnalysisWorkbookFileName(1, new Date("2026-07-09T00:00:00"), "Run A")).toBe("260709_Run_A_analysis1.xlsx");
+    expect(createAnalysisWorkbookFileName(2)).toBe("analysis2.xlsx");
+    expect(createAnalysisWorkbookFileName(1, "Run A")).toBe("Run_A_analysis1.xlsx");
+    expect(createAnalysisWorkbookFileName(3, "260803_data.xlsx")).toBe("260803_data_analysis3.xlsx");
     expect(sanitizeAnalysisFileNamePart(" a/b:c* run ")).toBe("a_b_c_run");
   });
 

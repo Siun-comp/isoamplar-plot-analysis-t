@@ -7,18 +7,18 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-07-22
+2026-08-03
 
 ## CURRENT TRUTH
 
-- Active branch: `codex/audit-remediation`; it does not trigger the Pages deploy workflow.
-- Current working extension: Selection Sets and Selected Data XLSX are implemented, independently reviewed, and deployed from `docs/16_SELECTION_SETS_AND_SELECTED_DATA_XLSX_PLAN_KR.md` at product source SHA `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`.
-- Current published product artifact source: `6c57afbf09a55fbb99d9e7474fb645a21a24ec95`. The prior tagged release `release-20260711-audit-remediation-r1` at `eae3281fb8f9bbbd900fab528be3e094b93b555a` remains the documented rollback anchor.
-- Active extension: `docs/17_THRESHOLD_CROSSING_IMPLEMENTATION_PLAN_KR.md` is complete and published as the separately managed `IsoAmplar Plot Analysis T` repository/Pages project. Current T product source is `18505c95eb0921d6c5c4f0987628296eba1db8db`; rollback tag is `release-20260714-threshold-edition`; Pages run `29323723239` succeeded.
-- Dual-edition M13 release is complete: plot-bearing PNG/JPEG/clipboard output uses a 1200 x 760 logical report profile at 2x raster resolution, with enlarged axis labels, margins, grid, curves, markers, and T-only Threshold annotation for readability near 9.5 cm physical width. New analyses default Chart image layout to `Plot only`; explicitly saved Analysis XLSX layout values remain authoritative. The original edition product source is `95c297705632d1bffb4f5b01eae6329872a20538`, with Pages run `29317061923` successful.
-- T-only M14 release is complete: the Threshold review panel copies the currently filtered results in current curve order as a rich Excel/TSV four-column table. The original non-T worktree and repository remain unchanged.
-- Source-local specimen-header inheritance is implemented and locally verified for both Excel and full-table Quick Paste on the T branch. A blank first usable specimen blocks the source; later true blanks inherit only within that source. Original blank provenance, exact anchor/target evidence, append isolation, merged-header behavior, indexed wide-source restore validation, and Analysis XLSX continuity are covered. Promotion to both repositories is in progress.
-- Pre-release rollback anchor: `9e77ad23ec8e863d3d05e7c8508ceb4729372155`.
+- Active branch: `codex/audit-remediation`; release promotion targets only the `threshold` remote repository `isoamplar-plot-analysis-t`.
+- `IsoAmplar Plot Analysis T` is the sole maintained product. The original non-T deployment is an unmaintained historical rollback artifact and receives no further feature patches.
+- Current local release candidate is semantic version `1.1.0`. The verified pre-change T source SHA `fdd3b31` is tagged locally as `v1.0.0`, and its static Pages build is archived under `public/versions/v1.0.0/` with a SHA-256 release manifest.
+- v1.1.0 adds blank/literal-`-` reagent-column exclusion without losing physical specimen inheritance anchors, extension-free default analysis names, date-neutral Analysis XLSX save names, editable FAM/HEX Y presets, common non-clinical Positive/ND Threshold status projections, Selected Data XLSX schema 3, and an in-app version/history dialog with archived-runtime links.
+- Analysis XLSX remains schema 5 and preserves full dataset/settings/Selection Sets/Threshold configuration. Its visible Settings sheet now records the generating app version; old supported schemas still migrate before semantic validation.
+- Source-local specimen-header inheritance remains authoritative for Excel and full-table Quick Paste. The first included curve must resolve to a same-source explicit specimen; ignored reagent columns never create curves but may supply an explicit inheritance anchor for later included columns.
+- The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
+- Pre-release rollback anchors remain the immutable `v1.0.0` runtime and historical Git tags. No user workbook, real specimen label, or real fluorescence data is committed.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
 - Phase S2 numeric/scale remediation is complete on the active branch after full verification and final independent expert GO review.
@@ -40,42 +40,52 @@ Active
 - The user has granted standing approval for subsequent remediation phase commits. Continue phases sequentially, but do not push or deploy until the plan reaches the corresponding release phase.
 
 ## Compression-Safe Summary
-- IsoAmplar Plot Analysis T is the separately managed Threshold-capable edition built from the validated original desktop workflow. The original IsoAmplar Plot Analysis repository and Pages deployment remain independent.
+- IsoAmplar Plot Analysis T is the sole maintained Threshold-capable product built from the validated desktop workflow. The original non-T repository and Pages deployment are historical rollback artifacts only.
 - Stack: React + Vite + TypeScript, SheetJS/xlsx, Apache ECharts, Zustand + Immer, `@tanstack/react-virtual`, Vitest + Testing Library, Playwright.
 - Historical MVP input remains `.xls` / `.xlsx` upload only, first worksheet only. Post-MVP Quick Paste Import now supports small tab-separated or single-column pasted tables; CSV files, comma/CSV tables, manual cell entry, app-side data editing, and sheet picker remain excluded.
 - Parser preserves raw fluorescence values; no smoothing, normalization, baseline correction, log transform, averaging, or Ct/Cq calculation is applied.
 - Default selection view is reagent-first. Import starts with all major groups collapsed. Selection identity is `curveId`; single-file parser IDs use `sheet0_col_<ExcelColumnLetter>`, and appended file IDs use an import prefix such as `file2_sheet0_col_A`.
 - Search/display-filter bulk actions apply across the full dataset, including collapsed groups.
 - Chart preview uses ECharts with white background, sparse major grid, no minor grid, animation off, `connectNulls: false`, and a fixed preview viewport height that does not stretch with side-panel expansion. On desktop the chart panel is sticky while the page scrolls.
-- X/Y Auto, Fixed, and user-editable P1/P2 scale presets are implemented. P1/P2 have no invented default min/max values and become selectable only after valid numeric bounds are entered.
+- X/Y Auto, Fixed, editable presets, and Box zoom are implemented. X presets remain blank P1/P2; new-analysis Y presets default to editable `FAM -200000..1600000` and `HEX -100000..600000` while Auto remains the initial applied mode. Analysis XLSX restored values remain authoritative.
 - Style controls include specimen/reagent group color with picker and HEX input, line type, group marker state model, stable default colors based on original data/group order, individual curve overrides, marker options, built-in presets, one-step preset undo, and user legend/export order.
 - Export supports PNG/JPEG downloads, PNG clipboard copy with fallback, Selected Data XLSX for current rectangular common-X selections, and plotted-data CSV as a secondary format.
 - Named Selection Sets switch recurring curve combinations within one analysis tab without changing scale, style, Analysis labels, legend/export order, search, or collapse state. They persist through Analysis XLSX schema 4.
-- GitHub Pages asset base is configured as `./` by default. The original public app remains active at `https://siun-comp.github.io/isoamplar-plot-analysis/`, while the separately managed Threshold edition is active at `https://siun-comp.github.io/isoamplar-plot-analysis-t/`.
+- GitHub Pages asset base is configured as `./` by default. The maintained public app is `https://siun-comp.github.io/isoamplar-plot-analysis-t/`; immutable prior T runtimes are served below `/versions/vX.Y.Z/`. The original non-T URL is historical only.
 - Browser tab/bookmark/PWA icon assets use the selected Option A amplification-curve icon.
 - The current implementation plan is `docs/09_UX_REFINEMENT_IMPLEMENTATION_PLAN_KR.md`. Phases R0 through R13 are complete.
 - The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, balanced Y-axis spacing, dedicated legend-only clipboard PNG copy, compact group style controls, and native style popover closing.
 - The current pre-use refinement adds slash-safe ` │ ` curve labels, report-readable legend PNG/JPEG/clipboard export, Analysis label editing, rich Excel-cell legend clipboard copy with Malgun Gothic 9 pt formatting, Export control grouping, dirty close/replace confirmation flows, Style-panel preset shortcut removal, line/marker popover auto-close after selection, report legend image text alignment fixes, Excel-friendly colored glyph legend clipboard samples, and raw-point/no-smoothing regression coverage.
 - The latest patch fixes the preview legend visibility Korean label and the pre-import Legend empty-state Korean mojibake, applies Auto compact labels to the chart preview/custom legend and plot/legend image exports, changes the Labels reset control back to an icon-sized button, stacks the Export Legend header to avoid text overlap, adds current Analysis XLSX continuity and parser edge-case regression coverage, removes unused legacy Legend/Report editor code that still referenced the old report-name override model, and changes the app header status badge from internal phase wording to `Browser-local analysis`.
-- A 19-page first-user Korean PDF guide is generated under `output/pdf/`, covering Excel/Quick Paste input, desktop workflow, export, exact Analysis XLSX continuity, privacy, parser edge cases, and troubleshooting. The guide examples and screenshots use only synthetic labels/values; do not use real user-provided labels or disease/test names in guide examples.
+- A 20-page first-user Korean PDF guide is generated under `output/pdf/`, covering Excel/Quick Paste input, desktop workflow, export, exact Analysis XLSX continuity, privacy, parser edge cases, version rollback, and troubleshooting. The guide examples and screenshots use only synthetic labels/values; do not use real user-provided labels or disease/test names in guide examples.
 - The default chart palette order is `#7030A0`, `#0926FB`, `#00B050`, `#FFC000`, `#FF0000`, `#767171`, `#4ACCE6`, `#EB45BC`.
 - Explicit Box zoom highlights the valid plot area and writes a dragged data-space region into Fixed X/Y scale bounds. `Previous scale` restores prior scale snapshots one step at a time, while `Auto scale` resets both axes and clears return history. It never crops or transforms fluorescence data.
 - The latest UI consistency pass normalizes button/form-control sizing across top tabs, import actions, selection controls, chart tools, scale controls, legend controls, and export controls; status badges remain intentionally smaller. It also scopes settings accordion summary styling so nested Style color/line popover triggers stay compact, tightens reset-icon button padding, and removes an obsolete hidden Export legend button wrapper.
 - Quick Paste Import Phases Q0-Q6 are implemented from `docs/10_QUICK_PASTE_IMPORT_PLAN_KR.md`. It supports full-table and single-specimen input, tab-separated and single-column text, read-only preview, paginated source-position warnings with acknowledgement, stale/target revision guards for append and new-analysis actions, per-import source identity, mixed-source Analysis XLSX continuity, and the existing chart/export pipeline. Comma/CSV tables are rejected to prevent silent delimiter corruption.
 - A 2026-07-11 code/data-integrity/desktop-UX audit is complete in `docs/11_GPT56_PROJECT_AUDIT_KR.md`. Mobile was explicitly excluded. No P0 issue was identified; Stabilization A prioritizes invalid Fixed-scale export fallback, exported-legend identity truncation, Excel formatted-header identity, actionable Excel warnings, browser refresh/close protection, and accepted-size Quick Paste crash prevention. The audit also records P2 state/export/performance risks, documentation drift, and workflow candidates such as Warning Center, explicit save commands, Named Views, and optional export preflight.
 - The audit remediation plan in `docs/12_AUDIT_REMEDIATION_IMPLEMENTATION_PLAN_KR.md` is implemented through S11 and the release is active on GitHub Pages.
-- Threshold remains absent from the original non-T public runtime and is available in the separately deployed T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and positive/negative interpretation.
+- Threshold is part of the sole maintained T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and clinical interpretation. `Positive`/`ND` are explicitly user-set Threshold crossing-status labels, not clinical classifications.
 
 ## Current Goal
-Maintain the released source-local blank specimen-header inheritance in both editions and collect only real-use regression findings for later patches.
+Promote the fully verified v1.1.0 T-only maintenance release and confirm both latest and archived v1.0.0 Pages URLs.
 
 ## Current Milestone
-M15 shared input refinement is complete and active on both GitHub Pages deployments.
+M16 versioned single-product maintenance and input/workflow refinement is implemented locally; commit, tag, Pages deployment, and public smoke remain.
 
 ## Last Completed Step
-Released M15 to the T edition as commits `9da1891` and `eec8b77`. GitHub Pages workflow `29936999379` completed successfully with Chromium 13/13. Public-origin smoke at `https://siun-comp.github.io/isoamplar-plot-analysis-t/` confirmed the app loads without browser errors and a synthetic full-table preview inherits the second blank specimen header from the first explicit specimen. The hardened local gate passed 43 files / 352 Vitest tests, audit 1/1, production dependency vulnerabilities 0, Pages-base build, and byte-identical pre/post-Playwright `dist` SHA-256 `f4e023d30318fae112b8d0611c15353ac60dbd473ef53b592735bfba4ad01878`.
+Completed local v1.1.0 implementation, documentation, PDF regeneration, immutable archive hardening, full Vitest 381/381, audit 1/1, dependency audit 0, Pages build, fresh Chromium 13/13, exact-dist verification, and final independent data-integrity and release/UX expert GO verdicts. Commit and deployment are next.
 
 ## Latest Changed Files
+- `package.json`, `package-lock.json`
+- `src/releaseHistory.ts`
+- `src/ui/VersionHistoryDialog.tsx`
+- `src/analysis/analysisNames.ts`
+- `scripts/archive-version.mjs`
+- `public/versions/v1.0.0/`
+- `src/chart/chartScale.ts`
+- `src/chart/selectedDataWorkbook.ts`
+- `docs/08_RELEASE_CHECKLIST_KR.md`
+- `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
 - `src/data/resolveSpecimenHeaders.ts`
 - `src/data/parseExcel.ts`
 - `src/data/parsePastedTable.ts`
@@ -521,6 +531,7 @@ Released M15 to the T edition as commits `9da1891` and `eec8b77`. GitHub Pages w
 - `D035`: Analysis labels replace report-only labels and apply consistently to chart legends, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state.
 
 ## Verification Status
+- 2026-08-03 v1.1.0 final local gate: `npm test` passed 45 files / 381 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; Pages-base production build passed; fresh Chromium passed 13/13 with `--fail-on-flaky-tests`; complete `dist` SHA-256 `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c` was byte-identical after Playwright. The 20-page PDF was regenerated, rendered through Poppler, inspected as a complete contact sheet and at full resolution on the changed troubleshooting pages, and contained no replacement characters. Independent data-integrity and release/UX re-audits returned GO after the last excluded-column warning provenance regression was fixed and tested.
 - 2026-07-14 Threshold final local gate: `npm run test` passed 41 files / 336 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; production build passed; fresh Chromium passed 13/13. The complete `dist` tree remained byte-identical before/after Playwright at `e178d3bf3e95be3a64f04959968a39c3995ee9e1c459139598424588b64c2d8c`.
 - Threshold browser evidence uses synthetic data only and covers Auto Y non-expansion, independent preview/export visibility, out-of-range downloaded PNG raster difference, crossed/multiple/internal-gap/starts-above results, Selected Data XLSX schema 2 sheet/readback, Analysis XLSX schema 5 restore, no document horizontal overflow, and no unexpected browser/network errors.
 - Final audit remediation exposes every event's raw bracket values, exact source cells, source instance ID, interpolation status, and formula-cache evidence in the bounded result panel; multiple crossings share the review filter/count predicate; non-primary XLSX notes remain consistent with blank primary columns. Edge outcome and enabled mismatched-draft roundtrip regressions are covered.

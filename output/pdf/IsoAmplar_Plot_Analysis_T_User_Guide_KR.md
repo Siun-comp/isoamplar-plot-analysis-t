@@ -2,11 +2,12 @@
 
 - 앱: https://siun-comp.github.io/isoamplar-plot-analysis-t/
 - 개발자: Jang Si Un
-- 가이드 기준일: 2026-07-14
+- 앱 버전: v1.1.0
+- 가이드 기준일: 2026-08-03
 - 예시 데이터: `Synthetic Sample`, `Control Sample`, `Assay 1`, `Assay 2`, `Reference`와 합성 fluorescence 값만 사용
 - 권장 환경: Windows 데스크톱 Chrome 또는 Edge의 최신 버전
 
-이 도구는 LAMP 증폭형광 데이터를 브라우저에서 선택, 비교, 시각화하고 결과를 내보내기 위한 분석 보조 도구다. 사용자가 지정한 raw fluorescence Threshold의 기하학적 교차를 검토할 수 있지만, 임상 판독, 양성/음성 판단, Threshold 자동 산정, Ct/Cq 계산 도구가 아니다.
+이 도구는 LAMP 증폭형광 데이터를 브라우저에서 선택, 비교, 시각화하고 결과를 내보내기 위한 분석 보조 도구다. 사용자가 지정한 raw fluorescence Threshold의 기하학적 교차를 검토할 수 있지만, 임상 판독, Threshold 자동 산정, Ct/Cq 계산 도구가 아니다. 화면의 `Positive`와 `ND`는 사용자가 정한 Threshold에 대한 교차 분석 상태이며 임상 양성·음성 판정이 아니다.
 
 ## 1. 빠른 시작
 
@@ -30,10 +31,12 @@
 
 - X축은 가장 긴 데이터 열을 기준으로 `Cycle 1..N`을 생성한다.
 - 수식은 workbook에 cached numeric value가 있을 때만 읽으며 앱이 재계산하지 않는다.
-- 첫 번째 유효 curve 열의 검체명은 반드시 입력해야 한다. 이 셀이 비어 있으면 해당 파일을 가져오지 않는다.
+- 첫 번째 분석 포함 curve는 같은 원본 안에서 검체명을 확인할 수 있어야 한다. 앞쪽에 명시 검체명이 전혀 없으면 해당 파일을 가져오지 않는다.
 - 이후 검체 셀이 실제 공란이면 왼쪽에서 가장 가까운 검체명을 따른다. 예를 들어 `Synthetic Sample, 공란, Control Sample, 공란`은 각각 `Synthetic Sample, Synthetic Sample, Control Sample, Control Sample`로 해석한다.
 - 검체명 계승은 현재 파일 안에서만 적용된다. 추가 파일 첫 검체가 공란이어도 이미 열린 분석의 마지막 검체명을 가져오지 않는다.
-- 시약명은 계승하지 않는다. 공란 시약은 missing reagent warning과 source 위치를 표시한다.
+- 시약명은 계승하지 않는다. 시약 셀이 실제 공란이거나 앞뒤 공백을 제외한 값이 문자 `-` 하나이면 그 열은 curve로 만들지 않고 제외 위치를 warning에 남긴다.
+- 제외된 시약 열 위에 명시 검체명이 있으면 그 검체명은 오른쪽의 포함 curve에 대한 계승 기준으로 유지된다. 예를 들어 검체가 `S1, S2, 공란`, 시약이 `A1, -, A2`이면 포함 결과는 `S1/A1`, `S2/A2`다.
+- `R-4`처럼 다른 문자가 포함된 시약명과 수식으로 만들어진 `-` 표시는 자동 제외하지 않는다. 모든 시약 열이 공란 또는 `-`이면 가져오기를 차단한다.
 - 계승된 curve도 원본 Excel의 공란 셀과 기준 셀을 provenance로 함께 보존하며, fluorescence 숫자는 변경하지 않는다.
 - 내부 빈 값과 숫자가 아닌 값은 `null`로 처리해 선을 연결하지 않는다.
 - 원본 숫자에 smoothing, normalization, baseline correction, log transform, averaging, Ct/Cq 계산을 적용하지 않는다.
@@ -53,7 +56,7 @@ Assay 1<Tab>Assay 2<Tab>Reference
 0.18<Tab>0.15<Tab>0.09
 ```
 
-이 예시에서 두 번째 열의 공란 검체명은 `Synthetic Sample`을 따른다. 첫 번째 유효 curve 열의 검체명이 공란이면 미리보기를 만들 수 없다.
+이 예시에서 두 번째 열의 공란 검체명은 `Synthetic Sample`을 따른다. 첫 번째 포함 curve가 같은 붙여넣기 원문 안에서 검체명을 확인할 수 없으면 미리보기를 만들 수 없다. 공란 또는 문자 `-` 시약 열 제외 규칙도 Excel과 동일하게 적용된다.
 
 ### 한 검체의 시약별 값 모드
 
@@ -158,10 +161,12 @@ Assay 1<Tab>Assay 2
 | --- | --- | --- |
 | Auto | 현재 표시 curve에 맞춰 범위 계산 | 초기 탐색 |
 | Fixed | 사용자가 min/max 직접 지정 | 비교 이미지의 축 통일 |
-| P1/P2 | 분석별 사용자 preset | 반복 범위 전환 |
+| P1/P2 또는 FAM/HEX | 분석별 사용자 preset | 반복 범위 전환 |
 | Box zoom | plot area를 사각형으로 선택해 Fixed 범위 적용 | 복잡한 구간 확대 |
 
 Box zoom은 데이터 자체를 자르거나 변환하지 않는다. `Previous scale`은 Box zoom 전 scale로 한 단계씩 돌아가고, `Auto scale`은 양 축을 Auto로 바꾸며 return history를 지운다.
+
+새 분석에서 X축 preset은 비어 있는 `P1`, `P2`로 시작한다. Y축은 반복 사용 범위에 맞춰 `FAM -200000~1600000`, `HEX -100000~600000`으로 시작하지만 가져오기 직후 표시 모드는 Auto다. 이름과 min/max는 현재 분석에서 수정할 수 있으며, Analysis XLSX를 다시 열면 파일에 저장된 preset이 기본값보다 우선한다.
 
 ## 7. Threshold 설정과 값 검토
 
@@ -184,10 +189,10 @@ Threshold는 분석 탭당 하나를 사용자가 직접 정하는 선택 기능
 | --- | --- |
 | Cycle축 선형 교차 추정값 | 인접한 두 raw 관측점이 `이전값 < Threshold`, `현재값 >= Threshold`를 만족할 때 두 점 사이를 Cycle축에서 선형 보간한 파생값 |
 | 최초 관측 이상점 | 실제로 저장된 raw fluorescence 중 처음으로 Threshold 이상인 Cycle과 fluorescence |
-| 교차 | 인접한 두 finite raw 관측점으로 유효한 상승 교차를 계산할 수 있음 |
+| Positive | 인접한 두 finite raw 관측점으로 유효한 상승 교차를 계산할 수 있음 |
 | 시작점 초과/동일 | 첫 유효 관측값부터 Threshold 이상이므로 그 이전 교차 위치를 알 수 없음 |
 | 결측 구간 | `null` 사이에서 Threshold를 넘었을 가능성이 있어 유효한 인접점 보간을 하지 않음 |
-| 미도달 | 유효한 상승 교차가 관측되지 않음 |
+| ND | 유효한 상승 교차가 관측되지 않음 |
 | 다중 교차 | 상승 교차 후보가 여러 개이며 첫 후보를 대표로 표시하므로 전체 event 검토 필요 |
 
 선형 교차 추정값은 실제 관측값이 아니다. 결과 행에는 최초 관측 이상점이 함께 표시되며, 상세 정보와 선택 데이터 XLSX에는 보간에 사용한 전후 raw point와 원본 위치 근거가 남는다. `null`을 가로질러 교차값을 만들지 않는다.
@@ -199,10 +204,10 @@ Threshold는 분석 탭당 하나를 사용자가 직접 정하는 선택 기능
 상태 필터 오른쪽 복사 아이콘은 일반 Export와 별개인 검토용 기능이다. 복사한 내용은 Excel에 `검체`, `시약`, `추정 교차 Cycle`, `결과 상태` 네 열로 붙여넣어진다.
 
 - `추정 교차 Cycle`은 유효한 인접 raw point 교차가 있을 때만 숫자로 들어간다. `C` 접두어를 붙이지 않으므로 Excel에서 정렬·계산할 수 있다.
-- 미도달, 결측 구간, 시작점 초과, 데이터 부족처럼 유효한 대표 추정값이 없으면 Cycle 셀은 비워 두고 이유를 `결과 상태`에 기록한다.
-- 다중 교차는 `교차 (다중 교차 검토)`로 표시한다.
+- ND, 결측 구간, 시작점 초과, 데이터 부족처럼 유효한 대표 추정값이 없으면 Cycle 셀은 비워 두고 이유를 `결과 상태`에 기록한다.
+- 유효 교차는 `Positive`, 다중 교차는 `Positive (다중 교차 검토)`로 표시한다.
 - 복사 순서와 대상은 현재 curve 순서와 상태 필터를 따른다. 필터를 `전체`로 두면 모든 현재 선택 curve를 복사한다.
-- 이 표의 `결과 상태`는 계산 상태이며 양성/음성 또는 임상 판정이 아니다.
+- 이 표의 `Positive`와 `ND`는 사용자가 적용한 raw fluorescence Threshold에 대한 계산 상태이며 임상 양성·음성 판정이 아니다.
 
 ### Scale, 선택 세트, 여러 원본과의 관계
 
@@ -236,7 +241,7 @@ Threshold는 분석 탭당 하나를 사용자가 직접 정하는 선택 기능
 
 Plot이 포함된 PNG/JPEG/Clipboard PNG는 Excel에서 약 9.5cm 너비로 배치해도 축 숫자와 곡선을 읽기 쉽도록 별도 출력 프로필을 사용한다. 이미지 자체는 2400px 너비를 유지하므로 9.5cm로 축소해도 해상도를 버리지 않는다. 이 프로필은 글자·여백·선 두께와 주요 눈금 밀도만 조정하며 raw fluorescence, 선택 curve, X/Y Scale, 순서와 스타일 값은 변경하지 않는다. 웹 미리보기의 크기와 모양도 바뀌지 않는다.
 
-선택 데이터 XLSX에는 `PlottedData`, `CurveInfo`, `Warnings`, `ExportInfo`, `ThresholdResults`, `ThresholdEvents`가 들어간다. Threshold를 사용하지 않아도 고정된 sheet 구조를 유지하며 비활성 상태만 기록한다. 활성 상태에서는 curve별 outcome과 최초 관측 이상점, 선형 교차 추정값을 `ThresholdResults`에 기록하고, 전후 raw point·결측 구간·원본 cell 근거를 `ThresholdEvents`에 기록한다. 그래프의 Box zoom이나 표시 Scale과 관계없이 `PlottedData`는 공통 X축 전체 raw 행을 저장하며 fluorescence 숫자를 보정하거나 변환하지 않는다. 이 파일은 Excel 후속 정리용이므로 `원본 데이터 열기`, `Excel 추가`, `저장한 분석 열기`에 다시 넣을 수 없다.
+선택 데이터 XLSX schema 3에는 `PlottedData`, `CurveInfo`, `Warnings`, `ExportInfo`, `ThresholdResults`, `ThresholdEvents`가 들어간다. Threshold를 사용하지 않아도 고정된 sheet 구조를 유지하며 비활성 상태만 기록한다. 활성 상태에서는 원래 계산 outcome과 별도의 `Analysis status`(`Positive`, `ND`, 검토 문구), 최초 관측 이상점, 선형 교차 추정값을 `ThresholdResults`에 기록하고, 전후 raw point·결측 구간·원본 cell 근거를 `ThresholdEvents`에 기록한다. 그래프의 Box zoom이나 표시 Scale과 관계없이 `PlottedData`는 공통 X축 전체 raw 행을 저장하며 fluorescence 숫자를 보정하거나 변환하지 않는다. 이 파일은 Excel 후속 정리용이므로 `원본 데이터 열기`, `Excel 추가`, `저장한 분석 열기`에 다시 넣을 수 없다.
 
 아래 화면은 출력 항목의 위치를 설명하기 위해 `Plot + Legend`를 선택한 예시다. 새 분석을 만들었을 때의 실제 기본값은 `Plot only`이며 필요할 때 사용자가 레이아웃을 바꿀 수 있다.
 
@@ -245,6 +250,8 @@ Plot이 포함된 PNG/JPEG/Clipboard PNG는 Excel에서 약 9.5cm 너비로 배�
 ## 10. Analysis XLSX로 분석 이어가기
 
 Analysis XLSX는 Excel 안에서 편집하는 chart workbook이 아니라 IsoAmplar 웹 앱의 restore file이다.
+
+원본 `260803_data.xlsx`를 열면 기본 analysis name은 확장자를 제외한 `260803_data`다. 이름을 바꾸지 않고 처음 저장하면 `260803_data_analysis1.xlsx`가 되며 앱이 날짜를 한 번 더 앞에 붙이지 않는다. 상단 Analysis name을 수정하면 이후 저장 파일명도 그 이름을 사용한다. 원본 source 정보에는 실제 파일명과 확장자가 그대로 남는다.
 
 저장 항목:
 
@@ -256,6 +263,7 @@ Analysis XLSX는 Excel 안에서 편집하는 chart workbook이 아니라 IsoAmp
 - analysis name과 export counter
 - Threshold 활성 상태, 입력값, 마지막 적용값, 계산 규칙 버전, 미리보기/Plot Export 표시 옵션
 - Excel/paste source type, immutable source ID, source name, column, paste input mode
+- 저장을 만든 앱 버전(visible Settings 검토 정보)
 
 Excel과 paste가 섞인 분석도 모든 source와 unselected curve를 포함한다. 구버전 Analysis XLSX에 source type이 없으면 Excel source로 안전하게 복원한다.
 
@@ -267,15 +275,26 @@ Excel과 paste가 섞인 분석도 모든 source와 unselected curve를 포함�
 
 Threshold 결과 배열은 Analysis XLSX에 고정 저장하지 않는다. 설정과 전체 raw dataset을 저장하고, 다시 열 때 같은 규칙으로 결과를 재계산한다. 따라서 선택 세트나 현재 선택을 바꾸면 복원 후에도 해당 선택에 맞는 결과가 생성된다.
 
+### 앱 버전과 이전 결과 재현
+
+화면 상단의 `v1.1.0` 버튼을 누르면 현재 버전, Analysis XLSX schema, 주요 변경 이력과 보관된 이전 버전을 볼 수 있다. `이 버전 열기`는 같은 GitHub Pages 안의 읽기 전용 과거 실행판을 새 탭으로 연다.
+
+- 일반 분석과 새 저장은 항상 최신 버전에서 진행한다.
+- 과거 실행판은 예전 결과의 화면 동작을 확인하거나 재현할 때만 사용한다.
+- 최신 Analysis XLSX는 더 오래된 실행판에서 열리지 않을 수 있다. 파일을 열 수 있는지는 앱 버전 번호가 아니라 Analysis XLSX schema 호환성으로 결정된다.
+- 현재 유지보수되는 제품은 T판 하나다. 원래의 non-T 웹앱은 새 기능이나 수정 패치를 받지 않는 역사적 rollback 대상이다.
+
 ## 11. Warning과 문제 해결
 
 | 상황 | 앱 동작 | 권장 조치 |
 | --- | --- | --- |
-| 첫 번째 유효 curve의 검체명 비어 있음 | 파일 또는 붙여넣기 미리보기 차단 | 첫 검체명을 입력한 뒤 다시 시도 |
+| 첫 번째 포함 curve가 검체명을 확인할 수 없음 | 파일 또는 붙여넣기 미리보기 차단 | 해당 curve 왼쪽을 포함해 명시 검체명을 입력한 뒤 다시 시도 |
 | 이후 curve의 검체명 비어 있음 | 왼쪽의 가장 가까운 명시 검체명을 계승하고 정보 표시 | 기준 셀과 대상 셀이 의도한 묶음인지 확인 |
+| 시약명이 공란 또는 `-` | 해당 열을 curve에서 제외하고 ignored warning 표시 | 의도적 미사용 열인지 확인; 필요한 데이터면 Excel 시약명을 입력 후 다시 가져오기 |
+| 모든 시약명이 공란 또는 `-` | usable curve가 없어 파일/미리보기 차단 | 최소 한 열에 실제 시약명을 입력 |
 | 수식 또는 표시 서식 때문에 검체명이 비어 보임 | 자동 계승하지 않고 formula/format 및 missing specimen warning | Excel에서 실제 표시값과 수식 cache를 확인 |
-| 시약명 비어 있음 | curve를 가져오고 missing reagent warning | 원본 또는 paste source 확인 |
-| 후속 curve의 두 header 모두 비어 있음 | 검체는 계승하고 시약은 missing reagent warning | 시약 입력 누락인지 확인 |
+| 시약명이 수식 결과 또는 숫자 표시 서식 때문에 `-`로 보임 | 자동 제외하지 않고 수식/표시값 warning과 함께 curve 유지 | Excel의 실제 셀 값, 수식 cache, 표시 서식을 확인 |
+| 후속 열의 두 header 모두 비어 있음 | 검체명은 계승할 수 있으나 시약명이 없어 해당 열 제외 | 시약 입력 누락인지 확인하고 원본을 수정한 뒤 다시 가져오기 |
 | 빈 fluorescence | `null`, graph gap | 누락이 의도인지 확인 |
 | 숫자가 아닌 fluorescence | 원문 token warning, `null`, graph gap | 메모/단위 혼입 확인 |
 | curve별 길이 차이 | 가장 긴 길이에 맞춰 짧은 curve를 `null`로 채움 | 장비 export와 비교 목적 확인 |
@@ -315,7 +334,7 @@ Threshold 결과 배열은 Analysis XLSX에 고정 저장하지 않는다. 설�
 - worksheet picker, custom Cycle 열, source cell 편집은 제공하지 않는다.
 - 이미 import된 검체명, 시약명, fluorescence를 앱 안에서 수정하지 않는다.
 - native editable Excel chart를 생성하지 않는다.
-- Threshold 자동 추천, baseline 보정 Threshold, 복수 Threshold, Ct/Cq/Tt/Tp, 양성/음성 또는 임상 판독 계산을 제공하지 않는다.
+- Threshold 자동 추천, baseline 보정 Threshold, 복수 Threshold, Ct/Cq/Tt/Tp 또는 임상 판독 계산을 제공하지 않는다. `Positive`/`ND`는 임상 판정이 아니라 사용자 지정 Threshold 교차 상태다.
 - clipboard는 브라우저/보안 정책에 따라 실패할 수 있다.
 - 모바일 분석 화면은 지원 목표가 아니다. 데스크톱 브라우저를 사용한다.
 

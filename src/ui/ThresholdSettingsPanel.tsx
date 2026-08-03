@@ -140,7 +140,7 @@ export function ThresholdSettingsPanel({ curves, hasDataset }: { curves: Curve[]
       <p className="threshold-integrity-note">원본 fluorescence 값을 그대로 사용하며 보정·변환하지 않습니다.</p>
       {settings.enabled && (
         <p className="threshold-result-summary">
-          선택 {results.length} · 교차 {crossedCount} · 검토 필요 {reviewCount}
+          선택 {results.length} · Positive {crossedCount} · 검토 필요 {reviewCount}
         </p>
       )}
       {settings.enabled && sourceCount > 1 && (

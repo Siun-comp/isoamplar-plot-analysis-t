@@ -1,10 +1,24 @@
 import { expect, test as base, type Locator, type Page } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import * as XLSX from "xlsx";
 import { readAnalysisWorkbookBuffer } from "../../src/analysis/analysisWorkbook";
 import { calculateLegendEvidenceRegions, exportPixelRatio } from "../../src/chart/exportChart";
+import { RELEASE_HISTORY } from "../../src/releaseHistory";
 import { findOverlappingBounds, inspectRasterDataUrl, inspectRasterRegions } from "./helpers/rasterEvidence";
+
+const archivedAssetPaths = new Set(
+  RELEASE_HISTORY.flatMap((release) => {
+    if (!release.archivePath) return [];
+    const manifestPath = resolve(process.cwd(), "public", ...release.archivePath.split("/"), "release-manifest.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { files: Array<{ path: string }> };
+    return [
+      release.archivePath,
+      `${release.archivePath}release-manifest.json`,
+      ...manifest.files.map((file) => `${release.archivePath}${file.path}`)
+    ];
+  })
+);
 
 type NetworkGuardControl = {
   violations: string[];
@@ -108,8 +122,9 @@ const test = base.extend<{ browserLocalNetworkGuard: NetworkGuardControl }>({
 function isAllowedBrowserLocalUrl(value: string, method: string, appOrigin: string, appBasePath: string) {
   const url = new URL(value);
   if (url.protocol === "blob:" || url.protocol === "data:") return true;
-  if (url.origin !== appOrigin || !["GET", "HEAD"].includes(method)) return false;
+  if (url.origin !== appOrigin || !["GET", "HEAD"].includes(method) || url.search) return false;
   if (url.pathname === appBasePath || url.pathname.startsWith(`${appBasePath}assets/`)) return true;
+  if (url.pathname.startsWith(appBasePath) && archivedAssetPaths.has(url.pathname.slice(appBasePath.length))) return true;
   return ["favicon.svg", "favicon-32.png", "favicon-16.png", "apple-touch-icon.png", "manifest.webmanifest"].some(
     (fileName) => url.pathname === `${appBasePath}${fileName}`
   );
@@ -127,6 +142,19 @@ test("renders the upload-first PCR workspace", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "데이터 선택" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "그래프 미리보기" })).toBeVisible();
   await expect(page.getByText("원본 Excel은 첫 번째 시트만 읽고, 모든 데이터는 브라우저 안에서 처리합니다.")).toBeVisible();
+
+  await page.getByRole("button", { name: "버전 v1.1.0 및 변경 이력" }).click();
+  const versionDialog = page.getByRole("dialog", { name: "버전 및 변경 이력" });
+  await expect(versionDialog).toBeVisible();
+  await expect(versionDialog.getByText(/현재 T판이 유일한 유지보수 판본/)).toBeVisible();
+  const archivePagePromise = page.context().waitForEvent("page");
+  await versionDialog.getByRole("link", { name: "이 버전 열기" }).click();
+  const archivePage = await archivePagePromise;
+  await archivePage.waitForLoadState("domcontentloaded");
+  await expect(archivePage.getByRole("heading", { name: "IsoAmplar Plot Analysis T" })).toBeVisible();
+  expect(new URL(archivePage.url()).pathname).toContain("/versions/v1.0.0/");
+  await archivePage.close();
+  await versionDialog.getByRole("button", { name: "버전 이력 닫기" }).click();
 });
 
 test("blocks synthetic cross-origin browser transports", async ({ page, browserLocalNetworkGuard }) => {
@@ -514,7 +542,7 @@ test("records reusable S9 reference and stress workload measurements", async ({ 
     const tabStarted = performance.now();
     await page.getByRole("button", { name: "새 분석" }).click();
     await expect(page.getByRole("tab", { name: "Analysis 2" })).toBeVisible();
-    const oldAnalysisTab = page.getByRole("tab", { name: `s9-${workload.name}.xlsx` });
+    const oldAnalysisTab = page.getByRole("tab", { name: `s9-${workload.name}` });
     await oldAnalysisTab.click();
     await expect(oldAnalysisTab).toHaveAttribute("aria-selected", "true");
     const tabRoundTripMs = performance.now() - tabStarted;
@@ -892,7 +920,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
     "_IsoAmplarSelectedData"
   ]);
   expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.A1?.v).toBe("IsoAmplarSelectedData");
-  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(2);
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(3);
   expect(selectedWorkbook.Sheets.PlottedData["!ref"]).toBe("A1:B13");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
@@ -920,8 +948,12 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   await page.getByRole("textbox", { name: "Raw fluorescence Threshold" }).fill("5");
   await page.getByRole("button", { name: "적용", exact: true }).click();
   await expect(page.getByText("적용값: ")).toContainText("5");
-  await expect(page.getByText("선택 3 · 교차 1 · 검토 필요 2")).toBeVisible();
+  await expect(page.getByText("선택 3 · Positive 1 · 검토 필요 2")).toBeVisible();
   expect(await yAxis.locator(".scale-auto-domain").textContent()).toBe(autoRangeBefore);
+  await page.screenshot({
+    path: testInfo.outputPath("threshold-v110-workspace.png"),
+    animations: "disabled"
+  });
 
   const resultsPanel = page.locator(".threshold-results-panel");
   await resultsPanel.locator("summary").first().click();
@@ -935,7 +967,7 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     [
       "검체\t시약\t추정 교차 Cycle\t결과 상태",
-      "Synthetic crossing\tAssay 01\t3.5\t교차",
+      "Synthetic crossing\tAssay 01\t3.5\tPositive",
       "Synthetic gap\tAssay 02\t\t결측 구간",
       "Synthetic starts above\tAssay 03\t\t시작점 초과"
     ].join("\r\n")
@@ -999,7 +1031,7 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   const selectedDataDownload = await selectedDataPromise;
   await selectedDataDownload.saveAs(selectedDataPath);
   const selectedWorkbook = XLSX.read(readFileSync(selectedDataPath), { type: "buffer", raw: true });
-  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(2);
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(3);
   expect(selectedWorkbook.SheetNames).toContain("ThresholdResults");
   expect(selectedWorkbook.SheetNames).toContain("ThresholdEvents");
   const thresholdResultRows = XLSX.utils.sheet_to_json<unknown[]>(selectedWorkbook.Sheets.ThresholdResults, {
@@ -1012,9 +1044,9 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
     "indeterminate-gap",
     "starts-above-threshold"
   ]);
-  expect(thresholdResultRows[2][14]).toBe(4);
-  expect(thresholdResultRows[2][15]).toBe(6);
-  expect(thresholdResultRows[2][17]).toBe(3.5);
+  expect(thresholdResultRows[2][15]).toBe(4);
+  expect(thresholdResultRows[2][16]).toBe(6);
+  expect(thresholdResultRows[2][18]).toBe(3.5);
   const eventRows = XLSX.utils.sheet_to_json<unknown[]>(selectedWorkbook.Sheets.ThresholdEvents, {
     header: 1,
     blankrows: false
@@ -1025,6 +1057,7 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   const analysisDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "분석 저장" }).click();
   const analysisDownload = await analysisDownloadPromise;
+  expect(analysisDownload.suggestedFilename()).toBe("synthetic-threshold-source_analysis4.xlsx");
   await analysisDownload.saveAs(analysisPath);
   const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
   expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
@@ -1037,7 +1070,7 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   await expect(page.getByRole("textbox", { name: "Raw fluorescence Threshold" })).toHaveValue("5");
   await expect(page.getByRole("checkbox", { name: "미리보기 표시" })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Plot Export 포함" })).toBeChecked();
-  await expect(page.getByText("선택 3 · 교차 1 · 검토 필요 2")).toBeVisible();
+  await expect(page.getByText("선택 3 · Positive 1 · 검토 필요 2")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
@@ -1049,9 +1082,9 @@ test("creates and switches internal analysis tabs", async ({ page }, testInfo) =
   await expect(page.getByRole("tab", { name: "Analysis 1" })).toHaveAttribute("aria-selected", "true");
 
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
-  await expect(page.getByRole("tab", { name: /phase-r3-tabs.xlsx/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: /^phase-r3-tabs/ })).toHaveAttribute("aria-selected", "true");
 
-  await page.getByRole("button", { name: "phase-r3-tabs.xlsx 닫기" }).click();
+  await page.getByRole("button", { name: "phase-r3-tabs 닫기" }).click();
   await expect(page.getByRole("alertdialog", { name: "저장하지 않은 분석" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Analysis XLSX 저장 후 닫기" })).toBeEnabled();
   await page.getByRole("button", { name: "취소" }).click();
@@ -1063,8 +1096,8 @@ test("creates and switches internal analysis tabs", async ({ page }, testInfo) =
   await page.getByRole("textbox", { name: "분석 이름" }).fill("Run B");
   await expect(page.getByRole("tab", { name: /Run B/ })).toHaveAttribute("aria-selected", "true");
 
-  await page.getByRole("tab", { name: /phase-r3-tabs.xlsx/ }).click();
-  await expect(page.getByRole("textbox", { name: "분석 이름" })).toHaveValue("phase-r3-tabs.xlsx");
+  await page.getByRole("tab", { name: /^phase-r3-tabs/ }).click();
+  await expect(page.getByRole("textbox", { name: "분석 이름" })).toHaveValue("phase-r3-tabs");
   await page.getByRole("tab", { name: /Run B/ }).click();
   await expect(page.getByRole("textbox", { name: "분석 이름" })).toHaveValue("Run B");
 });

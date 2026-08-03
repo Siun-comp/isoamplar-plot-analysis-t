@@ -16,17 +16,6 @@
       ]
     },
     {
-      "curveId": "sheet0_col_B",
-      "y": [
-        0.2,
-        0.4,
-        0.7
-      ],
-      "warningCodes": [
-        "MISSING_REAGENT_LABEL"
-      ]
-    },
-    {
       "curveId": "sheet0_col_C",
       "y": [
         0.3,
@@ -48,8 +37,7 @@
     {
       "code": "MISSING_REAGENT_LABEL",
       "sourceCell": "B2",
-      "curveId": "sheet0_col_B",
-      "handling": "kept"
+      "handling": "ignored"
     },
     {
       "code": "NON_NUMERIC_FLUORESCENCE",

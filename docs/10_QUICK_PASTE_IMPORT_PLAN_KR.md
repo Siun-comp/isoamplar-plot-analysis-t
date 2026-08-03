@@ -152,7 +152,7 @@ Preview action:
 
 필수 warning:
 - missing specimen label.
-- missing reagent label.
+- blank/whitespace 또는 문자 `-` 시약 열 제외(`MISSING_REAGENT_LABEL`, `handling: ignored`).
 - empty fluorescence cell.
 - nonnumeric fluorescence.
 - duplicate display label.

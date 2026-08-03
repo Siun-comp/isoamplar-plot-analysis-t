@@ -112,15 +112,32 @@ function parsePastedTableUnsafe(text: string, options: ParsePastedTableOptions):
     return invalidPaste("붙여넣은 표에 사용할 수 있는 curve 열이 없습니다.");
   }
 
-  const lastDataRow = findLastDataRow(fullTableRows, candidateColumns);
+  const reagentColumnResult = filterUsableReagentColumns(
+    fullTableRows,
+    candidateColumns,
+    options.mode,
+    sourceName,
+    sourceInstanceId
+  );
+  const usableColumns = reagentColumnResult.usableColumns;
+  if (usableColumns.length === 0) {
+    return invalidPaste(
+      "시약명이 공란 또는 '-'인 열을 제외한 뒤 사용할 수 있는 curve 열이 없습니다.",
+      "validation",
+      reagentColumnResult.warnings
+    );
+  }
+
+  const lastDataRow = findLastDataRow(fullTableRows, usableColumns);
   if (lastDataRow < 2) {
     return invalidPaste("붙여넣은 표에 fluorescence 데이터 행이 없습니다.");
   }
 
+  const usableColumnSet = new Set(usableColumns);
   const resolvedSpecimens = resolveSpecimenHeaders(
     candidateColumns.map((columnIndex) => {
       const label = fullTableRows[0]?.[columnIndex] ?? "";
-      return { columnIndex, label, canInherit: !label.trim() };
+      return { columnIndex, label, canInherit: !label.trim(), required: usableColumnSet.has(columnIndex) };
     })
   );
   if (!resolvedSpecimens.ok) {
@@ -129,7 +146,7 @@ function parsePastedTableUnsafe(text: string, options: ParsePastedTableOptions):
   }
   const resolvedSpecimenByColumn = new Map(resolvedSpecimens.headers.map((header) => [header.columnIndex, header]));
 
-  const curves = candidateColumns.map((columnIndex) =>
+  const curves = usableColumns.map((columnIndex) =>
     createCurveFromColumn({
       rows: fullTableRows,
       sourceName,
@@ -143,11 +160,12 @@ function parsePastedTableUnsafe(text: string, options: ParsePastedTableOptions):
   const inheritanceWarnings = createSpecimenInheritanceWarnings(
     resolvedSpecimens.headers,
     curves,
+    fullTableRows,
     sourceName,
     sourceInstanceId
   );
   const curveWarnings = curves.flatMap((curve) => curve.warnings);
-  const warningCount = curveWarnings.length + inheritanceWarnings.length;
+  const warningCount = curveWarnings.length + inheritanceWarnings.length + reagentColumnResult.warnings.length;
 
   return {
     ok: true,
@@ -159,7 +177,7 @@ function parsePastedTableUnsafe(text: string, options: ParsePastedTableOptions):
       cycleCount: lastDataRow - 1,
       sourceKind: "paste",
       importedAtIso: options.importedAtIso,
-      warnings: [...inheritanceWarnings, ...curveWarnings]
+      warnings: [...reagentColumnResult.warnings, ...inheritanceWarnings, ...curveWarnings]
     }),
     summary: createPasteTableSummary({
       text,
@@ -170,6 +188,61 @@ function parsePastedTableUnsafe(text: string, options: ParsePastedTableOptions):
       warningCount
     })
   };
+}
+
+function filterUsableReagentColumns(
+  rows: string[][],
+  candidateColumns: number[],
+  inputMode: PasteInputMode,
+  sourceName: string,
+  sourceInstanceId: string
+) {
+  const usableColumns: number[] = [];
+  const warnings: PcrWarning[] = [];
+
+  for (const columnIndex of candidateColumns) {
+    const reagentLabel = rows[1]?.[columnIndex] ?? "";
+    if (!isReagentPlaceholderText(reagentLabel)) {
+      usableColumns.push(columnIndex);
+      continue;
+    }
+
+    const columnLetter = encodeColumnLetter(columnIndex);
+    const sourceCell = `${columnLetter}${inputMode === "singleSpecimen" ? 1 : 2}`;
+    warnings.push(
+      createWarning({
+        code: "MISSING_REAGENT_LABEL",
+        severity: "warning",
+        scope: "header",
+        message: `시약명 ${sourceCell}이 공란 또는 '-'이므로 해당 열 전체를 분석에서 제외했습니다.`,
+        labels: [reagentLabel],
+        sourceCell,
+        sheetName: "Paste",
+        columnLetter,
+        rawValue: reagentLabel,
+        handling: "ignored",
+        sourceRefs: [
+          {
+            sourceInstanceId,
+            sourceName,
+            sourceKind: "paste",
+            worksheet: "Paste",
+            cell: sourceCell,
+            columnLetter,
+            rawValue: reagentLabel,
+            displayValue: reagentLabel
+          }
+        ]
+      })
+    );
+  }
+
+  return { usableColumns, warnings };
+}
+
+function isReagentPlaceholderText(value: string) {
+  const trimmed = value.trim();
+  return trimmed === "" || trimmed === "-";
 }
 
 function createPasteTableSummary(args: {
@@ -357,6 +430,7 @@ function createCurveFromColumn(args: {
 function createSpecimenInheritanceWarnings(
   resolvedHeaders: ResolvedSpecimenHeader[],
   curves: Curve[],
+  rows: string[][],
   sourceName: string,
   sourceInstanceId: string
 ): PcrWarning[] {
@@ -364,7 +438,7 @@ function createSpecimenInheritanceWarnings(
   const headerByColumn = new Map(resolvedHeaders.map((header) => [header.columnIndex, header]));
   const groups = new Map<number, ResolvedSpecimenHeader[]>();
   for (const header of resolvedHeaders) {
-    if (header.inheritedFromColumnIndex === undefined) continue;
+    if (header.inheritedFromColumnIndex === undefined || !curveByColumn.has(header.columnIndex)) continue;
     const group = groups.get(header.inheritedFromColumnIndex) ?? [];
     group.push(header);
     groups.set(header.inheritedFromColumnIndex, group);
@@ -373,7 +447,6 @@ function createSpecimenInheritanceWarnings(
   return [...groups.entries()].map(([sourceColumnIndex, headers]) => {
     const sourceHeader = headerByColumn.get(sourceColumnIndex)!;
     const sourceCell = `${encodeColumnLetter(sourceColumnIndex)}1`;
-    const sourceCurve = curveByColumn.get(sourceColumnIndex)!;
     const inheritedCurves = headers.map((header) => curveByColumn.get(header.columnIndex)!).filter(Boolean);
     return createWarning({
       code: "INHERITED_SPECIMEN_LABEL",
@@ -383,16 +456,28 @@ function createSpecimenInheritanceWarnings(
       curveIds: inheritedCurves.map((curve) => curve.curveId),
       labels: [sourceHeader.label],
       handling: "kept",
-      sourceRefs: [sourceCurve, ...inheritedCurves].map((curve) => ({
-        sourceInstanceId,
-        sourceName,
-        sourceKind: "paste",
-        worksheet: "Paste",
-        cell: curve.source.specimenCell,
-        columnLetter: curve.source.columnLetter,
-        rawValue: curve === sourceCurve ? sourceHeader.label : "",
-        displayValue: curve === sourceCurve ? sourceHeader.label : ""
-      }))
+      sourceRefs: [
+        {
+          sourceInstanceId,
+          sourceName,
+          sourceKind: "paste",
+          worksheet: "Paste",
+          cell: sourceCell,
+          columnLetter: encodeColumnLetter(sourceColumnIndex),
+          rawValue: rows[0]?.[sourceColumnIndex] ?? sourceHeader.label,
+          displayValue: rows[0]?.[sourceColumnIndex] ?? sourceHeader.label
+        },
+        ...inheritedCurves.map((curve) => ({
+          sourceInstanceId,
+          sourceName,
+          sourceKind: "paste" as const,
+          worksheet: "Paste",
+          cell: curve.source.specimenCell,
+          columnLetter: curve.source.columnLetter,
+          rawValue: "",
+          displayValue: ""
+        }))
+      ]
     });
   });
 }
@@ -462,14 +547,18 @@ function isBlankText(value: string | undefined) {
   return value === undefined || value.trim() === "";
 }
 
-function invalidPaste(message: string, errorKind: ParsePastedTableFailure["errorKind"] = "validation"): ParsePastedTableFailure {
+function invalidPaste(
+  message: string,
+  errorKind: ParsePastedTableFailure["errorKind"] = "validation",
+  priorWarnings: PcrWarning[] = []
+): ParsePastedTableFailure {
   const error = createWarning({
     code: "INVALID_PASTED_TABLE",
     severity: "error",
     scope: "import",
     message
   });
-  return { ok: false, errorKind, error, warnings: [error] };
+  return { ok: false, errorKind, error, warnings: [...priorWarnings, error] };
 }
 
 function createWarning(warning: PcrWarning): PcrWarning {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  formatThresholdAnalysisStatus,
   thresholdResultRequiresReview,
   type ThresholdEvent,
   type ThresholdOutcome,
@@ -78,9 +79,9 @@ export function ThresholdResultsPanel({
                     }}
                   >
                     <option value="all">전체</option>
-                    <option value="crossed">교차</option>
+                    <option value="crossed">Positive</option>
                     <option value="review">검토 필요</option>
-                    <option value="not-reached">미도달</option>
+                    <option value="not-reached">ND</option>
                   </select>
                 </label>
                 <button
@@ -95,6 +96,9 @@ export function ThresholdResultsPanel({
                 </button>
               </div>
             </div>
+            <p className="threshold-interpretation-note">
+              Positive/ND는 사용자 지정 Threshold 교차 분석 상태이며 임상 양성·음성 판정을 의미하지 않습니다.
+            </p>
             {clipboardMessage && (
               <p className="threshold-clipboard-message" role="status">
                 {clipboardMessage}
@@ -124,7 +128,7 @@ export function ThresholdResultsPanel({
                       <span>{formatEstimatedCycle(result)}</span>
                       <span>{observed ? `C${formatThresholdValue(observed.x)}` : "-"}</span>
                       <span className={`threshold-outcome threshold-outcome-${outcomeTone(result.outcome)}`}>
-                        {formatOutcome(result.outcome)}
+                        {formatThresholdAnalysisStatus(result.outcome, result.multipleUpwardCrossings)}
                       </span>
                     </summary>
                     <div className="threshold-result-details">
@@ -237,19 +241,6 @@ function formatEstimatedCycle(result: ThresholdResult) {
   return result.outcome === "crossed" && estimatedCycle !== null && estimatedCycle !== undefined
     ? `C${formatThresholdValue(estimatedCycle)}`
     : "-";
-}
-
-function formatOutcome(outcome: ThresholdOutcome) {
-  const labels: Record<ThresholdOutcome, string> = {
-    crossed: "교차",
-    "not-reached": "미도달",
-    "starts-at-threshold": "시작점=Threshold",
-    "starts-above-threshold": "시작점 초과",
-    "indeterminate-leading-gap": "선행 결측",
-    "indeterminate-gap": "결측 구간",
-    "insufficient-data": "데이터 부족"
-  };
-  return labels[outcome];
 }
 
 function outcomeTone(outcome: ThresholdOutcome) {

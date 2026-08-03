@@ -1,4 +1,4 @@
-import type { ThresholdOutcome, ThresholdResult } from "../analysis/threshold";
+import { formatThresholdAnalysisStatus, type ThresholdResult } from "../analysis/threshold";
 import type { Curve } from "../data/types";
 import { copyHtmlTableToClipboard } from "./exportChart";
 import { formatThresholdValue } from "./thresholdRender";
@@ -66,17 +66,7 @@ export function createThresholdResultsExcelClipboardPayload(args: {
 }
 
 export function formatThresholdClipboardStatus(result: ThresholdResult) {
-  if (result.outcome === "crossed" && result.multipleUpwardCrossings) return "교차 (다중 교차 검토)";
-  const labels: Record<ThresholdOutcome, string> = {
-    crossed: "교차",
-    "not-reached": "미도달",
-    "starts-at-threshold": "시작점=Threshold",
-    "starts-above-threshold": "시작점 초과",
-    "indeterminate-leading-gap": "선행 결측",
-    "indeterminate-gap": "결측 구간",
-    "insufficient-data": "데이터 부족"
-  };
-  return labels[result.outcome];
+  return formatThresholdAnalysisStatus(result.outcome, result.multipleUpwardCrossings);
 }
 
 function getEstimatedCrossingCycle(result: ThresholdResult) {

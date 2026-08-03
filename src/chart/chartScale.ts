@@ -52,7 +52,7 @@ export type AxisScaleResolution = {
 export function createDefaultChartScale(): ChartScaleState {
   return {
     x: createDefaultAxisScale(),
-    y: createDefaultAxisScale()
+    y: createDefaultYAxisScale()
   };
 }
 
@@ -64,6 +64,14 @@ export function createDefaultAxisScale(): AxisScaleState {
     preset1: { label: "P1", min: "", max: "" },
     preset2: { label: "P2", min: "", max: "" },
     applied: createAutoAppliedScale()
+  };
+}
+
+function createDefaultYAxisScale(): AxisScaleState {
+  return {
+    ...createDefaultAxisScale(),
+    preset1: { label: "FAM", min: "-200000", max: "1600000" },
+    preset2: { label: "HEX", min: "-100000", max: "600000" }
   };
 }
 

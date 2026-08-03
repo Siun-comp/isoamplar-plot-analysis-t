@@ -7,6 +7,7 @@ import { useAppStore } from "./appStore";
 import { WarningNavigationProvider } from "../ui/WarningNavigationContext";
 import { LocalizedErrorBoundary } from "../ui/LocalizedErrorBoundary";
 import { AnalysisWorkspaceRecovery } from "../ui/AnalysisWorkspaceRecovery";
+import { VersionHistoryDialog } from "../ui/VersionHistoryDialog";
 
 export function App() {
   const groupingMode = useAppStore((state) => state.selection?.groupingMode ?? "reagent");
@@ -35,7 +36,10 @@ export function App() {
           <p className="analysis-scope">연구·개발용 시각화 · 임상 판독 기능 없음</p>
           <p className="developer-credit">Developer Jang Si Un</p>
         </div>
-        <span className="phase-badge">Browser-local analysis</span>
+        <div className="top-bar-actions">
+          <VersionHistoryDialog />
+          <span className="phase-badge">Browser-local analysis</span>
+        </div>
       </header>
 
       <AnalysisTabs />

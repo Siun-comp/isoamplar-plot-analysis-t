@@ -4,7 +4,19 @@
 Active release gate
 
 ## 최종 갱신
-2026-07-14
+2026-08-03
+
+## v1.1.0 단일 유지보수 T판 게이트
+- [x] 배포 전 T판 `v1.0.0` 정적 빌드 및 SHA-256 manifest 보존
+- [x] 공란/문자 `-` 시약 열 제외, 전부 제외 차단, 제외 열 검체 anchor 유지
+- [x] 원본 확장자 제거 분석 이름 및 중복 날짜 없는 Analysis XLSX 파일명
+- [x] 새 분석 Y축 FAM/HEX 기본 preset과 Analysis XLSX 복원 우선순위
+- [x] Threshold `Positive`/`ND` UI·Excel clipboard·Selected Data XLSX schema 3 일치
+- [x] 앱 버전/변경 이력/이전판 링크와 Analysis XLSX Settings app version
+- [x] 전체 Vitest 45 files / 381 tests 및 audit 1/1 gate
+- [x] T Pages base-path production build와 fresh Chromium 13/13
+- [x] 사용자 가이드 20-page PDF 재생성 및 시각 검수
+- [ ] GitHub Pages 배포와 최신/보관 URL 공개 smoke
 
 ## Threshold 로컬 후보 게이트
 - [x] raw fluorescence 불변 및 `null` 비연결 계산 규칙 검증

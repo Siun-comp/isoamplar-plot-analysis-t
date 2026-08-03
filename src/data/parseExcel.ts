@@ -108,11 +108,31 @@ export function parseWorkbook(
     return invalidFirstSheet(fileName, firstSheetName, ignoredSheetWarnings, "First worksheet has no usable PCR data columns.");
   }
 
-  const lastDataRow = findLastDataRow(worksheet, range, candidateColumns, xlsx);
-  if (lastDataRow < 2) {
-    return invalidFirstSheet(fileName, firstSheetName, ignoredSheetWarnings, "First worksheet has no fluorescence rows.");
+  const reagentColumnResult = filterUsableReagentColumns(
+    worksheet,
+    candidateColumns,
+    fileName,
+    firstSheetName,
+    sourceInstanceId,
+    xlsx
+  );
+  const usableColumns = reagentColumnResult.usableColumns;
+  const importDiagnostics = [...ignoredSheetWarnings, ...reagentColumnResult.warnings];
+  if (usableColumns.length === 0) {
+    return invalidFirstSheet(
+      fileName,
+      firstSheetName,
+      importDiagnostics,
+      "First worksheet has no usable PCR data columns after reagent headers without information were excluded."
+    );
   }
 
+  const lastDataRow = findLastDataRow(worksheet, range, usableColumns, xlsx);
+  if (lastDataRow < 2) {
+    return invalidFirstSheet(fileName, firstSheetName, importDiagnostics, "First worksheet has no fluorescence rows.");
+  }
+
+  const usableColumnSet = new Set(usableColumns);
   const specimenHeaders = candidateColumns.map((columnIndex) => ({
     columnIndex,
     header: getHeaderIdentity(worksheet, 0, columnIndex, fileName, firstSheetName, xlsx)
@@ -121,7 +141,8 @@ export function parseWorkbook(
     specimenHeaders.map(({ columnIndex, header }) => ({
       columnIndex,
       label: header.label,
-      canInherit: isInheritableBlankSpecimenHeader(worksheet, columnIndex, header, xlsx)
+      canInherit: isInheritableBlankSpecimenHeader(worksheet, columnIndex, header, xlsx),
+      required: usableColumnSet.has(columnIndex)
     }))
   );
   if (!resolvedSpecimens.ok) {
@@ -133,7 +154,7 @@ export function parseWorkbook(
       sourceInstanceId,
       resolvedSpecimens.missingColumnIndex,
       firstHeader?.header,
-      ignoredSheetWarnings,
+      importDiagnostics,
       xlsx
     );
   }
@@ -141,7 +162,7 @@ export function parseWorkbook(
   const specimenHeaderByColumn = new Map(specimenHeaders.map(({ columnIndex, header }) => [columnIndex, header]));
   const resolvedSpecimenByColumn = new Map(resolvedSpecimens.headers.map((header) => [header.columnIndex, header]));
 
-  const curves: Curve[] = candidateColumns.map((columnIndex) =>
+  const curves: Curve[] = usableColumns.map((columnIndex) =>
     createCurveFromColumn({
       worksheet,
       fileName,
@@ -154,10 +175,27 @@ export function parseWorkbook(
       xlsx
     })
   );
+  const excludedSpecimenHeaderWarnings = createExcludedSpecimenHeaderWarnings(
+    specimenHeaders,
+    resolvedSpecimens.headers,
+    usableColumnSet,
+    curves,
+    fileName,
+    sourceInstanceId
+  );
   const importWarnings = [
-    ...ignoredSheetWarnings,
-    ...createMergedHeaderWarnings(worksheet, firstSheetName, candidateColumns, curves, resolvedSpecimens.headers, xlsx),
-    ...createSpecimenInheritanceWarnings(resolvedSpecimens.headers, curves, fileName, firstSheetName, sourceInstanceId, xlsx)
+    ...importDiagnostics,
+    ...excludedSpecimenHeaderWarnings,
+    ...createMergedHeaderWarnings(worksheet, firstSheetName, usableColumns, curves, resolvedSpecimens.headers, xlsx),
+    ...createSpecimenInheritanceWarnings(
+      worksheet,
+      resolvedSpecimens.headers,
+      curves,
+      fileName,
+      firstSheetName,
+      sourceInstanceId,
+      xlsx
+    )
   ];
   const curveWarnings = curves.flatMap((curve) => curve.warnings);
 
@@ -173,6 +211,114 @@ export function parseWorkbook(
       warnings: [...importWarnings, ...curveWarnings]
     })
   };
+}
+
+function createExcludedSpecimenHeaderWarnings(
+  specimenHeaders: Array<{ columnIndex: number; header: HeaderIdentity }>,
+  resolvedHeaders: ResolvedSpecimenHeader[],
+  usableColumnSet: Set<number>,
+  curves: Curve[],
+  fileName: string,
+  sourceInstanceId: string
+) {
+  const curveByColumn = new Map(curves.map((curve) => [curve.source.columnIndex, curve]));
+  const inheritedCurvesBySource = new Map<number, Curve[]>();
+  for (const resolved of resolvedHeaders) {
+    if (resolved.inheritedFromColumnIndex === undefined || !usableColumnSet.has(resolved.columnIndex)) continue;
+    const curve = curveByColumn.get(resolved.columnIndex);
+    if (!curve) continue;
+    const inheritedCurves = inheritedCurvesBySource.get(resolved.inheritedFromColumnIndex) ?? [];
+    inheritedCurves.push(curve);
+    inheritedCurvesBySource.set(resolved.inheritedFromColumnIndex, inheritedCurves);
+  }
+
+  return specimenHeaders
+    .filter(({ columnIndex, header }) => !usableColumnSet.has(columnIndex) && header.warnings.length > 0)
+    .flatMap(({ columnIndex, header }) => {
+      const inheritedCurves = inheritedCurvesBySource.get(columnIndex);
+      return header.warnings.map((warning) => ({
+        ...bindWarningToSource(warning, fileName, sourceInstanceId),
+        ...(inheritedCurves
+          ? {
+              curveIds: inheritedCurves.map((curve) => curve.curveId),
+              sourceRefs: [
+                ...(warning.sourceRefs ?? []),
+                ...inheritedCurves.map((curve) =>
+                  createSpecimenCurveSourceRef(
+                    curve,
+                    curve.source.sourceInstanceId!,
+                    curve.source.fileName,
+                    curve.source.sheetName
+                  )
+                )
+              ]
+            }
+          : {})
+      }));
+    });
+}
+
+function filterUsableReagentColumns(
+  worksheet: XLSX.WorkSheet,
+  candidateColumns: number[],
+  fileName: string,
+  sheetName: string,
+  sourceInstanceId: string,
+  xlsx: XlsxModule
+) {
+  const usableColumns: number[] = [];
+  const warnings: PcrWarning[] = [];
+
+  for (const columnIndex of candidateColumns) {
+    const columnLetter = xlsx.utils.encode_col(columnIndex);
+    const sourceCell = `${columnLetter}2`;
+    const cell = worksheet[sourceCell];
+    if (!isReagentColumnPlaceholder(cell)) {
+      usableColumns.push(columnIndex);
+      continue;
+    }
+
+    const displayValue = cell && !isBlankCell(cell) ? formatCellDisplayValue(cell, xlsx) : "";
+    warnings.push(
+      createWarning({
+        code: "MISSING_REAGENT_LABEL",
+        severity: "warning",
+        scope: "header",
+        message: `Reagent header ${sourceCell} is blank or a literal hyphen, so the entire column was excluded from analysis.`,
+        labels: [displayValue],
+        sourceCell,
+        sheetName,
+        columnLetter,
+        rawValue: toPortableCellValue(cell?.v),
+        handling: "ignored",
+        sourceRefs: [
+          {
+            sourceInstanceId,
+            sourceName: fileName,
+            sourceKind: "excel",
+            worksheet: sheetName,
+            cell: sourceCell,
+            columnLetter,
+            rawValue: toPortableCellValue(cell?.v),
+            displayValue,
+            cellType: cell?.t,
+            numberFormat: typeof cell?.z === "string" ? cell.z : undefined,
+            formulaText: cell?.f,
+            formulaCacheStatus: "not-formula"
+          }
+        ]
+      })
+    );
+  }
+
+  return { usableColumns, warnings };
+}
+
+function isReagentColumnPlaceholder(cell: XLSX.CellObject | undefined) {
+  if (!cell || cell.t === "z") return true;
+  if (cell.f) return false;
+  if (cell.v === undefined || cell.v === null) return true;
+  return typeof cell.v === "string" && (cell.v.trim() === "" || cell.v.trim() === "-");
 }
 
 export function isSupportedExcelFileName(fileName: string) {
@@ -559,6 +705,7 @@ function createMergedHeaderWarnings(
 }
 
 function createSpecimenInheritanceWarnings(
+  worksheet: XLSX.WorkSheet,
   resolvedHeaders: ResolvedSpecimenHeader[],
   curves: Curve[],
   fileName: string,
@@ -570,7 +717,7 @@ function createSpecimenInheritanceWarnings(
   const headerByColumn = new Map(resolvedHeaders.map((header) => [header.columnIndex, header]));
   const groups = new Map<number, ResolvedSpecimenHeader[]>();
   for (const header of resolvedHeaders) {
-    if (header.inheritedFromColumnIndex === undefined) continue;
+    if (header.inheritedFromColumnIndex === undefined || !curveByColumn.has(header.columnIndex)) continue;
     const group = groups.get(header.inheritedFromColumnIndex) ?? [];
     group.push(header);
     groups.set(header.inheritedFromColumnIndex, group);
@@ -579,7 +726,7 @@ function createSpecimenInheritanceWarnings(
   return [...groups.entries()].map(([sourceColumnIndex, headers]) => {
     const sourceHeader = headerByColumn.get(sourceColumnIndex)!;
     const sourceCell = `${xlsx.utils.encode_col(sourceColumnIndex)}1`;
-    const sourceCurve = curveByColumn.get(sourceColumnIndex)!;
+    const sourceCurve = curveByColumn.get(sourceColumnIndex);
     const inheritedCurves = headers.map((header) => curveByColumn.get(header.columnIndex)!).filter(Boolean);
     return createWarning({
       code: "INHERITED_SPECIMEN_LABEL",
@@ -590,22 +737,71 @@ function createSpecimenInheritanceWarnings(
       labels: [sourceHeader.label],
       sheetName,
       handling: "kept",
-      sourceRefs: [sourceCurve, ...inheritedCurves].map((curve) => ({
-        sourceInstanceId,
-        sourceName: fileName,
-        sourceKind: "excel",
-        worksheet: sheetName,
-        cell: curve.source.specimenCell,
-        columnLetter: curve.source.columnLetter,
-        rawValue: curve.source.specimenHeader?.rawValue,
-        displayValue: curve.source.specimenHeader?.displayValue,
-        cellType: curve.source.specimenHeader?.cellType,
-        numberFormat: curve.source.specimenHeader?.numberFormat,
-        formulaText: curve.source.specimenHeader?.formulaText,
-        formulaCacheStatus: curve.source.specimenHeader?.formulaCacheStatus
-      }))
+      sourceRefs: [
+        sourceCurve
+          ? createSpecimenCurveSourceRef(sourceCurve, sourceInstanceId, fileName, sheetName)
+          : createSpecimenHeaderSourceRef(
+              worksheet,
+              sourceColumnIndex,
+              sourceInstanceId,
+              fileName,
+              sheetName,
+              xlsx
+            ),
+        ...inheritedCurves.map((curve) => createSpecimenCurveSourceRef(curve, sourceInstanceId, fileName, sheetName))
+      ]
     });
   });
+}
+
+function createSpecimenCurveSourceRef(
+  curve: Curve,
+  sourceInstanceId: string,
+  fileName: string,
+  sheetName: string
+): WarningSourceRef {
+  return {
+    sourceInstanceId,
+    sourceName: fileName,
+    sourceKind: "excel",
+    worksheet: sheetName,
+    cell: curve.source.specimenCell,
+    columnLetter: curve.source.columnLetter,
+    rawValue: curve.source.specimenHeader?.rawValue,
+    displayValue: curve.source.specimenHeader?.displayValue,
+    cellType: curve.source.specimenHeader?.cellType,
+    numberFormat: curve.source.specimenHeader?.numberFormat,
+    formulaText: curve.source.specimenHeader?.formulaText,
+    formulaCacheStatus: curve.source.specimenHeader?.formulaCacheStatus
+  };
+}
+
+function createSpecimenHeaderSourceRef(
+  worksheet: XLSX.WorkSheet,
+  columnIndex: number,
+  sourceInstanceId: string,
+  fileName: string,
+  sheetName: string,
+  xlsx: XlsxModule
+): WarningSourceRef {
+  const columnLetter = xlsx.utils.encode_col(columnIndex);
+  const sourceCell = `${columnLetter}1`;
+  const cell = worksheet[sourceCell];
+  const header = getHeaderIdentity(worksheet, 0, columnIndex, fileName, sheetName, xlsx);
+  return {
+    sourceInstanceId,
+    sourceName: fileName,
+    sourceKind: "excel",
+    worksheet: sheetName,
+    cell: sourceCell,
+    columnLetter,
+    rawValue: header.provenance.rawValue,
+    displayValue: header.provenance.displayValue,
+    cellType: cell?.t,
+    numberFormat: typeof cell?.z === "string" ? cell.z : undefined,
+    formulaText: cell?.f,
+    formulaCacheStatus: header.provenance.formulaCacheStatus
+  };
 }
 
 function formatCellDisplayValue(cell: XLSX.CellObject, xlsx: XlsxModule) {

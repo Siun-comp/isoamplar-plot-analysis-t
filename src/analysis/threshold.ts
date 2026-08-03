@@ -26,6 +26,24 @@ export type ThresholdOutcome =
   | "indeterminate-gap"
   | "insufficient-data";
 
+export function formatThresholdAnalysisStatus(
+  outcome: ThresholdOutcome,
+  multipleUpwardCrossings = false
+) {
+  if (outcome === "crossed") {
+    return multipleUpwardCrossings ? "Positive (다중 교차 검토)" : "Positive";
+  }
+  const labels: Record<Exclude<ThresholdOutcome, "crossed">, string> = {
+    "not-reached": "ND",
+    "starts-at-threshold": "시작점=Threshold",
+    "starts-above-threshold": "시작점 초과",
+    "indeterminate-leading-gap": "선행 결측",
+    "indeterminate-gap": "결측 구간",
+    "insufficient-data": "데이터 부족"
+  };
+  return labels[outcome];
+}
+
 export type ThresholdSourceReference = {
   sourceInstanceId?: string;
   sourceKind?: ImportedSourceKind;

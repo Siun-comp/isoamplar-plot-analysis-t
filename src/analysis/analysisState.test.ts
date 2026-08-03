@@ -678,7 +678,7 @@ describe("analysis state serialization", () => {
       (warning: { code: string }) => warning.code === "INHERITED_SPECIMEN_LABEL"
     );
     inheritanceWarnings[0].sourceRefs[0] = { ...inheritanceWarnings[1].sourceRefs[0] };
-    expect(() => deserializeAnalysisState(crossSourceAnchor)).toThrow("target is inconsistent");
+    expect(() => deserializeAnalysisState(crossSourceAnchor)).toThrow("source provenance");
 
     const alteredPhysicalColumn = createInheritedExcelPayload(["Specimen 1", "", "Specimen 1", ""]);
     const alteredWarning = alteredPhysicalColumn.dataset.warnings.find((warning: { curveIds?: string[] }) =>
@@ -737,6 +737,41 @@ describe("analysis state serialization", () => {
       columnLetter: "A"
     };
     expect(() => deserializeAnalysisState(wrongNearestAnchor)).toThrow("nearest explicit specimen");
+  });
+
+  it("validates an inherited specimen anchor from an excluded reagent column", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet([["S1", "S2", ""], ["R1", "-", "R2"], [1, 100, 2]]),
+      "Sheet1"
+    );
+    const parsed = parseWorkbook(workbook, "excluded-anchor.xlsx", XLSX);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const state = createAnalysisState({
+      analysisId: "excluded-anchor",
+      analysisName: "Excluded anchor",
+      dataset: parsed.dataset,
+      selection: createInitialSelectionState(parsed.dataset),
+      searchQuery: "",
+      selectionFilter: "all",
+      chartScale: createDefaultChartScale(),
+      styleRules: createDefaultStyleRules(),
+      curveOverrides: {},
+      exportCounter: 1,
+      importFileName: "excluded-anchor.xlsx",
+      sourceFiles: [createSourceFileSummary(parsed.dataset)]
+    });
+
+    const serialized = JSON.parse(JSON.stringify(serializeAnalysisState(state)));
+    expect(deserializeAnalysisState(serialized).dataset.curves[1].specimenLabel).toBe("S2");
+
+    const inheritanceWarning = serialized.dataset.warnings.find(
+      (warning: { code: string }) => warning.code === "INHERITED_SPECIMEN_LABEL"
+    );
+    inheritanceWarning.sourceRefs[0].sourceName = "different-source.xlsx";
+    expect(() => deserializeAnalysisState(serialized)).toThrow("source provenance");
   });
 
   it("restores a wide mostly-inherited paste source through indexed validation", () => {

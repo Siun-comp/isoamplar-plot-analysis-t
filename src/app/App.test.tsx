@@ -91,6 +91,7 @@ describe("App PCR workspace", () => {
     expect(screen.getByText("연구·개발용 시각화 · 임상 판독 기능 없음")).toBeInTheDocument();
     expect(screen.getByText("Developer Jang Si Un")).toBeInTheDocument();
     expect(screen.getByText("Browser-local analysis")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "버전 v1.1.0 및 변경 이력" })).toBeInTheDocument();
     expect(screen.queryByText("MVP implementation")).not.toBeInTheDocument();
     expect(screen.queryByText("Release validation")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Analysis 1" })).toHaveAttribute("aria-selected", "true");
@@ -103,6 +104,23 @@ describe("App PCR workspace", () => {
     expect(screen.getByText("원본 Excel은 첫 번째 시트만 읽고, 모든 데이터는 브라우저 안에서 처리합니다.")).toBeInTheDocument();
     expect(screen.getByText("원본 데이터 열기")).toBeInTheDocument();
     expect(screen.getByText("저장한 분석 열기")).toBeInTheDocument();
+  });
+
+  it("opens version history and links to the immutable previous release", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "버전 v1.1.0 및 변경 이력" }));
+    const dialog = screen.getByRole("dialog", { name: "버전 및 변경 이력" });
+    expect(within(dialog).getByText("현재 버전")).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "이 버전 열기" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("versions/v1.0.0/")
+    );
+    expect(within(dialog).getByText(/최신 Analysis XLSX는 이전 버전에서 열리지 않을 수 있습니다/u)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "닫기" }));
+    expect(screen.queryByRole("dialog", { name: "버전 및 변경 이력" })).not.toBeInTheDocument();
   });
 
   it("protects browser unload while any analysis is dirty and removes protection when all are saved", async () => {

@@ -1,0 +1,132 @@
+{
+  "version": "1.0.0",
+  "sourceCommit": "fdd3b31ea67b3db769b2c4287e23e1ac79fe9274",
+  "basePath": "/isoamplar-plot-analysis-t/versions/v1.0.0/",
+  "files": [
+    {
+      "path": "assets/index-CFkqW9WI.css",
+      "bytes": 38911,
+      "sha256": "bf446a74990687d5b422732e500acd0f13e250cb97b9f54d97c450a852adda33"
+    },
+    {
+      "path": "assets/core-CHeHsHOm.js",
+      "bytes": 4981,
+      "sha256": "9840e75c980ee90e7e83f9f347ba911ece1f21864a2aaaa36bbd04aa764021ad"
+    },
+    {
+      "path": "assets/ChartView-C7sdUe-l.js",
+      "bytes": 8685,
+      "sha256": "a87d6da1963d825aa0e01072d881fe38e172a98fb79cd19b0ca8efb8c7bd11d2"
+    },
+    {
+      "path": "assets/index-511XEwVU.js",
+      "bytes": 475945,
+      "sha256": "dce823dc7377ddd9d7f61daa218db52cc8c67d6e209f1e5ac2c1cbc9ac0bfaa4"
+    },
+    {
+      "path": "assets/charts-C1yWzhbc.js",
+      "bytes": 238782,
+      "sha256": "f49e6e3f29e87d8f075f5493366ca13b8d5b31804ecd88b2dfb5ca946247de6f"
+    },
+    {
+      "path": "assets/install-X42mEo9c.js",
+      "bytes": 23055,
+      "sha256": "a37267b7df0f5b01b6034f80fe85362133f35178b710ace429b24fcb04119517"
+    },
+    {
+      "path": "assets/createSeriesData-oB_Zu_UR.js",
+      "bytes": 3208,
+      "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
+    },
+    {
+      "path": "assets/components-De8aQx5T.js",
+      "bytes": 190524,
+      "sha256": "ddf619f1b3d4c799883bf34f2add841026c41e4ce48fe1cf6383acd1e3ee6ff6"
+    },
+    {
+      "path": "assets/install-BXu0TYwC.js",
+      "bytes": 71793,
+      "sha256": "c8a1b3b31cbe90080414bea08462efb309f7c591854a6be05403c15717e8bc08"
+    },
+    {
+      "path": "assets/install-idcfyR9g.js",
+      "bytes": 79220,
+      "sha256": "493f0343bad6b0234f6e27f4f58bf9169730ded1ea16b6e52fefda4793285fc5"
+    },
+    {
+      "path": "assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+      "bytes": 66459,
+      "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
+    },
+    {
+      "path": "assets/parseGeoJson-BRELWpDE.js",
+      "bytes": 4313,
+      "sha256": "5baffe9a49975540fede98039bad91c4b48aac82e5bb9efa9235844ffcfd207d"
+    },
+    {
+      "path": "assets/Axis-DtDXW_5t.js",
+      "bytes": 241485,
+      "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
+    },
+    {
+      "path": "assets/installCanvasRenderer-u3c4MenG.js",
+      "bytes": 13917,
+      "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
+    },
+    {
+      "path": "assets/renderers-CzT9A_km.js",
+      "bytes": 20096,
+      "sha256": "9197d5a13916e6886b9a64256f2bfcd634d0cbed00cf0cd25122842c019a4499"
+    },
+    {
+      "path": "assets/graphic-BBQJ00JB.js",
+      "bytes": 150439,
+      "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
+    },
+    {
+      "path": "assets/xlsx-CKwrMZHi.js",
+      "bytes": 499549,
+      "sha256": "f895dd67a19c78f7cfa4069482c2f9bd4c754167dc8f9b15f11988e5358ee1ba"
+    },
+    {
+      "path": "favicon.svg",
+      "bytes": 1751,
+      "sha256": "75ce31bdb49e86ac60988df15ef1f82145c4cd44d5944b64bb25992784a5d584"
+    },
+    {
+      "path": "manifest.webmanifest",
+      "bytes": 535,
+      "sha256": "8f70eebe9e7e83374a42878f9124e52c8ddc9e122a0df9ec401ac6b4ffa012a0"
+    },
+    {
+      "path": "favicon-16.png",
+      "bytes": 583,
+      "sha256": "74bfc46633fe2f0e705b3c1df41ed1e527d864347912c4abe2526ced148cdad9"
+    },
+    {
+      "path": "favicon-32.png",
+      "bytes": 1352,
+      "sha256": "9cac8c9669f9c1ae50bfa049a551e78dc9181d1a5c730c0271cbb89fc40cc8ea"
+    },
+    {
+      "path": "apple-touch-icon.png",
+      "bytes": 13450,
+      "sha256": "11e780f6782b2138879ce5516798042f613de354d4b6c06e0f7cd619452298d0"
+    },
+    {
+      "path": "icon-192.png",
+      "bytes": 14593,
+      "sha256": "c5da7efd580b2b2f93318f14b509b4efbed17eb5e406538312fcc2aa6d5d33cc"
+    },
+    {
+      "path": "icon-512.png",
+      "bytes": 55845,
+      "sha256": "4a1fc51140b21b8c9378bef6d095d44a3df498e28b44d13b23bd0b64ac436ea6"
+    },
+    {
+      "path": "index.html",
+      "bytes": 908,
+      "sha256": "95b9db2931dd21869009f87ad06b49167b985a958211d8649003ebe7f2cc048b"
+    }
+  ]
+}

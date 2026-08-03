@@ -2,6 +2,7 @@ export type SpecimenHeaderEntry = {
   columnIndex: number;
   label: string;
   canInherit: boolean;
+  required?: boolean;
 };
 
 export type ResolvedSpecimenHeader = {
@@ -17,15 +18,11 @@ export type ResolveSpecimenHeadersResult =
 export function resolveSpecimenHeaders(entries: readonly SpecimenHeaderEntry[]): ResolveSpecimenHeadersResult {
   if (entries.length === 0) return { ok: true, headers: [] };
 
-  const first = entries[0];
-  if (!first.label.trim()) return { ok: false, missingColumnIndex: first.columnIndex };
+  let currentLabel: string | null = null;
+  let currentSourceColumnIndex: number | null = null;
+  const headers: ResolvedSpecimenHeader[] = [];
 
-  let currentLabel = first.label;
-  let currentSourceColumnIndex = first.columnIndex;
-  const headers: ResolvedSpecimenHeader[] = [{ columnIndex: first.columnIndex, label: first.label }];
-
-  for (let index = 1; index < entries.length; index += 1) {
-    const entry = entries[index];
+  for (const entry of entries) {
     if (entry.label.trim()) {
       currentLabel = entry.label;
       currentSourceColumnIndex = entry.columnIndex;
@@ -33,13 +30,17 @@ export function resolveSpecimenHeaders(entries: readonly SpecimenHeaderEntry[]):
       continue;
     }
 
-    if (entry.canInherit) {
+    if (entry.canInherit && currentLabel !== null && currentSourceColumnIndex !== null) {
       headers.push({
         columnIndex: entry.columnIndex,
         label: currentLabel,
         inheritedFromColumnIndex: currentSourceColumnIndex
       });
       continue;
+    }
+
+    if (entry.required !== false && currentLabel === null) {
+      return { ok: false, missingColumnIndex: entry.columnIndex };
     }
 
     headers.push({ columnIndex: entry.columnIndex, label: entry.label });

@@ -277,7 +277,7 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().chartScale.y.mode).toBe("preset1");
 
     useAppStore.getState().loadDataset(dataset);
-    expect(useAppStore.getState().chartScale.y.preset1?.min).toBe("");
+    expect(useAppStore.getState().chartScale.y.preset1).toEqual({ label: "FAM", min: "-200000", max: "1600000" });
   });
 
   it("applies box zoom bounds as fixed X/Y scale without changing presets", () => {
@@ -612,7 +612,7 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().selection?.selectedCurveIds.has(secondCurveId)).toBe(true);
     expect(useAppStore.getState().selection?.orderedCurveIds.slice(0, 2)).toEqual([firstCurveId, secondCurveId]);
     expect(useAppStore.getState().selection?.collapsedGroupIds.has(firstGroupId)).toBe(true);
-    expect(useAppStore.getState().chartScale.y.preset1?.min).toBe("");
+    expect(useAppStore.getState().chartScale.y.preset1).toEqual({ label: "FAM", min: "-200000", max: "1600000" });
     expect(useAppStore.getState().curveOverrides[firstCurveId]).toBeUndefined();
     expect(useAppStore.getState().curveOverrides[secondCurveId]?.color).toBe("#222222");
     expect(useAppStore.getState().exportCounter).toBe(1);
@@ -765,7 +765,7 @@ describe("app store style preset and legend order", () => {
     expect(useAppStore.getState().dirty).toBe(false);
 
     useAppStore.getState().loadDataset(dataset);
-    expect(useAppStore.getState().analysisName).toBe(dataset.sourceFileName);
+    expect(useAppStore.getState().analysisName).toBe("sample_1x8");
     expect(useAppStore.getState().sourceFiles).toEqual([
       expect.objectContaining({
         fileName: dataset.sourceFileName,

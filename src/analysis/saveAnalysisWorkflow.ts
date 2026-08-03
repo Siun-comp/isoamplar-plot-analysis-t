@@ -39,7 +39,7 @@ export async function saveActiveAnalysis(): Promise<SaveActiveAnalysisResult> {
     sourceFiles: snapshot.sourceFiles,
     dirty: snapshot.dirty
   });
-  const fileName = createAnalysisWorkbookFileName(job.reservedCounter, new Date(), snapshot.analysisName);
+  const fileName = createAnalysisWorkbookFileName(job.reservedCounter, snapshot.analysisName);
 
   try {
     const blob = await exportAnalysisWorkbookBlob(analysisState);

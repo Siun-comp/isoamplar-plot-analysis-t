@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { RELEASE_HISTORY } from "../../src/releaseHistory";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const temporaryRoots: string[] = [];
@@ -13,6 +15,44 @@ afterEach(() => {
 });
 
 describe("GPT-5.6 audit remediation evidence", () => {
+  it("keeps the immutable v1.0.0 Pages archive byte-identical to its SHA-256 manifest", () => {
+    const archiveRoot = join(projectRoot, "public", "versions", "v1.0.0");
+    const manifest = JSON.parse(readFileSync(join(archiveRoot, "release-manifest.json"), "utf8")) as {
+      version: string;
+      sourceCommit: string;
+      basePath: string;
+      files: Array<{ path: string; bytes: number; sha256: string }>;
+    };
+
+    expect(manifest.version).toBe("1.0.0");
+    expect(manifest.sourceCommit).toBe("fdd3b31ea67b3db769b2c4287e23e1ac79fe9274");
+    expect(manifest.basePath).toBe("/isoamplar-plot-analysis-t/versions/v1.0.0/");
+    expect(
+      execFileSync("git", ["rev-parse", "v1.0.0^{commit}"], { cwd: projectRoot, encoding: "utf8" }).trim()
+    ).toBe(manifest.sourceCommit);
+    const release = RELEASE_HISTORY.find((entry) => entry.version === manifest.version);
+    expect(release?.manifestSha256).toBe(
+      createHash("sha256").update(readFileSync(join(archiveRoot, "release-manifest.json"))).digest("hex")
+    );
+    expect(manifest.files.length).toBeGreaterThan(10);
+    const actualFiles = listFiles(archiveRoot)
+      .map((path) => path.replaceAll("\\", "/"))
+      .filter((path) => path !== "release-manifest.json")
+      .sort();
+    expect(manifest.files.map((file) => file.path).sort()).toEqual(actualFiles);
+    for (const file of manifest.files) {
+      const bytes = readFileSync(join(archiveRoot, ...file.path.split("/")));
+      expect(bytes.byteLength, file.path).toBe(file.bytes);
+      expect(createHash("sha256").update(bytes).digest("hex"), file.path).toBe(file.sha256);
+    }
+    expect(readFileSync(join(archiveRoot, "index.html"), "utf8")).toContain(manifest.basePath);
+    const archiveScript = readFileSync(join(projectRoot, "scripts", "archive-version.mjs"), "utf8");
+    expect(archiveScript).not.toContain("manifest-only");
+    expect(archiveScript).toContain('"status", "--porcelain", "--untracked-files=all"');
+    expect(archiveScript).toContain('["run", "build"]');
+    expect(archiveScript).toContain("VITE_BASE_PATH: basePath");
+  });
+
   it("rejects a dist tree that changes after the integrity baseline", () => {
     const root = mkdtempSync(join(tmpdir(), "isoamplar-dist-integrity-"));
     temporaryRoots.push(root);
@@ -68,4 +108,12 @@ describe("GPT-5.6 audit remediation evidence", () => {
 
 function runIntegrity(root: string, script: string, ...args: string[]) {
   execFileSync(process.execPath, [script, ...args], { cwd: root, stdio: "pipe" });
+}
+
+function listFiles(root: string, relativeDirectory = ""): string[] {
+  const directory = join(root, relativeDirectory);
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = join(relativeDirectory, entry.name);
+    return entry.isDirectory() ? listFiles(root, relativePath) : statSync(join(root, relativePath)).isFile() ? [relativePath] : [];
+  });
 }

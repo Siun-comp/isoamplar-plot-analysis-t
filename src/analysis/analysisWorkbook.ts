@@ -7,8 +7,10 @@ import {
   type SerializedAnalysisState
 } from "./analysisState";
 import type { Curve, PcrWarning } from "../data/types";
-import { createFileNameStem, sanitizeFileNamePart } from "../chart/exportFilenames";
+import { sanitizeFileNamePart } from "../chart/exportFilenames";
 import { inspectSelectedDataWorkbookRole } from "../chart/selectedDataWorkbook";
+import { stripFinalExcelExtension } from "./analysisNames";
+import { APP_VERSION } from "../releaseHistory";
 
 type XlsxModule = typeof import("xlsx");
 
@@ -138,8 +140,9 @@ export function readAnalysisWorkbook(workbook: XLSX.WorkBook, xlsx: XlsxModule):
   }
 }
 
-export function createAnalysisWorkbookFileName(analysisNumber: number, date = new Date(), analysisName?: string) {
-  return `${createFileNameStem("analysis", analysisNumber, date, analysisName)}.xlsx`;
+export function createAnalysisWorkbookFileName(analysisNumber: number, analysisName?: string) {
+  const safeAnalysisName = sanitizeFileNamePart(stripFinalExcelExtension(analysisName ?? ""));
+  return `${safeAnalysisName ? `${safeAnalysisName}_` : ""}analysis${analysisNumber}.xlsx`;
 }
 
 export const sanitizeAnalysisFileNamePart = sanitizeFileNamePart;
@@ -162,6 +165,7 @@ function createSettingsRows(state: AnalysisState, metrics: AnalysisWorkbookMetri
   const rows: unknown[][] = [
     ["Setting", "Value"],
     ["Analysis name", state.analysisName],
+    ["App version", APP_VERSION],
     ["Exported at", new Date().toISOString()],
     ["Schema version", ANALYSIS_STATE_SCHEMA_VERSION],
     ["Imported curve count", state.dataset.curves.length],

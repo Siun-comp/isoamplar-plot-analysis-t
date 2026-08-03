@@ -31,14 +31,14 @@ describe("Threshold Excel clipboard payload", () => {
 
     expect(payload.text.split("\r\n")).toEqual([
       "검체\t시약\t추정 교차 Cycle\t결과 상태",
-      "\u200B=Synthetic specimen\tSynthetic assay\t1.8\t교차 (다중 교차 검토)",
-      "Synthetic specimen 2\tSynthetic assay\t\t미도달"
+      "\u200B=Synthetic specimen\tSynthetic assay\t1.8\tPositive (다중 교차 검토)",
+      "Synthetic specimen 2\tSynthetic assay\t\tND"
     ]);
     expect(payload.html).toContain("Malgun Gothic");
     expect(payload.html).toContain("font-size:9pt");
     expect(payload.html).toContain("&#8203;=Synthetic specimen");
     expect(payload.html).toContain(">1.8</td>");
-    expect(payload.html).toContain("교차 (다중 교차 검토)");
+    expect(payload.html).toContain("Positive (다중 교차 검토)");
   });
 
   it("rejects a result whose curve identity is unavailable instead of silently omitting it", () => {

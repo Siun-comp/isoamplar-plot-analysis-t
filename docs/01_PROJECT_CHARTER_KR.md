@@ -4,7 +4,7 @@
 Implemented baseline - release validation and real-data hardening
 
 ## 최종 갱신
-2026-07-11
+2026-08-03
 
 ## 목적
 IsoAmplar 장비 및 LAMP 개발 과정에서 얻은 증폭형광 데이터를 데스크톱 브라우저에서 선택, 비교, 시각화하고 보고용 결과로 정리한다. 주 사용자는 프로그래머가 아닌 분자진단 키트 개발자다.
@@ -44,7 +44,7 @@ IsoAmplar 장비 및 LAMP 개발 과정에서 얻은 증폭형광 데이터를 �
 - CSV file import 또는 comma/quoted CSV 자동 추측
 - 앱 안의 원본 cell 편집, 검체/시약/fluorescence 수정
 - worksheet picker 또는 custom X/cycle 입력
-- 자동/import-time threshold, Ct/Cq/Tt/Tp, 양성/음성, 임상 판독 계산. 사용자가 직접 지정하는 raw fluorescence Threshold와 기하학적 교차 검토는 허용한다.
+- 자동/import-time threshold, Ct/Cq/Tt/Tp, 임상 판독 계산. 사용자가 직접 지정하는 raw fluorescence Threshold와 기하학적 교차 검토는 허용하며, 그 결과의 `Positive`/`ND`는 임상 판정이 아닌 교차 분석 상태로만 사용한다.
 - native editable Excel chart
 - 서버 저장, 계정, 공동 편집, 실시간 협업
 - 모바일 분석 UI, multi-plot dashboard

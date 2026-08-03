@@ -13,6 +13,7 @@ import {
   type SourceFileSummary
 } from "../analysis/analysisState";
 import { readAnalysisWorkbookFile } from "../analysis/analysisWorkbook";
+import { createImportedAnalysisName } from "../analysis/analysisNames";
 import type {
   CurveStyleField,
   CurveStyleOverride,
@@ -228,7 +229,7 @@ export const useAppStore = create<AppStore>()(
         state.selectionSets = [];
         state.activeSelectionSetId = null;
         state.selectionSetUndo = null;
-        state.analysisName = dataset.sourceFileName || state.analysisName;
+        state.analysisName = createImportedAnalysisName(dataset.sourceFileName, dataset.sourceKind, state.analysisName);
         state.searchQuery = "";
         state.selectionFilter = "all";
         state.chartScale = createDefaultChartScale();
@@ -1422,7 +1423,7 @@ function replaceAnalysisDataset(
   const nextAnalysis: AnalysisTabState = {
     ...cloneAnalysisTab(previous),
     runtimeInstanceId: createRuntimeInstanceId(),
-    analysisName: dataset.sourceFileName || previous.analysisName,
+    analysisName: createImportedAnalysisName(dataset.sourceFileName, dataset.sourceKind, previous.analysisName),
     dataset,
     selection: createInitialSelectionState(dataset),
     selectionSets: [],
@@ -1558,7 +1559,10 @@ function openDatasetInNewTab(state: AppState, dataset: PcrDataset) {
   persistActiveAnalysis(state);
   const nextSequence = state.analysisSequence + 1;
   const analysisId = `analysis-${nextSequence}`;
-  const baseAnalysis = createEmptyAnalysisTab(analysisId, dataset.sourceFileName || `Analysis ${nextSequence}`);
+  const baseAnalysis = createEmptyAnalysisTab(
+    analysisId,
+    createImportedAnalysisName(dataset.sourceFileName, dataset.sourceKind, `Analysis ${nextSequence}`)
+  );
   const nextAnalysis: AnalysisTabState = {
     ...baseAnalysis,
     dataset,

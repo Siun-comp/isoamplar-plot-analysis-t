@@ -7,7 +7,7 @@ Define how data enters the application, how it is normalized internally, and wha
 Active draft
 
 ## Last Updated
-2026-07-12
+2026-08-03
 
 ## Owner
 Engineering / Agent
@@ -22,7 +22,7 @@ Engineering / Agent
 - PNG and JPEG export use white background and analysis-name-based filenames such as `YYMMDD_<sanitizedAnalysisName>_plotN.ext`.
 - Plotted-data CSV, when enabled, uses the matching analysis-name-based filename stem such as `YYMMDD_<sanitizedAnalysisName>_plotN_data.csv`, includes only the current plotted chart projection, and uses current Analysis labels for curve headers with duplicate disambiguation when needed.
 - Chart styling uses stable default colors by original data/group order, solid no-marker lines by default, and optional individual marker overrides.
-- Analysis XLSX is a web-app restore file containing the full imported dataset and settings, including Analysis labels and legend/export settings; it is separate from plotted-data CSV and report-style chart workbooks.
+- Analysis XLSX schema 5 is a web-app restore file containing the full imported dataset and settings, including Analysis labels, Selection Sets, Threshold configuration, and legend/export settings; it is separate from plotted-data CSV and report-style chart workbooks.
 - Selection Sets store tab-local curveId membership only and persist in Analysis XLSX schema 4.
 - Selected Data XLSX is the primary current-selection data output. It contains raw numeric/null values plus source/warning metadata and is not a valid original, append, or restore input.
 - Internal analysis tabs keep separate in-browser analysis states; user data remains browser-local unless explicitly exported.
@@ -34,7 +34,7 @@ Update this file when parsing rules, data types, invalid data handling, internal
 
 | ID | Input | Initial Rule | Related Requirements | Acceptance Criteria |
 | --- | --- | --- | --- | --- |
-| IO-001 | Excel workbook | Support `.xls` and `.xlsx` upload through browser file APIs; parse only the first worksheet. Within each workbook, the first usable curve column requires a specimen label and each truly blank later specimen header inherits the nearest previous explicit specimen label. The user can replace the current dataset or append another file to the current analysis. If the active analysis is dirty, replace upload requires explicit replace or new-analysis confirmation. | FR-001 | AC-001, AC-002, AC-PCR-001, AC-PCR-015, AC-PCR-016, AC-PCR-025, AC-PCR-061 |
+| IO-001 | Excel workbook | Support `.xls` and `.xlsx` upload through browser file APIs; parse only the first worksheet. Within each workbook, each truly blank later specimen header inherits the nearest previous explicit specimen label. A truly blank reagent header or exact trimmed literal `-` excludes that physical column, while an explicit specimen above an excluded column remains an inheritance anchor. The user can replace the current dataset or append another file. | FR-001 | AC-001, AC-002, AC-PCR-001, AC-PCR-015, AC-PCR-016, AC-PCR-025, AC-PCR-061, AC-PCR-062 |
 | IO-002 | CSV file | Deferred beyond MVP. | FR-002 | TBD |
 | IO-003 | Pasted table | Implemented post-MVP Quick Paste Import. The user pastes a small table into a textarea using either full-table mode, row 1 specimen labels with the same within-source blank-as-previous contract as Excel / row 2 reagent labels / row 3+ fluorescence values, or single-specimen mode, one supplied specimen name / pasted row 1 reagent labels / pasted row 2+ fluorescence values. The app generates a read-only preview, source-position diagnostics, row/column/cell/character/curve/cycle counts, and an approximate minimum working-memory estimate before append/new-analysis import. No in-app cell editing or source-data correction is allowed. | FR-003 | AC-PCR-061, AC-QP-001 through AC-QP-021 |
 | IO-004 | Manual entry / editing | Deferred beyond MVP. Imported data is not editable in MVP. | FR-003 | AC-PCR-017 |
@@ -59,16 +59,18 @@ Parser policy:
 
 - Empty trailing rows after the final row containing any fluorescence value are ignored.
 - Internal empty fluorescence cells normalize to `null` and produce warnings.
-- Empty data columns are ignored only when specimen header, reagent header, and all data cells are empty.
+- A physical candidate column is excluded when the reagent header is truly blank/whitespace or its non-formula display text is exactly `-`, regardless of fluorescence cells. It produces an ignored `MISSING_REAGENT_LABEL` diagnostic with source references and no curve IDs.
+- A formula-backed reagent cell is never excluded solely because its cached display is `-`; non-empty labels containing a hyphen, such as `R-4`, remain normal reagent identities.
 - Date, boolean, and error cells in fluorescence rows are treated as nonnumeric fluorescence unless later explicitly supported.
 - Specimen/reagent identity uses SheetJS-formatted display text recomputed from raw value/type/number format rather than unconditionally trusting cached `cell.w`; raw value, display text, type, format, formula, and cache state remain provenance.
 - Formula cells are never recalculated in the browser. Use cached finite numeric fluorescence values unchanged and warn that cache was used; otherwise normalize to `null` and warn that no cache was available.
 - Each source import receives an immutable source-instance ID. Every normalized/persisted warning carries one-to-many source references, handling outcome, and affected curve IDs where applicable; same-name repeated imports remain distinct.
 - Extension/content signature mismatch is diagnostic only and does not change the current allow/block policy.
-- The first usable curve column must have a nonblank specimen display label; a missing value blocks that source and cannot borrow a specimen from an already open analysis.
+- The first included curve must resolve to a specimen display label; a missing value with no prior explicit same-source anchor blocks that source and cannot borrow a specimen from an already open analysis.
 - A truly blank or whitespace-only later row-1 specimen cell inherits the nearest previous explicit specimen label within the same workbook or full-table paste source. The normalized curve uses the inherited label while the original blank cell remains in provenance and an informational diagnostic records both source and target cells.
 - Formula-without-cache and formatted-display-empty specimen headers are not treated as intentional blanks and do not silently inherit.
-- Reagent headers never inherit. Missing reagent labels retain the existing warning/fallback behavior.
+- Reagent headers never inherit. If every candidate column has a blank or literal-`-` reagent header, the source is rejected because it contains no usable curve.
+- Specimen inheritance is evaluated across the physical left-to-right headers before excluded reagent columns are removed. Therefore an explicit specimen above an excluded reagent column remains the nearest valid anchor for a later included curve.
 - Horizontal row-1 specimen merges use the same tested left-to-right inheritance only where a blank continuation actually exists. Reagent or cross-row merges are not auto-filled and continue to warn.
 - Negative numeric fluorescence values are valid raw values and should not warn by default.
 - Maximum file size, maximum row count, and maximum column count remain performance-budget decisions.
@@ -79,8 +81,9 @@ CSV import is not part of the MVP. If added later, it must map into the same PCR
 ## Analysis XLSX Rules
 Analysis XLSX is a project/session restore file for IsoAmplar Plot Analysis T. It is not a report workbook and does not contain a native editable Excel chart. The T edition continues to recognize the legacy non-T README marker before schema validation.
 
-- Filename convention is `YYMMDD_<sanitizedAnalysisName>_analysisN.xlsx`, using browser-local date, the current analysis name, and the per-analysis export counter.
-- If no usable analysis name is available, the safe name segment falls back to `analysis`.
+- Filename convention is `<sanitizedAnalysisName>_analysisN.xlsx`, using the current analysis name and per-analysis save counter without adding another date prefix.
+- Opening an original Excel workbook derives the default analysis name by removing only its final case-insensitive `.xls` or `.xlsx` extension. Source filename/provenance remains unchanged. For example, `260803_data.xlsx` defaults to analysis name `260803_data` and saves as `260803_data_analysis1.xlsx`.
+- If no usable analysis name is available, the filename falls back to `analysisN.xlsx`.
 - The analysis name segment must be sanitized so characters invalid on Windows/macOS/Linux filesystems are removed or replaced.
 - Failed Analysis XLSX exports do not consume the analysis export counter.
 - The existing analysis header owns the single `분석 저장` command and always explains that Analysis XLSX contains the full imported dataset, including unselected/hidden curves, plus analysis settings.
@@ -132,7 +135,7 @@ Routing policy:
 - `빠른 붙여넣기`: keeps the existing preview plus append/new-analysis confirmation flow.
 - Dirty tab close shows explicit options: Cancel, save Analysis XLSX then close, or close without saving. Dirty replacement never proceeds silently.
 
-If the hidden restore worksheet is missing, corrupt, chunk-damaged, or has an unsupported schema version, the app must show an actionable error and must not misinterpret the file as a normal PCR source workbook. Ordinary `.xlsx` source workbooks are treated as Analysis XLSX only when they contain the explicit IsoAmplar restore marker, so review-like sheet names such as `Settings` or `ImportedData` alone do not change routing. Current Analysis XLSX uses schema 4 and normalized dataset schema 2. Schema 1 derives explicit applied scale state and legacy source/header/warning provenance; schema 2 migrates legacy header/warning provenance; schema 3 migrates to empty Selection Sets. Schema 4 requires valid unique Selection Set IDs/names, known non-empty curve membership, and a valid active set reference. Restore may fill only documented non-destructive legacy defaults.
+If the hidden restore worksheet is missing, corrupt, chunk-damaged, or has an unsupported schema version, the app must show an actionable error and must not misinterpret the file as a normal PCR source workbook. Ordinary `.xlsx` source workbooks are treated as Analysis XLSX only when they contain the explicit IsoAmplar restore marker, so review-like sheet names such as `Settings` or `ImportedData` alone do not change routing. Current Analysis XLSX uses schema 5 and normalized dataset schema 2. Schemas 1-4 migrate documented legacy defaults before validation; schema 4 introduced Selection Sets and schema 5 adds Threshold configuration. Restore may fill only documented non-destructive legacy defaults. The visible Settings sheet records the current app semantic version, but the hidden payload schema remains the compatibility authority.
 
 After migration and structural validation, restore must also verify generated `Cycle 1..N` X values, X/Y lengths, dataset maximum cycle count, recomputed min/max/missing/point statistics, specimen/reagent membership, source summary/provenance, warning references, selected/order/override IDs, collapsed group IDs, and style entity keys. Validation completes before a new analysis tab is committed. Restore JSON chunks must not split a UTF-16 surrogate pair.
 
@@ -187,7 +190,7 @@ MVP rules:
 - Row 2 is always reagent labels.
 - Row 3 onward is fluorescence data.
 - Similar specimen or reagent names warn only; the app does not merge, rename, or correct labels. MVP similar-key rule trims labels, lowercases Latin text, removes whitespace/hyphen/underscore characters, and compares non-empty keys.
-- A missing specimen label in the first usable curve column invalidates the source. Truly blank later specimen labels inherit the nearest previous explicit specimen within that source and retain blank raw provenance plus `INHERITED_SPECIMEN_LABEL` information. Other unresolved specimen blanks and missing reagent labels retain warning/fallback behavior.
+- The first included curve must resolve a specimen label from its own header or the nearest previous explicit physical-column anchor in the same source; if no such anchor exists, the source is invalid. Truly blank later specimen labels retain blank raw provenance plus `INHERITED_SPECIMEN_LABEL` information. A candidate column whose reagent cell is blank/whitespace or a literal non-formula `-` is excluded with an ignored warning; formula-backed or number-format-only hyphens remain curves with provenance warnings.
 
 ## Internal PCR Dataset Model
 The normalized PCR dataset should be representable as:
@@ -210,6 +213,12 @@ The normalized PCR dataset should be representable as:
   "warnings": []
 }
 ```
+
+New-analysis scale defaults:
+
+- X-axis P1/P2 labels remain `P1`/`P2` with blank bounds.
+- Y-axis preset 1 is `FAM`, `-200000..1600000`; preset 2 is `HEX`, `-100000..600000`.
+- Preset labels and bounds are editable. Import still starts in Auto mode, and valid values restored from Analysis XLSX override these defaults.
 
 Curve IDs should be stable for a given workbook/sheet/column parse and should not depend on the current tree grouping. In a single parsed workbook, IDs use source position such as `sheet0_col_A`. When another workbook is appended into the current analysis, appended IDs are rekeyed with an import prefix such as `file2_sheet0_col_A` so selections, overrides, chart series, and export order do not collide with the existing dataset.
 
@@ -317,9 +326,10 @@ This structure may be refined during implementation but must preserve curveId-ba
 | IO-104 | Static build | Produce static assets that work on GitHub Pages. | FR-013 | AC-011 |
 | IO-105 | Plotted data export | Export only currently plotted data when the current chart projection is simple and rectangular; otherwise disable with a clear reason. | FR-016 | AC-PCR-021, AC-PCR-022 |
 | IO-106 | Analysis XLSX export | Export a full analysis restore workbook containing the complete imported dataset and settings, including Threshold enabled/draft/applied/rule and independent preview/export visibility options. Derived Threshold results are recomputed from raw data after restore. | FR-017, FR-023 | AC-PCR-033, AC-PCR-034, AC-PCR-037, AC-PCR-058 |
-| IO-107 | Selected Data XLSX export | Export the current non-empty rectangular common-X selection in current user order as an `.xlsx` workbook. Schema 2 keeps visible raw `PlottedData`, `CurveInfo`, `Warnings`, and `ExportInfo`, adds separate `ThresholdResults` and `ThresholdEvents` evidence sheets, and carries a hidden role marker. Numeric fluorescence remains numeric, null remains blank, strings remain non-formula/non-hyperlink cells, and all common-X rows are exported regardless of visible scale. | FR-021, FR-023 | AC-PCR-054, AC-PCR-055, AC-PCR-058 |
+| IO-107 | Selected Data XLSX export | Export the current non-empty rectangular common-X selection in current user order as an `.xlsx` workbook. Schema 3 keeps visible raw `PlottedData`, `CurveInfo`, `Warnings`, and `ExportInfo`, separate `ThresholdResults` and `ThresholdEvents` evidence sheets, and a hidden role marker. `ThresholdResults` preserves the raw outcome and adds the user-facing Analysis status (`Positive`, `ND`, or review wording). Numeric fluorescence remains numeric, null remains blank, and all common-X rows are exported regardless of visible scale. | FR-021, FR-023 | AC-PCR-054, AC-PCR-055, AC-PCR-058, AC-PCR-062 |
 | IO-108 | Threshold derived projection | Calculate the current selected curves over complete raw X/Y arrays with versioned `raw-first-upward-linear-v1`. Scale and preview/export visibility do not crop or alter calculation. The first observed at-or-above point, Cycle-axis linear estimate, all crossing events, gap uncertainty, source/formula-cache evidence, and outcome remain distinguishable. | FR-023 | AC-PCR-056, AC-PCR-057, AC-PCR-058 |
-| IO-109 | Threshold Excel clipboard projection | In the T edition, copy only the Threshold review rows visible under the current status filter, preserving current curve order. Emit rich HTML and TSV with headers `검체`, `시약`, `추정 교차 Cycle`, `결과 상태`; write a finite primary Cycle-axis estimate as an Excel-readable number, leave unavailable estimates blank, sanitize label-like text against spreadsheet formula interpretation, and retain review-relevant outcome wording. | FR-024 | AC-PCR-060 |
+| IO-109 | Threshold Excel clipboard projection | Copy only the Threshold review rows visible under the current status filter, preserving current curve order. Emit rich HTML and TSV with headers `검체`, `시약`, `추정 교차 Cycle`, `결과 상태`; write a finite primary Cycle-axis estimate as an Excel-readable number, leave unavailable estimates blank, sanitize label-like text against spreadsheet formula interpretation, and map valid crossing/no-reached results to `Positive`/`ND` while retaining review wording for uncertain cases. | FR-024 | AC-PCR-060, AC-PCR-062 |
+| IO-110 | Version history | Display the current package version and release notes in-app. Serve archived T builds from immutable same-origin `versions/vX.Y.Z/` paths and include a SHA-256 release manifest. | FR-025 | AC-PCR-063 |
 
 ## Image Download Rules
 - Formats: PNG, JPEG.
@@ -365,6 +375,7 @@ This structure may be refined during implementation but must preserve curveId-ba
 - `Warnings` includes warning evidence related to the exported curves; `ExportInfo` records export time, analysis name, applied display Scale, and an explicit `None` data-transform statement.
 - Fluorescence values remain numbers and `null` remains blank. No smoothing, normalization, source-value interpolation, baseline correction, automatic thresholding, or scale-based cropping is applied. User-set Threshold crossing estimates are written only to separate derived result sheets and never inserted into `PlottedData`.
 - User/source strings are written as literal string cells without formulas or hyperlinks. Duplicate visible labels are deterministically source-disambiguated for column identity without changing live Analysis labels.
+- Schema 3 keeps the machine-facing Threshold `Outcome` and adds a separate `Analysis status` column. `Positive` means a valid upward crossing under the applied user Threshold; `ND` means no reached crossing. Neither is a clinical interpretation.
 - A hidden `_IsoAmplarSelectedData` marker identifies the workbook as output-only. Original open, append, and saved-analysis restore reject this role before analysis mutation.
 
 ## Clipboard Rules

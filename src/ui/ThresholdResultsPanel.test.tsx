@@ -73,6 +73,8 @@ describe("ThresholdResultsPanel", () => {
     );
 
     await user.click(screen.getByText("Threshold 값 검토"));
+    expect(screen.getByText("Positive (다중 교차 검토)")).toBeInTheDocument();
+    expect(screen.getByText(/임상 양성·음성 판정을 의미하지 않습니다/u)).toBeInTheDocument();
     const filter = screen.getByRole("combobox", { name: "Threshold 결과 상태 필터" });
     await user.selectOptions(filter, "review");
     const resultRow = screen.getByText("Synthetic assay").closest("details");

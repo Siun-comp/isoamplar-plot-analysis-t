@@ -19,7 +19,9 @@ Active release gate
 - [x] 전체 Vitest 45 files / 393 tests, audit 1/1, dependency vulnerabilities 0, Pages build, fresh Chromium 13/13
 - [x] Playwright 전후 complete `dist` byte-identical: `d4c5651a323f6158ca5323b739121c308a483325ed50f2a8736678b57347c6e0`
 - [x] 데이터 무결성·데스크톱 UX 재감사 잔여 항목 해소: 시약별 전부 미설정 XLSX 근거와 긴 Threshold 라벨 수치 보존. 전문가 재감사는 사용 한도 중단 전 핵심 불변조건을 확인했고, lead가 기록된 잔여 검사를 완료하여 release blocker 없음.
-- [ ] commit/tag/push/Pages 배포 및 최신/v1.1/v1.0 공개 smoke
+- [x] commit/tag/push/Pages 배포 및 최신/v1.1/v1.0 공개 smoke: head `6936093`, tag `v1.2.0`, run `33558251077`
+
+배포 전 보관 자산의 Git 줄바꿈 정규화를 차단하는 과정에서 run `33557883231`과 `33558044276`이 각각 형식 검사와 archive manifest 검사에서 중단되었다. 두 실행은 배포 단계에 도달하지 않았고, 바이너리 속성 적용 및 archive byte 재인덱싱 후 최종 run에서 전체 gate와 배포가 통과했다.
 
 ## v1.1.0 단일 유지보수 T판 게이트
 - [x] 배포 전 T판 `v1.0.0` 정적 빌드 및 SHA-256 manifest 보존

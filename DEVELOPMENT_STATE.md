@@ -13,7 +13,7 @@ Active
 
 - Active branch: `codex/audit-remediation`; release promotion targets only the `threshold` remote repository `isoamplar-plot-analysis-t`.
 - `IsoAmplar Plot Analysis T` is the sole maintained product. The original non-T deployment is an unmaintained historical rollback artifact and receives no further feature patches.
-- Current deployed stable release is semantic version `1.1.0`. The active v1.2.0 work adds common/per-reagent Threshold modes and an eight-swatch shortcut palette without changing raw fluorescence or existing free-form color controls. Before v1.2.0 promotion, the verified v1.1.0 runtime must be archived under `public/versions/v1.1.0/` with SHA-256 evidence.
+- Current deployed stable release is semantic version `1.2.0`. It adds common/per-reagent Threshold modes and an eight-swatch shortcut palette without changing raw fluorescence or existing free-form color controls. The verified v1.1.0 runtime is archived under `public/versions/v1.1.0/` with SHA-256 evidence.
 - By D062, the existing v1.1 Korean user guide remains a historical artifact and is no longer regenerated for each release. Current behavior is documented through requirements, I/O, acceptance, changelog, release history, and this state file.
 - v1.1.0 adds blank/literal-`-` reagent-column exclusion without losing physical specimen inheritance anchors, extension-free default analysis names, date-neutral Analysis XLSX save names, editable FAM/HEX Y presets, common non-clinical Positive/ND Threshold status projections, Selected Data XLSX schema 3, and an in-app version/history dialog with archived-runtime links.
 - v1.2.0 Analysis XLSX uses schema 6 and preserves the full dataset, settings, Selection Sets, and both Common/per-reagent Threshold configurations. Schema 5 restores into Common mode, and older supported schemas still migrate before semantic validation.
@@ -21,6 +21,7 @@ Active
 - Source-local specimen-header inheritance remains authoritative for Excel and full-table Quick Paste. The first included curve must resolve to a same-source explicit specimen; ignored reagent columns never create curves but may supply an explicit inheritance anchor for later included columns.
 - The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
 - Release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` is tagged `v1.1.0` and deployed by successful Pages run `30802527069`. Public smoke confirmed the latest v1.1.0 UI and executable archived v1.0.0 runtime with no browser console warning/error.
+- v1.2.0 promotion head `693609364fb83f5df75da1f8c6109de85ce316b8` is tagged `v1.2.0` and deployed by successful Pages run `33558251077`. Public smoke confirmed latest v1.2.0 plus executable v1.1.0/v1.0.0 archives with no browser console warning/error. Pre-deploy runs `33557883231` and `33558044276` failed before deployment while the immutable archive Git attributes were hardened; neither failed run published a runtime.
 - Pre-release rollback anchors remain the immutable `v1.0.0` runtime and historical Git tags. No user workbook, real specimen label, or real fluorescence data is committed.
 - Immutable `public/versions/**` runtime files are Git binary assets so release bytes and SHA-256 manifests are not altered by line-ending normalization or patch-format checks.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
@@ -71,18 +72,18 @@ Active
 - Threshold is part of the sole maintained T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and clinical interpretation. `Positive`/`ND` are explicitly user-set Threshold crossing-status labels, not clinical classifications.
 
 ## Current Goal
-Implement, verify, archive, and release v1.2.0 with exact-reagent Threshold analysis and optional eight-color shortcut swatches while preserving v1.1.0 Analysis XLSX continuity.
+Maintain the deployed v1.2.0 release and collect real-use feedback without changing raw fluorescence semantics or Analysis XLSX continuity.
 
 ## Current Milestone
-M17 v1.2.0 per-reagent Threshold and color-template refinement has passed local release gates and is ready for promotion.
+M17 v1.2.0 per-reagent Threshold and color-template refinement is complete and deployed.
 
 ## Last Completed Step
-Implemented exact per-reagent Threshold projection and the optional eight-color palette; archived v1.1.0; resolved the final all-unconfigured workbook and long-label review edges; passed full unit/audit/dependency/Pages-build/fresh-Chromium/dist-integrity gates. The interrupted specialist re-audits were completed by the lead against their recorded residual checks with no release blocker.
+Released v1.2.0 from `6936093`, completed Pages run `33558251077`, and passed public latest/v1.1/v1.0 smoke with no browser console warning/error. The v1.1 archive byte-fidelity fix preserves the original manifest exactly.
 
 ## Exact Next 3 Tasks
-1. Commit and tag v1.2.0, then push only to the maintained `threshold` repository.
-2. Wait for Pages and run public latest/v1.1/v1.0 smoke checks.
-3. Record exact release commit/run/hash evidence without regenerating the user guide under D062.
+1. Use v1.2.0 with representative browser-local data and record only reproducible usability or correctness findings.
+2. Preserve Analysis XLSX files when an analysis must be continued later; do not expect latest schema files to open in archived runtimes.
+3. For a future patch, update requirements/tests/changelog/state and keep the user guide unchanged unless D062 is explicitly reversed.
 
 ## Latest Changed Files
 - `package.json`, `package-lock.json`

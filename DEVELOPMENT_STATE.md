@@ -22,6 +22,7 @@ Active
 - The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
 - Release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` is tagged `v1.1.0` and deployed by successful Pages run `30802527069`. Public smoke confirmed the latest v1.1.0 UI and executable archived v1.0.0 runtime with no browser console warning/error.
 - Pre-release rollback anchors remain the immutable `v1.0.0` runtime and historical Git tags. No user workbook, real specimen label, or real fluorescence data is committed.
+- Immutable `public/versions/**` runtime files are Git binary assets so release bytes and SHA-256 manifests are not altered by line-ending normalization or patch-format checks.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
 - Phase S0 is complete. Phase S1 evidence foundation was committed as `1e30717` after local verification and expert review.
 - Phase S2 numeric/scale remediation is complete on the active branch after full verification and final independent expert GO review.

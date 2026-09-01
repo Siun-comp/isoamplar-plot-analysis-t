@@ -8,6 +8,7 @@ Active release gate
 
 ## v1.2.0 시약별 Threshold·색상 팔레트 게이트
 - [x] v1.1.0 정적 실행판과 SHA-256 manifest 보존
+- [x] 보관 실행판은 Git binary 속성으로 원본 줄바꿈/바이트를 보존하며 patch-format 검사에서 제외
 - [x] 공통/시약별 모드 전환 시 각 설정 보존
 - [x] 정확한 `reagentId` 기준 적용, 신규 시약 미설정, 미설정 curve ND 오분류 방지
 - [x] 시약별 입력 전체 선검증 및 부분 적용 없는 원자적 `모두 적용`

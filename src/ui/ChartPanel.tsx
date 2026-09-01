@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { calculateThresholdResults } from "../analysis/threshold";
+import { calculateConfiguredThresholdResults, hasActiveThresholdForCurves } from "../analysis/threshold";
 import { useAppStore } from "../app/appStore";
 import { buildPcrChartOption } from "../chart/chartConfig";
 import { hasVisibleCurveWarning } from "../chart/chartScale";
@@ -46,8 +46,7 @@ export function ChartPanel() {
         styleRules,
         curveOverrides,
         legendSettings,
-        threshold:
-          thresholdSettings.enabled && thresholdSettings.showInPreview ? thresholdSettings.applied : null
+        thresholdSettings: thresholdSettings.showInPreview ? thresholdSettings : null
       }),
     [
       chartScale,
@@ -64,11 +63,10 @@ export function ChartPanel() {
   const selectedCount = buildResult.visibleCurves.length;
   const thresholdResults = useMemo(
     () =>
-      thresholdSettings.enabled && thresholdSettings.applied
-        ? calculateThresholdResults(buildResult.visibleCurves, thresholdSettings.applied.value)
-        : [],
-    [buildResult.visibleCurves, thresholdSettings.applied, thresholdSettings.enabled]
+      calculateConfiguredThresholdResults(buildResult.visibleCurves, thresholdSettings),
+    [buildResult.visibleCurves, thresholdSettings]
   );
+  const thresholdActive = hasActiveThresholdForCurves(thresholdSettings, buildResult.visibleCurves);
   const selectedCurveIds = buildResult.visibleCurves.map((curve) => curve.curveId);
   const matchedSearchCurveIds = useMemo(
     () => (dataset ? getMatchedCurveIds(dataset, searchQuery) : new Set<string>()),
@@ -207,8 +205,9 @@ export function ChartPanel() {
       </div>
       <ChartReadout readout={hoverReadout} />
       <ThresholdResultsPanel
-        enabled={thresholdSettings.enabled}
-        threshold={thresholdSettings.applied?.value ?? null}
+        enabled={thresholdActive}
+        threshold={thresholdSettings.mode === "common" ? thresholdSettings.applied?.value ?? null : null}
+        thresholdMode={thresholdSettings.mode}
         curves={buildResult.visibleCurves}
         results={thresholdResults}
         legendItems={buildResult.legendItems}

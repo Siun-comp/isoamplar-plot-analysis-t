@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -91,7 +91,7 @@ describe("App PCR workspace", () => {
     expect(screen.getByText("연구·개발용 시각화 · 임상 판독 기능 없음")).toBeInTheDocument();
     expect(screen.getByText("Developer Jang Si Un")).toBeInTheDocument();
     expect(screen.getByText("Browser-local analysis")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "버전 v1.1.0 및 변경 이력" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "버전 v1.2.0 및 변경 이력" })).toBeInTheDocument();
     expect(screen.queryByText("MVP implementation")).not.toBeInTheDocument();
     expect(screen.queryByText("Release validation")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Analysis 1" })).toHaveAttribute("aria-selected", "true");
@@ -110,13 +110,14 @@ describe("App PCR workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "버전 v1.1.0 및 변경 이력" }));
+    await user.click(screen.getByRole("button", { name: "버전 v1.2.0 및 변경 이력" }));
     const dialog = screen.getByRole("dialog", { name: "버전 및 변경 이력" });
     expect(within(dialog).getByText("현재 버전")).toBeInTheDocument();
-    expect(within(dialog).getByRole("link", { name: "이 버전 열기" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("versions/v1.0.0/")
-    );
+    expect(within(dialog).getAllByRole("link", { name: "이 버전 열기" }).map((link) => link.getAttribute("href")))
+      .toEqual(expect.arrayContaining([
+        expect.stringContaining("versions/v1.1.0/"),
+        expect.stringContaining("versions/v1.0.0/")
+      ]));
     expect(within(dialog).getByText(/최신 Analysis XLSX는 이전 버전에서 열리지 않을 수 있습니다/u)).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "닫기" }));
@@ -497,6 +498,22 @@ describe("App PCR workspace", () => {
     expect(useAppStore.getState().analyses[firstId].exportCounter).toBe(1);
   });
 
+  it("applies the default color template through the shared color popover", async () => {
+    const user = userEvent.setup();
+    const dataset = createOneSpecimenEightReagentDataset();
+    act(() => {
+      useAppStore.getState().loadDataset(dataset);
+      useAppStore.getState().setCurvesSelected([dataset.curves[0].curveId], true);
+    });
+
+    render(<App />);
+    await user.click(screen.getByText("Style"));
+    await user.click(screen.getByLabelText("A1 color editor"));
+    expect(screen.getByRole("button", { name: "보라색 #7030A0" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "빨간색 #FF0000" }));
+    expect(useAppStore.getState().styleRules.reagentColors[dataset.reagents[0].id]).toBe("#FF0000");
+  });
+
   it("accepts HEX color input for group and individual curve styles", async () => {
     const user = userEvent.setup();
     const dataset = createOneSpecimenEightReagentDataset();
@@ -507,18 +524,16 @@ describe("App PCR workspace", () => {
 
     render(<App />);
     await user.click(screen.getByText("Style"));
-
     await user.click(screen.getByLabelText("A1 color editor"));
+
     const reagentHex = screen.getByRole("textbox", { name: "A1 hex color" });
-    await user.clear(reagentHex);
-    await user.type(reagentHex, "#123abc");
+    fireEvent.change(reagentHex, { target: { value: "#123abc" } });
     expect(useAppStore.getState().styleRules.reagentColors[dataset.reagents[0].id]).toBe("#123abc");
 
     await user.click(screen.getByLabelText("A1 │ 검체 1 color editor"));
     const curveHex = screen.getByRole("textbox", { name: "A1 │ 검체 1 hex color" });
-    await user.clear(curveHex);
-    await user.type(curveHex, "f80");
-    await user.tab();
+    fireEvent.change(curveHex, { target: { value: "f80" } });
+    fireEvent.blur(curveHex);
     expect(useAppStore.getState().curveOverrides[dataset.curves[0].curveId].color).toBe("#ff8800");
   });
 
@@ -981,6 +996,42 @@ describe("App PCR workspace", () => {
     await waitFor(() => expect(exportChartLayoutImageBlob).toHaveBeenCalledTimes(1));
     const withoutThreshold = vi.mocked(exportChartLayoutImageBlob).mock.calls[0][0].option as Record<string, any>;
     expect(withoutThreshold.series.some((series: Record<string, unknown>) => "markLine" in series)).toBe(false);
+  });
+
+  it("applies per-reagent Thresholds atomically and uses them in plot export", async () => {
+    const user = userEvent.setup();
+    const dataset = createOneSpecimenEightReagentDataset();
+    act(() => {
+      useAppStore.getState().loadDataset(dataset);
+      useAppStore.getState().setCurvesSelected(
+        [dataset.curves[0].curveId, dataset.curves[1].curveId],
+        true
+      );
+    });
+    render(<App />);
+
+    await user.click(getSettingsSummary("Threshold"));
+    const thresholdRegion = screen.getByRole("region", { name: "Threshold 설정" });
+    await user.click(within(thresholdRegion).getByRole("button", { name: "시약별" }));
+    fireEvent.change(within(thresholdRegion).getByRole("textbox", { name: "A1 Raw fluorescence Threshold" }), {
+      target: { value: "100" }
+    });
+    fireEvent.change(within(thresholdRegion).getByRole("textbox", { name: "A2 Raw fluorescence Threshold" }), {
+      target: { value: "200" }
+    });
+    await user.click(within(thresholdRegion).getByRole("button", { name: "모두 적용" }));
+    expect(
+      dataset.reagents.slice(0, 2).map((reagent) =>
+        useAppStore.getState().thresholdSettings.reagentSettings[reagent.id].applied?.value
+      )
+    ).toEqual([100, 200]);
+
+    await user.click(getSettingsSummary("Export"));
+    await user.click(screen.getByRole("button", { name: "Save PNG" }));
+    await waitFor(() => expect(exportChartLayoutImageBlob).toHaveBeenCalled());
+    const option = vi.mocked(exportChartLayoutImageBlob).mock.calls.at(-1)?.[0].option as Record<string, any>;
+    const markLine = option.series.find((series: Record<string, unknown>) => "markLine" in series).markLine;
+    expect(markLine.data.map((item: { yAxis: number }) => item.yAxis)).toEqual([100, 200]);
   });
 
   it("blocks only outputs that would contain an unapplied Threshold draft", async () => {

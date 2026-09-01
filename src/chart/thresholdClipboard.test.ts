@@ -5,7 +5,7 @@ import type { Curve } from "../data/types";
 import { createThresholdResultsExcelClipboardPayload } from "./thresholdClipboard";
 
 describe("Threshold Excel clipboard payload", () => {
-  it("creates four Excel cells per visible result with numeric estimates and blank unavailable values", () => {
+  it("creates five Excel cells per visible result with applied Thresholds, numeric estimates, and blank unavailable values", () => {
     const baseCurves = createSyntheticPcrDataset({
       specimenLabels: ["=Synthetic specimen", "Synthetic specimen 2"],
       reagentLabels: ["Synthetic assay"],
@@ -30,9 +30,9 @@ describe("Threshold Excel clipboard payload", () => {
     });
 
     expect(payload.text.split("\r\n")).toEqual([
-      "검체\t시약\t추정 교차 Cycle\t결과 상태",
-      "\u200B=Synthetic specimen\tSynthetic assay\t1.8\tPositive (다중 교차 검토)",
-      "Synthetic specimen 2\tSynthetic assay\t\tND"
+      "검체\t시약\t적용 Threshold\t추정 교차 Cycle\t결과 상태",
+      "\u200B=Synthetic specimen\tSynthetic assay\t5\t1.8\tPositive (다중 교차 검토)",
+      "Synthetic specimen 2\tSynthetic assay\t5\t\tND"
     ]);
     expect(payload.html).toContain("Malgun Gothic");
     expect(payload.html).toContain("font-size:9pt");

@@ -7,15 +7,17 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-08-03
+2026-09-02
 
 ## CURRENT TRUTH
 
 - Active branch: `codex/audit-remediation`; release promotion targets only the `threshold` remote repository `isoamplar-plot-analysis-t`.
 - `IsoAmplar Plot Analysis T` is the sole maintained product. The original non-T deployment is an unmaintained historical rollback artifact and receives no further feature patches.
-- Current local release candidate is semantic version `1.1.0`. The verified pre-change T source SHA `fdd3b31` is tagged locally as `v1.0.0`, and its static Pages build is archived under `public/versions/v1.0.0/` with a SHA-256 release manifest.
+- Current deployed stable release is semantic version `1.1.0`. The active v1.2.0 work adds common/per-reagent Threshold modes and an eight-swatch shortcut palette without changing raw fluorescence or existing free-form color controls. Before v1.2.0 promotion, the verified v1.1.0 runtime must be archived under `public/versions/v1.1.0/` with SHA-256 evidence.
+- By D062, the existing v1.1 Korean user guide remains a historical artifact and is no longer regenerated for each release. Current behavior is documented through requirements, I/O, acceptance, changelog, release history, and this state file.
 - v1.1.0 adds blank/literal-`-` reagent-column exclusion without losing physical specimen inheritance anchors, extension-free default analysis names, date-neutral Analysis XLSX save names, editable FAM/HEX Y presets, common non-clinical Positive/ND Threshold status projections, Selected Data XLSX schema 3, and an in-app version/history dialog with archived-runtime links.
-- Analysis XLSX remains schema 5 and preserves full dataset/settings/Selection Sets/Threshold configuration. Its visible Settings sheet now records the generating app version; old supported schemas still migrate before semantic validation.
+- v1.2.0 Analysis XLSX uses schema 6 and preserves the full dataset, settings, Selection Sets, and both Common/per-reagent Threshold configurations. Schema 5 restores into Common mode, and older supported schemas still migrate before semantic validation.
+- v1.2.0 local verification passes 45 Vitest files / 393 tests, audit 1/1, zero production dependency vulnerabilities, Pages-base production build, and fresh Chromium 13/13. The complete `dist` tree stayed byte-identical before/after Playwright at `d4c5651a323f6158ca5323b739121c308a483325ed50f2a8736678b57347c6e0`.
 - Source-local specimen-header inheritance remains authoritative for Excel and full-table Quick Paste. The first included curve must resolve to a same-source explicit specimen; ignored reagent columns never create curves but may supply an explicit inheritance anchor for later included columns.
 - The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
 - Release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` is tagged `v1.1.0` and deployed by successful Pages run `30802527069`. Public smoke confirmed the latest v1.1.0 UI and executable archived v1.0.0 runtime with no browser console warning/error.
@@ -38,7 +40,7 @@ Active
 - Latest S11 pre-commit verification: the standard suite passed 32 files / 265 tests; isolated audit probe passed 1/1; production dependency audit found 0 vulnerabilities; Pages-base build and fresh Chromium passed 11/11 with fail-on-flaky. Complete dist tree hash `1012572727dd66d74763775f828fef165baa24012c61c770db6617e90d6cce46` was byte-identical before and after Playwright. A representative workbook outside the repository passed local-only import, all-curve selection, nonblank canvas, P1/P2 application, and browser-error checks without copying labels, values, or paths into evidence.
 - Final branch CI run `29156244025` and Pages run `29156323546` succeeded for SHA `eae3281fb8f9bbbd900fab528be3e094b93b555a`. Public smoke compared all 25 known `dist` files byte-for-byte and passed synthetic XLSX import, reagent-first collapsed state, nonblank chart, P2/Box zoom/Previous scale, dashed-line/circle-marker legend identity, opaque white PNG, Analysis XLSX restore, zero unexpected external requests, and zero browser errors. Initial Pages run `29156159533` failed before build on historical Markdown whitespace and did not deploy.
 - User data remains browser-local. No real workbook, patient/specimen record, or actual fluorescence dataset is checked into S1 fixtures.
-- The user has granted standing approval for subsequent remediation phase commits. Continue phases sequentially, but do not push or deploy until the plan reaches the corresponding release phase.
+- The user has granted standing approval for v1.2.0 commit, tag, push, and maintained T-repository Pages deployment after local release gates pass.
 
 ## Compression-Safe Summary
 - IsoAmplar Plot Analysis T is the sole maintained Threshold-capable product built from the validated desktop workflow. The original non-T repository and Pages deployment are historical rollback artifacts only.
@@ -58,7 +60,7 @@ Active
 - The latest direct refinement pass adds app-controlled curve hover highlighting, custom-legend hover/focus highlighting, marker-preserving hover behavior, analysis-name-based export filenames, balanced Y-axis spacing, dedicated legend-only clipboard PNG copy, compact group style controls, and native style popover closing.
 - The current pre-use refinement adds slash-safe ` │ ` curve labels, report-readable legend PNG/JPEG/clipboard export, Analysis label editing, rich Excel-cell legend clipboard copy with Malgun Gothic 9 pt formatting, Export control grouping, dirty close/replace confirmation flows, Style-panel preset shortcut removal, line/marker popover auto-close after selection, report legend image text alignment fixes, Excel-friendly colored glyph legend clipboard samples, and raw-point/no-smoothing regression coverage.
 - The latest patch fixes the preview legend visibility Korean label and the pre-import Legend empty-state Korean mojibake, applies Auto compact labels to the chart preview/custom legend and plot/legend image exports, changes the Labels reset control back to an icon-sized button, stacks the Export Legend header to avoid text overlap, adds current Analysis XLSX continuity and parser edge-case regression coverage, removes unused legacy Legend/Report editor code that still referenced the old report-name override model, and changes the app header status badge from internal phase wording to `Browser-local analysis`.
-- A 20-page first-user Korean PDF guide is generated under `output/pdf/`, covering Excel/Quick Paste input, desktop workflow, export, exact Analysis XLSX continuity, privacy, parser edge cases, version rollback, and troubleshooting. The guide examples and screenshots use only synthetic labels/values; do not use real user-provided labels or disease/test names in guide examples.
+- The existing v1.1 Korean Markdown/PDF guide is a historical artifact. Under D062 it is not regenerated or updated for v1.2.0 or later releases unless the user explicitly reverses that decision.
 - The default chart palette order is `#7030A0`, `#0926FB`, `#00B050`, `#FFC000`, `#FF0000`, `#767171`, `#4ACCE6`, `#EB45BC`.
 - Explicit Box zoom highlights the valid plot area and writes a dragged data-space region into Fixed X/Y scale bounds. `Previous scale` restores prior scale snapshots one step at a time, while `Auto scale` resets both axes and clears return history. It never crops or transforms fluorescence data.
 - The latest UI consistency pass normalizes button/form-control sizing across top tabs, import actions, selection controls, chart tools, scale controls, legend controls, and export controls; status badges remain intentionally smaller. It also scopes settings accordion summary styling so nested Style color/line popover triggers stay compact, tightens reset-icon button padding, and removes an obsolete hidden Export legend button wrapper.
@@ -68,13 +70,18 @@ Active
 - Threshold is part of the sole maintained T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and clinical interpretation. `Positive`/`ND` are explicitly user-set Threshold crossing-status labels, not clinical classifications.
 
 ## Current Goal
-Operate the deployed v1.1.0 T-only release and collect real-use feedback for future patches.
+Implement, verify, archive, and release v1.2.0 with exact-reagent Threshold analysis and optional eight-color shortcut swatches while preserving v1.1.0 Analysis XLSX continuity.
 
 ## Current Milestone
-M16 versioned single-product maintenance and input/workflow refinement is released; latest and archived v1.0.0 Pages runtimes are publicly verified.
+M17 v1.2.0 per-reagent Threshold and color-template refinement has passed local release gates and is ready for promotion.
 
 ## Last Completed Step
-Committed and tagged v1.1.0, pushed only to the maintained T repository, completed Pages run `30802527069`, and smoke-tested the latest and archived v1.0.0 URLs without browser console warning/error.
+Implemented exact per-reagent Threshold projection and the optional eight-color palette; archived v1.1.0; resolved the final all-unconfigured workbook and long-label review edges; passed full unit/audit/dependency/Pages-build/fresh-Chromium/dist-integrity gates. The interrupted specialist re-audits were completed by the lead against their recorded residual checks with no release blocker.
+
+## Exact Next 3 Tasks
+1. Commit and tag v1.2.0, then push only to the maintained `threshold` repository.
+2. Wait for Pages and run public latest/v1.1/v1.0 smoke checks.
+3. Record exact release commit/run/hash evidence without regenerating the user guide under D062.
 
 ## Latest Changed Files
 - `package.json`, `package-lock.json`
@@ -741,4 +748,4 @@ Committed and tagged v1.1.0, pushed only to the maintained T repository, complet
 ## Next 3 Tasks
 1. Use the released parser with representative non-sensitive workbooks and record any reproducible regression.
 2. Preserve Analysis XLSX continuation files when testing long-running analyses.
-3. Update requirements, tests, guide, and changelog together before the next user-visible release.
+3. Update requirements, tests, changelog, release history, and development state together before the next user-visible release; the guide remains historical under D062.

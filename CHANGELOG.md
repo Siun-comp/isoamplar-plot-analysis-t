@@ -1,5 +1,16 @@
 # CHANGELOG.md
 
+## 2026-09-02 - v1.2.0 per-reagent Threshold and color shortcuts
+
+- Added Common and Per reagent Threshold modes with independent values preserved across mode switches and analysis tabs.
+- Added atomic validation/application for per-reagent drafts, exact `reagentId` reuse on append, and explicit unconfigured handling for newly introduced reagents.
+- Unified preview, plot export, result review, clipboard, and XLSX outputs on one curveId-based Threshold assignment.
+- Added multiple Threshold lines with same-value deduplication, reagent color identity, out-of-range annotations, and a collision-managed right-side label rail.
+- Advanced Analysis XLSX to schema 6 with a visible `ReagentThresholds` review sheet; schema 5 restores as Common mode.
+- Advanced Selected Data XLSX to schema 4 and added applied Threshold identity to result/event evidence. Threshold Excel clipboard output now contains five columns including `적용 Threshold`.
+- Added the established eight-color order as square shortcut swatches in every existing group and individual color popover while retaining HEX, native picker, reset, presets, and undo.
+- Archived the verified v1.1.0 runtime under `versions/v1.1.0/` with a SHA-256 release manifest before v1.2.0 promotion.
+
 ## 2026-08-03 - v1.1.0 maintained T release
 
 - Consolidated ongoing maintenance on `IsoAmplar Plot Analysis T`; the original non-T app is now a historical rollback artifact rather than a second patch target.

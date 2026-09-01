@@ -10,7 +10,7 @@ import type {
   ScalePresetId
 } from "../chart/chartScale";
 import { isScalePresetConfigured } from "../chart/chartScale";
-import { defaultChartColors } from "../chart/chartStyle";
+import { defaultChartColors, defaultChartPalette } from "../chart/chartStyle";
 import { buildPcrChartOption } from "../chart/chartConfig";
 import { buildChartProjection, type LegendItem } from "../chart/chartProjection";
 import {
@@ -26,7 +26,7 @@ import { createPlottedDataCsv } from "../chart/plottedDataExport";
 import { createSelectedDataWorkbook, validateSelectedDataProjection } from "../chart/selectedDataWorkbook";
 import { buildReportLegendProjection } from "../chart/reportLegend";
 import { createStyleAdvisories, normalizeHexColor, type StyleAdvisories } from "../chart/styleAdvisories";
-import { isThresholdDraftApplied } from "../analysis/threshold";
+import { hasActiveThresholdForCurves, hasThresholdDraftMismatch } from "../analysis/threshold";
 import { useAppStore } from "../app/appStore";
 import { formatCurveLabel, formatCurveSourceSuffix } from "../data/curveLabels";
 import type {
@@ -144,7 +144,7 @@ export function SettingsPanel() {
       </details>
       <details>
         <summary>Threshold</summary>
-        <ThresholdSettingsPanel curves={selectedCurves} hasDataset={Boolean(dataset)} />
+        <ThresholdSettingsPanel curves={selectedCurves} reagents={dataset?.reagents ?? []} hasDataset={Boolean(dataset)} />
       </details>
       <details>
         <summary>Style</summary>
@@ -334,7 +334,7 @@ function ExportControls({
   const blockingScaleIssues = scaleIssues.filter((issue) => issue.blocksPlotExport);
   const plotImageScaleBlocked = exportSettings.imageLayout !== "legendOnly" && blockingScaleIssues.length > 0;
   const plotScaleMessage = blockingScaleIssues.map((issue) => issue.message).join(" ");
-  const thresholdDraftMismatch = thresholdSettings.enabled && !isThresholdDraftApplied(thresholdSettings);
+  const thresholdDraftMismatch = hasThresholdDraftMismatch(thresholdSettings, selectedCurves);
   const thresholdBlocksLayout = (layout: ImageExportLayout) =>
     layout !== "legendOnly" && thresholdSettings.includeInPlotExport && thresholdDraftMismatch;
   const plotImageThresholdBlocked = thresholdBlocksLayout(exportSettings.imageLayout);
@@ -351,9 +351,11 @@ function ExportControls({
       styleRules,
       curveOverrides,
       legendSettings,
-      threshold:
-        layout !== "legendOnly" && thresholdSettings.enabled && thresholdSettings.includeInPlotExport
-          ? thresholdSettings.applied
+      thresholdSettings:
+        layout !== "legendOnly" &&
+        thresholdSettings.includeInPlotExport &&
+        hasActiveThresholdForCurves(thresholdSettings, selectedCurves)
+          ? thresholdSettings
           : null
     });
   }
@@ -936,6 +938,21 @@ function ColorPopoverButton({
         aria-label={`${label} color editor options`}
         style={popover.panelStyle}
       >
+        <fieldset className="color-template-grid">
+          <legend>기본 색상</legend>
+          {defaultChartPalette.map((entry) => (
+            <button
+              key={entry.value}
+              type="button"
+              className={`color-template-swatch${color.toUpperCase() === entry.value ? " is-selected" : ""}`}
+              aria-label={`${entry.name} ${entry.value}`}
+              aria-pressed={color.toUpperCase() === entry.value}
+              title={`${entry.name} ${entry.value}`}
+              style={{ backgroundColor: entry.value }}
+              onClick={() => onCommit(entry.value)}
+            />
+          ))}
+        </fieldset>
         <label>
           HEX
           <HexColorInput label={`${label} hex color`} value={color} onCommit={onCommit} />

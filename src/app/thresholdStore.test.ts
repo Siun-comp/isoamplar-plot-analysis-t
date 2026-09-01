@@ -20,9 +20,11 @@ describe("Threshold tab state", () => {
     useAppStore.getState().setThresholdDraftValue("1.25e3");
     expect(useAppStore.getState().applyThresholdDraft()).toEqual({ ok: true });
     expect(useAppStore.getState().thresholdSettings).toEqual({
+      mode: "common",
       enabled: true,
       draftValue: "1.25e3",
       applied: { value: 1250, ruleId: THRESHOLD_RULE_ID },
+      reagentSettings: {},
       showInPreview: true,
       includeInPlotExport: true
     });
@@ -75,6 +77,41 @@ describe("Threshold tab state", () => {
     });
   });
 
+  it("preserves common and per-reagent values while switching modes", () => {
+    const reagentId = useAppStore.getState().dataset?.reagents[0].id as string;
+    useAppStore.getState().setThresholdDraftValue("100");
+    useAppStore.getState().applyThresholdDraft();
+    useAppStore.getState().setThresholdMode("perReagent");
+    useAppStore.getState().setReagentThresholdDraftValue(reagentId, "250");
+    expect(useAppStore.getState().applyReagentThresholdDraft(reagentId)).toEqual({ ok: true });
+
+    expect(useAppStore.getState().thresholdSettings).toMatchObject({
+      mode: "perReagent",
+      applied: { value: 100 },
+      reagentSettings: {
+        [reagentId]: { enabled: true, draftValue: "250", applied: { value: 250 } }
+      }
+    });
+    useAppStore.getState().setThresholdMode("common");
+    expect(useAppStore.getState().thresholdSettings.applied?.value).toBe(100);
+    useAppStore.getState().setThresholdMode("perReagent");
+    expect(useAppStore.getState().thresholdSettings.reagentSettings[reagentId].applied?.value).toBe(250);
+  });
+
+  it("applies all reagent drafts atomically and leaves every applied value unchanged on one invalid row", () => {
+    const reagentIds = useAppStore.getState().dataset?.reagents.slice(0, 2).map((reagent) => reagent.id) as string[];
+    useAppStore.getState().setThresholdMode("perReagent");
+    useAppStore.getState().setReagentThresholdDraftValue(reagentIds[0], "100");
+    useAppStore.getState().setReagentThresholdDraftValue(reagentIds[1], "invalid");
+    expect(useAppStore.getState().applyAllReagentThresholdDrafts(reagentIds)).toMatchObject({ ok: false });
+    expect(useAppStore.getState().thresholdSettings.reagentSettings[reagentIds[0]].applied).toBeNull();
+
+    useAppStore.getState().setReagentThresholdDraftValue(reagentIds[1], "200");
+    expect(useAppStore.getState().applyAllReagentThresholdDrafts(reagentIds)).toEqual({ ok: true });
+    expect(reagentIds.map((id) => useAppStore.getState().thresholdSettings.reagentSettings[id].applied?.value))
+      .toEqual([100, 200]);
+  });
+
   it("preserves Threshold on append and resets it on dataset replacement", () => {
     useAppStore.getState().setThresholdDraftValue("50");
     useAppStore.getState().applyThresholdDraft();
@@ -89,6 +126,25 @@ describe("Threshold tab state", () => {
       createSyntheticPcrDataset({ specimenLabels: ["Replacement"], reagentLabels: ["R1"] })
     );
     expect(useAppStore.getState().thresholdSettings).toEqual(createDefaultThresholdSettings());
+  });
+
+  it("preserves exact reagent settings on append and leaves newly introduced reagents unconfigured", () => {
+    const existingReagentId = useAppStore.getState().dataset?.reagents[0].id as string;
+    useAppStore.getState().setThresholdMode("perReagent");
+    useAppStore.getState().setReagentThresholdDraftValue(existingReagentId, "75");
+    useAppStore.getState().applyReagentThresholdDraft(existingReagentId);
+    const target = useAppStore.getState();
+    const appended = createSyntheticPcrDataset({
+      specimenLabels: ["Synthetic appended"],
+      reagentLabels: ["A1", "New reagent"]
+    });
+    expect(
+      target.appendPastedDataset(appended, target.activeAnalysisId, target.runtimeInstanceId, target.revision)
+    ).toMatchObject({ ok: true });
+    expect(useAppStore.getState().thresholdSettings.reagentSettings[existingReagentId].applied?.value).toBe(75);
+    const newReagent = useAppStore.getState().dataset?.reagents.find((reagent) => reagent.label === "New reagent");
+    expect(newReagent).toBeDefined();
+    expect(useAppStore.getState().thresholdSettings.reagentSettings[newReagent?.id as string]).toBeUndefined();
   });
 
   it("does not advance revision for a rejected apply and advances it for persisted mutations", () => {

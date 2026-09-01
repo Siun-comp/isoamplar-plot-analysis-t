@@ -2121,6 +2121,133 @@ select:focus-visible,
   font-size: 12px;
 }
 
+.threshold-mode-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.threshold-mode-control button {
+  min-height: var(--control-height-compact);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.threshold-mode-control button.is-active {
+  border-color: #17233a;
+  background: #17233a;
+  color: #ffffff;
+}
+
+.reagent-threshold-list {
+  display: grid;
+  gap: 4px;
+}
+
+.reagent-threshold-header,
+.reagent-threshold-row {
+  display: grid;
+  grid-template-columns: 24px minmax(58px, 0.8fr) minmax(86px, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.reagent-threshold-header {
+  padding: 0 2px 3px;
+  border-bottom: 1px solid #dfe5ed;
+  color: #6b7890;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.reagent-threshold-row {
+  min-height: 34px;
+}
+
+.reagent-threshold-row > input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0 auto;
+}
+
+.reagent-threshold-name {
+  overflow: hidden;
+  color: #263448;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reagent-threshold-input-wrap {
+  position: relative;
+}
+
+.reagent-threshold-input-wrap input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 18px 0 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.reagent-threshold-dirty {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  color: #b56b00;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.reagent-threshold-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.reagent-threshold-actions button {
+  min-height: 30px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.reagent-threshold-actions .icon-button {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  font-size: 15px;
+}
+
+.reagent-threshold-status {
+  justify-self: end;
+  min-width: 48px;
+  color: #6b7890;
+  font-size: 10px;
+  font-weight: 750;
+  text-align: right;
+}
+
+.reagent-threshold-status.is-applied {
+  color: #17643a;
+}
+
+.reagent-threshold-status.is-warning {
+  color: #9a5f00;
+}
+
+.reagent-threshold-bulk-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.reagent-threshold-bulk-actions button {
+  min-height: 30px;
+  padding: 0 5px;
+  font-size: 11px;
+}
+
 .threshold-setting-row,
 .threshold-action-row,
 .threshold-display-options {
@@ -2665,6 +2792,57 @@ select:focus-visible,
   border-radius: 7px;
   padding: 3px;
   background: #ffffff;
+}
+
+.color-template-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 28px);
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.color-template-grid legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  padding: 0;
+  color: #52627a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.color-template-swatch {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 1px solid #9aa8bc;
+  border-radius: 3px;
+}
+
+.color-template-swatch:hover,
+.color-template-swatch:focus-visible {
+  border-color: #17233a;
+  box-shadow: 0 0 0 2px rgba(23, 35, 58, 0.16);
+}
+
+.color-template-swatch.is-selected {
+  outline: 2px solid #17233a;
+  outline-offset: 1px;
+}
+
+.color-template-swatch.is-selected::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+  text-shadow: 0 1px 2px #000000, 0 0 2px #000000;
 }
 
 .line-marker-trigger {

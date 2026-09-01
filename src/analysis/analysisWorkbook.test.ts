@@ -96,9 +96,22 @@ describe("Analysis XLSX workbook", () => {
       },
       exportSettings: { imageLayout: "legendOnly" },
       thresholdSettings: {
+        mode: "perReagent",
         enabled: true,
         draftValue: "2.6e5",
         applied: { value: 250_000, ruleId: THRESHOLD_RULE_ID },
+        reagentSettings: {
+          [dataset.reagents[0].id]: {
+            enabled: true,
+            draftValue: "125000",
+            applied: { value: 125_000, ruleId: THRESHOLD_RULE_ID }
+          },
+          [dataset.reagents[1].id]: {
+            enabled: true,
+            draftValue: "3e5",
+            applied: { value: 300_000, ruleId: THRESHOLD_RULE_ID }
+          }
+        },
         showInPreview: false,
         includeInPlotExport: true
       },
@@ -127,6 +140,7 @@ describe("Analysis XLSX workbook", () => {
       "ImportedData",
       "Warnings",
       "SelectionSets",
+      "ReagentThresholds",
       ANALYSIS_RESTORE_SHEET_NAME
     ]);
     const hiddenSheetMeta = workbook.Workbook?.Sheets?.find((sheet) => sheet.name === ANALYSIS_RESTORE_SHEET_NAME);
@@ -174,13 +188,22 @@ describe("Analysis XLSX workbook", () => {
       "X-axis rule"
     ]);
     expect(settingsRows).toContainEqual(["Cycle generation rule", "Cycle 1..N"]);
-    expect(settingsRows).toContainEqual(["Threshold enabled", true]);
+    expect(settingsRows).toContainEqual(["Threshold mode", "perReagent"]);
+    expect(settingsRows).toContainEqual(["Common Threshold enabled", true]);
     expect(settingsRows).toContainEqual(["Threshold draft", "2.6e5"]);
     expect(settingsRows).toContainEqual(["Threshold applied value", 250_000]);
     expect(settingsRows).toContainEqual(["Threshold rule ID", THRESHOLD_RULE_ID]);
     expect(settingsRows).toContainEqual(["Threshold visible in preview", false]);
     expect(settingsRows).toContainEqual(["Threshold included in plot export", true]);
     expect(settingsRows).toContainEqual(["Threshold data basis", "Raw fluorescence / no baseline correction"]);
+    const reagentThresholdRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.ReagentThresholds, {
+      header: 1,
+      blankrows: false
+    });
+    expect(reagentThresholdRows.slice(1, 3)).toEqual([
+      [dataset.reagents[0].id, dataset.reagents[0].label, true, "125000", 125_000, THRESHOLD_RULE_ID],
+      [dataset.reagents[1].id, dataset.reagents[1].label, true, "3e5", 300_000, THRESHOLD_RULE_ID]
+    ]);
 
     const restored = await readAnalysisWorkbookBuffer(buffer);
     expect(restored.kind, restored.kind === "invalid-analysis" ? restored.message : "").toBe("analysis");
@@ -688,9 +711,11 @@ describe("Analysis XLSX workbook", () => {
       styleRules: createDefaultStyleRules(),
       curveOverrides: {},
       thresholdSettings: {
+        mode: "common",
         enabled: true,
         draftValue: "123.5",
         applied: { value: 123.5, ruleId: THRESHOLD_RULE_ID },
+        reagentSettings: {},
         showInPreview: false,
         includeInPlotExport: false
       },
@@ -708,6 +733,10 @@ describe("Analysis XLSX workbook", () => {
     const serialized = JSON.parse(JSON.stringify(serializeAnalysisState(state)));
     serialized.schemaVersion = schemaVersion;
     if (schemaVersion < 5) delete serialized.thresholdSettings;
+    if (schemaVersion === 5) {
+      delete serialized.thresholdSettings.mode;
+      delete serialized.thresholdSettings.reagentSettings;
+    }
     if (schemaVersion < 4) {
       delete serialized.selectionSets;
       delete serialized.activeSelectionSetId;
@@ -730,9 +759,11 @@ describe("Analysis XLSX workbook", () => {
       schemaVersion >= 5
         ? state.thresholdSettings
         : {
+            mode: "common",
             enabled: false,
             draftValue: "",
             applied: null,
+            reagentSettings: {},
             showInPreview: true,
             includeInPlotExport: true
           }
@@ -741,7 +772,7 @@ describe("Analysis XLSX workbook", () => {
       expect(restored.analysis.dataset.curves[0].source).toEqual(state.dataset.curves[0].source);
     }
     if (schemaVersion === 5) {
-      expect(serializeAnalysisState(restored.analysis)).toEqual(serialized);
+      expect(serializeAnalysisState(restored.analysis).thresholdSettings).toEqual(state.thresholdSettings);
     }
   });
 

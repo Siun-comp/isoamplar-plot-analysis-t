@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EChartsCoreOption } from "echarts/core";
-import { THRESHOLD_RULE_ID } from "../analysis/threshold";
+import { createDefaultThresholdSettings, THRESHOLD_RULE_ID } from "../analysis/threshold";
+import { createSyntheticPcrDataset } from "../data/sampleData";
 import {
   applyRenderedThresholdAnnotation,
+  buildChartThresholdMarkers,
   createThresholdMarkLine,
   findThresholdValue,
   formatThresholdValue
@@ -23,6 +25,33 @@ function createOption(value = 5): EChartsCoreOption {
 }
 
 describe("Threshold chart rendering", () => {
+  it("merges equal enabled reagent Thresholds into one neutral line", () => {
+    const dataset = createSyntheticPcrDataset({
+      specimenLabels: ["Synthetic"],
+      reagentLabels: ["A", "B", "C"]
+    });
+    const settings = {
+      ...createDefaultThresholdSettings(),
+      mode: "perReagent" as const,
+      reagentSettings: Object.fromEntries(dataset.reagents.map((reagent, index) => [
+        reagent.id,
+        {
+          enabled: index < 2,
+          draftValue: "5",
+          applied: index < 2 ? { value: 5, ruleId: THRESHOLD_RULE_ID } : null
+        }
+      ]))
+    };
+    const markers = buildChartThresholdMarkers({
+      curves: dataset.curves,
+      reagents: dataset.reagents,
+      settings
+    });
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toMatchObject({ value: 5, color: "#4b5563" });
+    expect(markers[0].label).toContain("A, B");
+  });
+
   it("creates one silent no-symbol mark line and extracts its value", () => {
     const option = createOption(5);
     expect(findThresholdValue(option)).toBe(5);
@@ -49,6 +78,54 @@ describe("Threshold chart rendering", () => {
       expect.objectContaining({ graphic: [expect.objectContaining({ style: expect.objectContaining({ font: "36px Arial, sans-serif" }) })] }),
       expect.any(Object)
     );
+  });
+
+  it("renders distinct in-range reagent Thresholds on a collision-managed label rail", () => {
+    const option = createOption();
+    (option.series as Array<Record<string, unknown>>)[0].markLine = createThresholdMarkLine([
+      { key: "reagent-a", label: "Assay A · 5", color: "#7030A0", value: 5, ruleId: THRESHOLD_RULE_ID },
+      { key: "reagent-b", label: "Assay B · 5.1", color: "#0926FB", value: 5.1, ruleId: THRESHOLD_RULE_ID }
+    ]);
+    const setOption = vi.fn();
+    const chart = {
+      convertToPixel: vi.fn((_finder: object, value: number) => (value === 5 ? 200 : 202)),
+      getWidth: () => 800,
+      getHeight: () => 600,
+      setOption
+    };
+
+    expect(applyRenderedThresholdAnnotation(chart, option)).toBe("line");
+    const graphics = setOption.mock.calls[0][0].graphic as Array<{ id: string; top?: number }>;
+    const labels = graphics.filter((graphic) => graphic.id.includes("rail-label"));
+    expect(labels.map((label) => label.id)).toEqual([
+      "isoamplar-threshold-range-annotation-rail-label-reagent-a",
+      "isoamplar-threshold-range-annotation-rail-label-reagent-b"
+    ]);
+    expect((labels[1].top as number) - (labels[0].top as number)).toBeGreaterThanOrEqual(20);
+  });
+
+  it("keeps the applied value visible when a long reagent label is shortened on the rail", () => {
+    const option = createOption();
+    (option.series as Array<Record<string, unknown>>)[0].markLine = createThresholdMarkLine([
+      { key: "long-a", label: "Synthetic assay condition with long distinguishing suffix A · 5", color: "#7030A0", value: 5, ruleId: THRESHOLD_RULE_ID },
+      { key: "long-b", label: "Synthetic assay condition with long distinguishing suffix B · 5.1", color: "#0926FB", value: 5.1, ruleId: THRESHOLD_RULE_ID }
+    ]);
+    const setOption = vi.fn();
+    const chart = {
+      convertToPixel: vi.fn((_finder: object, value: number) => (value === 5 ? 200 : 230)),
+      getWidth: () => 800,
+      getHeight: () => 600,
+      setOption
+    };
+
+    applyRenderedThresholdAnnotation(chart, option);
+    const graphics = setOption.mock.calls[0][0].graphic as Array<{ id: string; style?: { text?: string } }>;
+    const labelTexts = graphics
+      .filter((graphic) => graphic.id.includes("rail-label"))
+      .map((graphic) => graphic.style?.text);
+    expect(labelTexts).toHaveLength(2);
+    expect(labelTexts[0]).toMatch(/… · 5$/u);
+    expect(labelTexts[1]).toMatch(/… · 5\.1$/u);
   });
 
   it("reports no-data instead of drawing a misleading Auto-scale line", () => {

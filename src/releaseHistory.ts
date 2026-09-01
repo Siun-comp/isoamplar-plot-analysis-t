@@ -15,14 +15,26 @@ export type AppRelease = {
 export const RELEASE_HISTORY: readonly AppRelease[] = [
   {
     version: APP_VERSION,
-    releasedOn: "2026-08-03",
-    analysisSchemaVersion: 5,
+    releasedOn: "2026-09-02",
+    analysisSchemaVersion: 6,
     current: true,
     changes: [
+      "공통 또는 정확한 시약별 raw fluorescence Threshold를 선택해 분석할 수 있습니다.",
+      "시약별 Threshold는 일괄 검증·적용되며 미설정 시약을 ND로 오인하지 않습니다.",
+      "Preview와 Plot Export에 동일한 다중 Threshold 선과 충돌 방지 라벨을 적용했습니다.",
+      "모든 색상 팝업에 기존 8색 순서의 정사각형 빠른 선택 팔레트를 추가했습니다."
+    ]
+  },
+  {
+    version: "1.1.0",
+    releasedOn: "2026-08-03",
+    analysisSchemaVersion: 5,
+    current: false,
+    archivePath: "versions/v1.1.0/",
+    manifestSha256: "6e18757d1334616a69c7685864f09ce4d8dcc7adf8aef3d5efa55149e81e510a",
+    changes: [
       "T판을 단일 유지보수 제품으로 통합하고 이전 안정 버전 실행 경로를 추가했습니다.",
-      "공란 또는 문자 '-' 시약 열을 분석에서 제외하되 검체명 이어쓰기는 보존합니다.",
-      "원본 Excel 확장자를 분석 이름에서 제거하고 Analysis XLSX 저장 파일명 규칙을 단순화했습니다.",
-      "Y축 FAM/HEX 프리셋과 Threshold 결과의 Positive/ND 분석 표기를 추가했습니다."
+      "공란 또는 문자 '-' 시약 열 제외, FAM/HEX Y축 프리셋, Positive/ND 분석 표기를 추가했습니다."
     ]
   },
   {

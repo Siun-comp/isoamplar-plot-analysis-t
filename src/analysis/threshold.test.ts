@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Curve, PcrWarning } from "../data/types";
 import {
   THRESHOLD_RULE_ID,
+  calculateConfiguredThresholdResults,
   calculateThresholdResult,
   calculateThresholdResults,
   createDefaultThresholdSettings,
+  getAppliedThresholdForCurve,
+  hasThresholdDraftMismatch,
   isThresholdDraftApplied,
   parseThresholdInput,
   thresholdResultRequiresReview
@@ -45,6 +48,51 @@ function createCurve(y: Array<number | null>, options: { x?: number[]; warnings?
   };
 }
 
+describe("Per-reagent Threshold assignment", () => {
+  it("applies exact reagent settings and leaves an unconfigured reagent without an ND result", () => {
+    const first = createCurve([0, 4, 8], { id: "curve-a" });
+    const second = {
+      ...createCurve([0, 4, 8], { id: "curve-b" }),
+      reagentId: "reagent-2",
+      reagentLabel: "Synthetic reagent 2"
+    };
+    const settings = {
+      ...createDefaultThresholdSettings(),
+      mode: "perReagent" as const,
+      reagentSettings: {
+        "reagent-1": {
+          enabled: true,
+          draftValue: "5",
+          applied: { value: 5, ruleId: THRESHOLD_RULE_ID }
+        }
+      }
+    };
+
+    expect(getAppliedThresholdForCurve(settings, first)?.value).toBe(5);
+    expect(getAppliedThresholdForCurve(settings, second)).toBeNull();
+    expect(calculateConfiguredThresholdResults([first, second], settings)).toMatchObject([
+      { curveId: "curve-a", threshold: 5, outcome: "crossed" }
+    ]);
+  });
+
+  it("detects only enabled relevant reagent drafts that differ from applied values", () => {
+    const first = createCurve([0, 4, 8]);
+    const settings = {
+      ...createDefaultThresholdSettings(),
+      mode: "perReagent" as const,
+      reagentSettings: {
+        "reagent-1": {
+          enabled: true,
+          draftValue: "6",
+          applied: { value: 5, ruleId: THRESHOLD_RULE_ID }
+        }
+      }
+    };
+    expect(hasThresholdDraftMismatch(settings, [first])).toBe(true);
+    expect(hasThresholdDraftMismatch(settings, [{ ...first, reagentId: "other" }])).toBe(false);
+  });
+});
+
 describe("Threshold input", () => {
   it("accepts decimal and exponent notation while rejecting Number coercion extras", () => {
     expect(parseThresholdInput(" -1.25e+3 ")).toEqual({ ok: true, value: -1250 });
@@ -58,9 +106,11 @@ describe("Threshold input", () => {
 
   it("creates disabled defaults and compares draft/applied numerically", () => {
     expect(createDefaultThresholdSettings()).toEqual({
+      mode: "common",
       enabled: false,
       draftValue: "",
       applied: null,
+      reagentSettings: {},
       showInPreview: true,
       includeInPlotExport: true
     });

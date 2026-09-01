@@ -943,4 +943,8 @@ release gate:
 9. 1280/1366/1920 desktop browser에서 overlap/overflow가 없다.
 10. unit/audit/dependency/build/fresh Chromium/exact-dist/network/raster gate가 통과한다.
 11. 사용자 가이드 PDF와 public synthetic smoke가 현재 배포본과 일치한다.
+
+## v1.2.0 계약 보강 - 시약별 Threshold
+
+기존 문서의 분석 탭당 단일 Threshold 설명은 v1.1.0 Common 모드의 역사적 구현 범위다. v1.2.0은 Common 모드를 그대로 유지하면서 정확한 `reagentId`별 설정을 추가한다. Analysis XLSX는 schema 6, Selected Data XLSX는 schema 4를 사용하며 schema 5 Analysis XLSX는 Common 모드로 복원한다. 미설정 시약은 분석에서 제외하고 ND로 해석하지 않으며, preview/export/clipboard/XLSX가 동일한 적용값 projection을 사용한다. 상세 결정과 수용기준은 `D060`, `FR-023`, `IO-106`~`IO-109`, `AC-PCR-064`를 따른다.
 12. 독립 전문가 감사에서 데이터 의미, 상태/Excel, desktop UX, QA/release가 모두 GO이다.

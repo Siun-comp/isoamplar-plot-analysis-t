@@ -34,8 +34,11 @@ import { parseExcelFile } from "../data/parseExcel";
 import { appendPcrDataset } from "../data/mergeDatasets";
 import {
   THRESHOLD_RULE_ID,
+  createDefaultReagentThresholdSetting,
   createDefaultThresholdSettings,
-  parseThresholdInput
+  parseThresholdInput,
+  type ReagentThresholdSetting,
+  type ThresholdMode
 } from "../analysis/threshold";
 import { createAllMajorGroupIds } from "../selection/buildTrees";
 import {
@@ -54,6 +57,14 @@ import {
 } from "../selection/selectionSets";
 
 enableMapSet();
+
+function ensureReagentThresholdSetting(
+  settings: Record<string, ReagentThresholdSetting>,
+  reagentId: string
+) {
+  settings[reagentId] ??= createDefaultReagentThresholdSetting();
+  return settings[reagentId];
+}
 
 type ImportStatus = "idle" | "importing" | "ready" | "error";
 type ImportFileMode = "replace" | "newTab";
@@ -171,11 +182,20 @@ type AppStore = AppState & {
   returnFromBoxZoom: () => void;
   resetScaleToAuto: () => void;
   setAxisPresetValue: (axis: AxisId, preset: ScalePresetId, field: "label" | "min" | "max", value: string) => void;
+  setThresholdMode: (mode: ThresholdMode) => void;
   setThresholdEnabled: (enabled: boolean) => ThresholdMutationResult;
   setThresholdDraftValue: (value: string) => void;
   applyThresholdDraft: () => ThresholdMutationResult;
   revertThresholdDraft: () => void;
   clearThreshold: () => void;
+  setReagentThresholdEnabled: (reagentId: string, enabled: boolean) => ThresholdMutationResult;
+  setReagentThresholdDraftValue: (reagentId: string, value: string) => void;
+  applyReagentThresholdDraft: (reagentId: string) => ThresholdMutationResult;
+  revertReagentThresholdDraft: (reagentId: string) => void;
+  clearReagentThreshold: (reagentId: string) => void;
+  applyAllReagentThresholdDrafts: (reagentIds: string[]) => ThresholdMutationResult;
+  revertAllReagentThresholdDrafts: (reagentIds: string[]) => void;
+  clearAllReagentThresholds: (reagentIds: string[]) => void;
   setThresholdShowInPreview: (visible: boolean) => void;
   setThresholdIncludeInPlotExport: (included: boolean) => void;
   setStyleGroupingTarget: (field: "colorBy" | "lineTypeBy" | "markerBy", target: StyleGroupingTarget) => void;
@@ -716,6 +736,12 @@ export const useAppStore = create<AppStore>()(
         markDirtyAndPersistActive(state);
       });
     },
+    setThresholdMode: (mode) => {
+      set((state) => {
+        state.thresholdSettings.mode = mode;
+        markDirtyAndPersistActive(state);
+      });
+    },
     setThresholdEnabled: (enabled) => {
       let result: ThresholdMutationResult = { ok: true };
       set((state) => {
@@ -764,8 +790,119 @@ export const useAppStore = create<AppStore>()(
     },
     clearThreshold: () => {
       set((state) => {
-        state.thresholdSettings = createDefaultThresholdSettings();
+        state.thresholdSettings.enabled = false;
+        state.thresholdSettings.draftValue = "";
+        state.thresholdSettings.applied = null;
+        state.thresholdSettings.showInPreview = true;
+        state.thresholdSettings.includeInPlotExport = true;
         markDirtyAndPersistActive(state);
+      });
+    },
+    setReagentThresholdEnabled: (reagentId, enabled) => {
+      let result: ThresholdMutationResult = { ok: true };
+      set((state) => {
+        const setting = ensureReagentThresholdSetting(state.thresholdSettings.reagentSettings, reagentId);
+        if (enabled && !setting.applied) {
+          result = { ok: false, message: "Apply a valid Threshold for this reagent before enabling it." };
+          return;
+        }
+        setting.enabled = enabled;
+        markDirtyAndPersistActive(state);
+      });
+      return result;
+    },
+    setReagentThresholdDraftValue: (reagentId, value) => {
+      set((state) => {
+        ensureReagentThresholdSetting(state.thresholdSettings.reagentSettings, reagentId).draftValue = value;
+        markDirtyAndPersistActive(state);
+      });
+    },
+    applyReagentThresholdDraft: (reagentId) => {
+      let result: ThresholdMutationResult = { ok: true };
+      set((state) => {
+        const setting = ensureReagentThresholdSetting(state.thresholdSettings.reagentSettings, reagentId);
+        const parsed = parseThresholdInput(setting.draftValue);
+        if (!parsed.ok) {
+          result = {
+            ok: false,
+            message:
+              parsed.reason === "empty"
+                ? "Enter a raw fluorescence Threshold for this reagent."
+                : "Threshold must use a finite decimal or exponent number."
+          };
+          return;
+        }
+        setting.applied = { value: parsed.value, ruleId: THRESHOLD_RULE_ID };
+        setting.enabled = true;
+        markDirtyAndPersistActive(state);
+      });
+      return result;
+    },
+    revertReagentThresholdDraft: (reagentId) => {
+      set((state) => {
+        const setting = state.thresholdSettings.reagentSettings[reagentId];
+        if (!setting?.applied) return;
+        setting.draftValue = setting.applied.value.toString();
+        markDirtyAndPersistActive(state);
+      });
+    },
+    clearReagentThreshold: (reagentId) => {
+      set((state) => {
+        delete state.thresholdSettings.reagentSettings[reagentId];
+        markDirtyAndPersistActive(state);
+      });
+    },
+    applyAllReagentThresholdDrafts: (reagentIds) => {
+      let result: ThresholdMutationResult = { ok: true };
+      set((state) => {
+        const parsedValues: Array<{ reagentId: string; value: number }> = [];
+        for (const reagentId of reagentIds) {
+          const setting = state.thresholdSettings.reagentSettings[reagentId];
+          if (!setting || (!setting.draftValue.trim() && !setting.applied)) continue;
+          const parsed = parseThresholdInput(setting.draftValue);
+          if (!parsed.ok) {
+            result = {
+              ok: false,
+              message: "하나 이상의 시약 Threshold 입력값이 비어 있거나 유효하지 않아 적용하지 않았습니다. 변경됨 또는 입력 오류 상태를 확인하십시오."
+            };
+            return;
+          }
+          parsedValues.push({ reagentId, value: parsed.value });
+        }
+        if (parsedValues.length === 0) {
+          result = { ok: false, message: "Enter at least one reagent Threshold." };
+          return;
+        }
+        parsedValues.forEach(({ reagentId, value }) => {
+          const setting = ensureReagentThresholdSetting(state.thresholdSettings.reagentSettings, reagentId);
+          setting.applied = { value, ruleId: THRESHOLD_RULE_ID };
+          setting.enabled = true;
+        });
+        markDirtyAndPersistActive(state);
+      });
+      return result;
+    },
+    revertAllReagentThresholdDrafts: (reagentIds) => {
+      set((state) => {
+        let changed = false;
+        reagentIds.forEach((reagentId) => {
+          const setting = state.thresholdSettings.reagentSettings[reagentId];
+          if (!setting?.applied || setting.draftValue === setting.applied.value.toString()) return;
+          setting.draftValue = setting.applied.value.toString();
+          changed = true;
+        });
+        if (changed) markDirtyAndPersistActive(state);
+      });
+    },
+    clearAllReagentThresholds: (reagentIds) => {
+      set((state) => {
+        let changed = false;
+        reagentIds.forEach((reagentId) => {
+          if (!(reagentId in state.thresholdSettings.reagentSettings)) return;
+          delete state.thresholdSettings.reagentSettings[reagentId];
+          changed = true;
+        });
+        if (changed) markDirtyAndPersistActive(state);
       });
     },
     setThresholdShowInPreview: (visible) => {

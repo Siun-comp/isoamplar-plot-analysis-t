@@ -13,12 +13,12 @@ This tool is for research and kit-development visualization. Its Threshold table
 - Quick Paste Import for tab-separated or single-column comparison data, with read-only preview and warnings.
 - Reagent-first or specimen-first selection, full-dataset search, and stable `curveId` identity.
 - ECharts plot preview with Auto, Fixed, FAM/HEX Y presets, user-editable preset bounds, Box zoom, Previous scale, and raw point readout.
-- One user-set raw fluorescence Threshold per analysis, with independent preview/export visibility and auditable per-curve observed and Cycle-axis linear crossing evidence.
-- Specimen/reagent group styles, per-curve overrides, HEX colors, line types, and markers.
+- Common or exact per-reagent user-set raw fluorescence Thresholds per analysis, with independent preview/export visibility and auditable per-curve observed and Cycle-axis linear crossing evidence. An unconfigured reagent is excluded from Threshold analysis rather than reported as ND.
+- Specimen/reagent group styles, per-curve overrides, HEX colors, line types, markers, and an optional eight-color quick palette that preserves the full color editor.
 - User-controlled legend order, Analysis labels, Auto compact labels, and separate plot/legend outputs.
-- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, Selected Data XLSX schema 3 with separate Threshold result/event sheets, and secondary conditional plotted-data CSV.
+- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, Selected Data XLSX schema 4 with exact per-reagent Threshold result/event evidence, and secondary conditional plotted-data CSV.
 - Named Selection Sets for switching recurring curve combinations without changing scale, style, labels, or order.
-- Multiple analysis tabs and Analysis XLSX schema 5 save/restore containing the complete imported dataset, settings, Selection Sets, and Threshold configuration.
+- Multiple analysis tabs and Analysis XLSX schema 6 save/restore containing the complete imported dataset, settings, Selection Sets, and Common/per-reagent Threshold configuration.
 
 The app does not smooth, normalize, baseline-correct, log-transform, or average fluorescence data. Its optional user-set raw Threshold feature reports a versioned geometric crossing estimate together with observed raw evidence; it does not recommend a Threshold, bridge null gaps, calculate Ct/Cq/Tt/Tp, or make a clinical interpretation. `Positive` means a calculable upward crossing and `ND` means no crossing reached under the user-set Threshold.
 

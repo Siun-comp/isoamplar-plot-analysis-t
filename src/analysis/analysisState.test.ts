@@ -54,9 +54,11 @@ function createTestAnalysisState(): AnalysisState {
     },
     exportSettings: { imageLayout: "legendOnly" },
     thresholdSettings: {
+      mode: "common",
       enabled: true,
       draftValue: "2.5e5",
       applied: { value: 250_000, ruleId: THRESHOLD_RULE_ID },
+      reagentSettings: {},
       showInPreview: false,
       includeInPlotExport: true
     },
@@ -167,9 +169,11 @@ describe("analysis state serialization", () => {
       expect(restored.activeSelectionSetId).toBeNull();
     }
     expect(restored.thresholdSettings).toEqual({
+      mode: "common",
       enabled: false,
       draftValue: "",
       applied: null,
+      reagentSettings: {},
       showInPreview: true,
       includeInPlotExport: true
     });
@@ -206,7 +210,7 @@ describe("analysis state serialization", () => {
     );
   });
 
-  it("strictly validates schema 5 Threshold settings", () => {
+  it("strictly validates schema 6 common and per-reagent Threshold settings", () => {
     const serialized = serializeAnalysisState(createTestAnalysisState());
     const thresholdSettings = serialized.thresholdSettings;
 
@@ -255,6 +259,23 @@ describe("analysis state serialization", () => {
         }
       })
     ).toThrow("unsupported field results");
+
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        thresholdSettings: {
+          ...thresholdSettings,
+          mode: "perReagent",
+          reagentSettings: {
+            unknown: {
+              enabled: true,
+              draftValue: "5",
+              applied: { value: 5, ruleId: THRESHOLD_RULE_ID }
+            }
+          }
+        }
+      })
+    ).toThrow("unknown reagentId");
   });
 
   it("rejects selection sets with unknown curve references or active IDs", () => {
@@ -315,9 +336,11 @@ describe("analysis state serialization", () => {
     expect(state.legendSettings).toEqual({ previewVisible: true, reportLabelMode: "autoCompact", reportNameOverrides: {} });
     expect(state.exportSettings).toEqual({ imageLayout: "plotOnly" });
     expect(state.thresholdSettings).toEqual({
+      mode: "common",
       enabled: false,
       draftValue: "",
       applied: null,
+      reagentSettings: {},
       showInPreview: true,
       includeInPlotExport: true
     });

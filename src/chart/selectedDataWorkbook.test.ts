@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 import { createDefaultChartScale } from "./chartScale";
 import { createStats, createSyntheticPcrDataset } from "../data/sampleData";
 import type { Curve, PcrWarning } from "../data/types";
-import { THRESHOLD_RULE_ID } from "../analysis/threshold";
+import { createDefaultThresholdSettings, THRESHOLD_RULE_ID } from "../analysis/threshold";
 import {
   createSelectedDataWorkbook,
   inspectSelectedDataWorkbookRole,
   LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
   PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
+  PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION_3,
   SELECTED_DATA_ROLE_SHEET_NAME,
   SELECTED_DATA_WORKBOOK_MARKER,
   THRESHOLD_EVENTS_SHEET_NAME,
@@ -53,7 +54,7 @@ describe("Selected Data XLSX writer", () => {
       THRESHOLD_EVENTS_SHEET_NAME,
       SELECTED_DATA_ROLE_SHEET_NAME
     ]);
-    expect(inspectSelectedDataWorkbookRole(workbook)).toEqual({ kind: "selected-data", schemaVersion: 3 });
+    expect(inspectSelectedDataWorkbookRole(workbook)).toEqual({ kind: "selected-data", schemaVersion: 4 });
     expect(workbook.Workbook?.Sheets?.find((sheet) => sheet.name === SELECTED_DATA_ROLE_SHEET_NAME)?.Hidden).toBe(1);
 
     const plotted = workbook.Sheets.PlottedData;
@@ -96,9 +97,11 @@ describe("Selected Data XLSX writer", () => {
       analysisName: "Threshold evidence",
       chartScale: createDefaultChartScale(),
       thresholdSettings: {
+        mode: "common",
         enabled: true,
         draftValue: "5",
         applied: { value: 5, ruleId: THRESHOLD_RULE_ID },
+        reagentSettings: {},
         showInPreview: false,
         includeInPlotExport: false
       }
@@ -129,17 +132,87 @@ describe("Selected Data XLSX writer", () => {
       header: 1,
       raw: true
     });
-    expect(eventRows.slice(2).map((row) => row[3])).toEqual(["crossing", "crossing", "indeterminate-gap"]);
-    expect(eventRows[2][14]).toBe(2.5);
-    expect(eventRows[4][12]).toBe(1);
-    expect(eventRows[4][13]).toBe(1);
-    expect(eventRows[2][22]).toEqual(expect.stringContaining('"cell"'));
+    expect(eventRows.slice(2).map((row) => row[7])).toEqual(["crossing", "crossing", "indeterminate-gap"]);
+    expect(eventRows[2][18]).toBe(2.5);
+    expect(eventRows[4][16]).toBe(1);
+    expect(eventRows[4][17]).toBe(1);
+    expect(eventRows[2][26]).toEqual(expect.stringContaining('"cell"'));
 
     const exportInfo = keyValueRows(workbook.Sheets.ExportInfo);
     expect(exportInfo.get("Threshold enabled")).toBe(true);
     expect(exportInfo.get("Threshold applied")).toBe(5);
     expect(exportInfo.get("Threshold rule ID")).toBe(THRESHOLD_RULE_ID);
     expect(exportInfo.get("Threshold data transform")).toContain("no baseline correction");
+  });
+
+  it("writes exact per-reagent Threshold values and marks an unconfigured selected reagent", async () => {
+    const dataset = createSyntheticPcrDataset({
+      specimenLabels: ["Synthetic"],
+      reagentLabels: ["A", "B", "C"],
+      cycleCount: 4
+    });
+    const [first, second, third] = dataset.curves.map((curve) => withValues(curve, [0, 4, 8, 10]));
+    const result = await createSelectedDataWorkbook({
+      curves: [first, second, third],
+      warnings: [],
+      analysisName: "Per reagent",
+      chartScale: createDefaultChartScale(),
+      thresholdSettings: {
+        ...createDefaultThresholdSettings(),
+        mode: "perReagent",
+        reagentSettings: {
+          [first.reagentId]: {
+            enabled: true,
+            draftValue: "5",
+            applied: { value: 5, ruleId: THRESHOLD_RULE_ID }
+          },
+          [third.reagentId]: {
+            enabled: true,
+            draftValue: "7",
+            applied: { value: 7, ruleId: THRESHOLD_RULE_ID }
+          }
+        }
+      }
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const workbook = readWorkbook(result.buffer);
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_RESULTS_SHEET_NAME], {
+      header: 1,
+      raw: true
+    });
+    expect(rows.slice(2).map((row) => [row[1], row[8], row[10]])).toEqual([
+      [first.curveId, 5, "crossed"],
+      [second.curveId, undefined, "unconfigured"],
+      [third.curveId, 7, "crossed"]
+    ]);
+  });
+
+  it("identifies every selected curve as unconfigured when per-reagent mode has no applied values", async () => {
+    const dataset = createSyntheticPcrDataset({
+      specimenLabels: ["Synthetic"],
+      reagentLabels: ["A", "B"],
+      cycleCount: 4
+    });
+    const result = await createSelectedDataWorkbook({
+      curves: dataset.curves,
+      warnings: [],
+      analysisName: "Unconfigured per reagent",
+      chartScale: createDefaultChartScale(),
+      thresholdSettings: { ...createDefaultThresholdSettings(), mode: "perReagent" }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const workbook = readWorkbook(result.buffer);
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[THRESHOLD_RESULTS_SHEET_NAME], {
+      header: 1,
+      raw: true
+    });
+    expect(rows[0]).toEqual(["Threshold status", "No configured reagent Thresholds"]);
+    expect(rows.slice(2).map((row) => [row[1], row[10], row[11]])).toEqual(
+      dataset.curves.map((curve) => [curve.curveId, "unconfigured", "Threshold 미설정"])
+    );
   });
 
   it("keeps edge outcomes blank in primary estimate columns and describes later events accurately", async () => {
@@ -162,9 +235,11 @@ describe("Selected Data XLSX writer", () => {
       analysisName: "Threshold edge outcomes",
       chartScale: createDefaultChartScale(),
       thresholdSettings: {
+        mode: "common",
         enabled: true,
         draftValue: "5",
         applied: { value: 5, ruleId: THRESHOLD_RULE_ID },
+        reagentSettings: {},
         showInPreview: true,
         includeInPlotExport: true
       }
@@ -206,8 +281,8 @@ describe("Selected Data XLSX writer", () => {
       header: 1,
       raw: true
     });
-    expect(events.slice(2).some((row) => row[3] === "indeterminate-leading-gap")).toBe(true);
-    expect(events.slice(2).filter((row) => row[3] === "crossing").length).toBeGreaterThan(3);
+    expect(events.slice(2).some((row) => row[7] === "indeterminate-leading-gap")).toBe(true);
+    expect(events.slice(2).filter((row) => row[7] === "crossing").length).toBeGreaterThan(3);
   });
 
   it("rejects an enabled unapplied Threshold draft", async () => {
@@ -218,9 +293,11 @@ describe("Selected Data XLSX writer", () => {
       analysisName: "Mismatched Threshold",
       chartScale: createDefaultChartScale(),
       thresholdSettings: {
+        mode: "common",
         enabled: true,
         draftValue: "6",
         applied: { value: 5, ruleId: THRESHOLD_RULE_ID },
+        reagentSettings: {},
         showInPreview: true,
         includeInPlotExport: true
       }
@@ -437,7 +514,8 @@ describe("Selected Data XLSX writer", () => {
 
     for (const schemaVersion of [
       LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
-      PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION
+      PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION,
+      PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION_3
     ]) {
       const legacy = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(

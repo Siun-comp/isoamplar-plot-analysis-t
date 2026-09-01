@@ -24,6 +24,7 @@ const HEADER_PROVENANCE_SHEET_NAME = "HeaderProvenance";
 const IMPORTED_DATA_SHEET_NAME = "ImportedData";
 const WARNINGS_SHEET_NAME = "Warnings";
 const SELECTION_SETS_SHEET_NAME = "SelectionSets";
+const REAGENT_THRESHOLDS_SHEET_NAME = "ReagentThresholds";
 const CHUNK_SIZE = 30000;
 
 export type AnalysisWorkbookMetrics = {
@@ -62,6 +63,7 @@ export async function exportAnalysisWorkbookBufferWithMetrics(state: AnalysisSta
   appendSheet(xlsx, workbook, IMPORTED_DATA_SHEET_NAME, createImportedDataRows(state.dataset.curves, state.curveOverrides));
   appendSheet(xlsx, workbook, WARNINGS_SHEET_NAME, createWarningsRows(state.dataset.warnings));
   appendSheet(xlsx, workbook, SELECTION_SETS_SHEET_NAME, createSelectionSetRows(state));
+  appendSheet(xlsx, workbook, REAGENT_THRESHOLDS_SHEET_NAME, createReagentThresholdRows(state));
   appendSheet(xlsx, workbook, ANALYSIS_RESTORE_SHEET_NAME, createRestoreRows(prepared));
   hideSheet(workbook, ANALYSIS_RESTORE_SHEET_NAME);
 
@@ -193,7 +195,8 @@ function createSettingsRows(state: AnalysisState, metrics: AnalysisWorkbookMetri
     ["Y applied mode", state.chartScale.y.applied.mode],
     ["Y applied min", state.chartScale.y.applied.min ?? ""],
     ["Y applied max", state.chartScale.y.applied.max ?? ""],
-    ["Threshold enabled", state.thresholdSettings.enabled],
+    ["Threshold mode", state.thresholdSettings.mode],
+    ["Common Threshold enabled", state.thresholdSettings.enabled],
     ["Threshold draft", state.thresholdSettings.draftValue],
     ["Threshold applied value", state.thresholdSettings.applied?.value ?? ""],
     ["Threshold rule ID", state.thresholdSettings.applied?.ruleId ?? ""],
@@ -227,6 +230,24 @@ function createSettingsRows(state: AnalysisState, metrics: AnalysisWorkbookMetri
       "Cycle 1..N"
     ]);
   }
+  return rows;
+}
+
+function createReagentThresholdRows(state: AnalysisState) {
+  const rows: unknown[][] = [
+    ["Reagent ID", "Reagent", "Enabled", "Draft value", "Applied value", "Rule ID"]
+  ];
+  state.dataset.reagents.forEach((reagent) => {
+    const setting = state.thresholdSettings.reagentSettings[reagent.id];
+    rows.push([
+      reagent.id,
+      reagent.label,
+      setting?.enabled ?? false,
+      setting?.draftValue ?? "",
+      setting?.applied?.value ?? "",
+      setting?.applied?.ruleId ?? ""
+    ]);
+  });
   return rows;
 }
 
@@ -449,6 +470,7 @@ function readSerializedAnalysisState(worksheet: XLSX.WorkSheet, xlsx: XlsxModule
     schemaVersion !== 2 &&
     schemaVersion !== 3 &&
     schemaVersion !== 4 &&
+    schemaVersion !== 5 &&
     schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
   ) {
     throw new Error("Unsupported Analysis XLSX schema version.");

@@ -9,10 +9,20 @@ export type AppliedThreshold = {
   ruleId: ThresholdRuleId;
 };
 
-export type ThresholdSettings = {
+export type ThresholdMode = "common" | "perReagent";
+
+export type ReagentThresholdSetting = {
   enabled: boolean;
   draftValue: string;
   applied: AppliedThreshold | null;
+};
+
+export type ThresholdSettings = {
+  mode: ThresholdMode;
+  enabled: boolean;
+  draftValue: string;
+  applied: AppliedThreshold | null;
+  reagentSettings: Record<string, ReagentThresholdSetting>;
   showInPreview: boolean;
   includeInPlotExport: boolean;
 };
@@ -117,12 +127,18 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/
 
 export function createDefaultThresholdSettings(): ThresholdSettings {
   return {
+    mode: "common",
     enabled: false,
     draftValue: "",
     applied: null,
+    reagentSettings: {},
     showInPreview: true,
     includeInPlotExport: true
   };
+}
+
+export function createDefaultReagentThresholdSetting(): ReagentThresholdSetting {
+  return { enabled: false, draftValue: "", applied: null };
 }
 
 export function parseThresholdInput(input: string): ThresholdInputParseResult {
@@ -134,9 +150,37 @@ export function parseThresholdInput(input: string): ThresholdInputParseResult {
 }
 
 export function isThresholdDraftApplied(settings: ThresholdSettings) {
-  if (!settings.applied) return false;
-  const parsed = parseThresholdInput(settings.draftValue);
-  return parsed.ok && Object.is(normalizeNegativeZero(parsed.value), normalizeNegativeZero(settings.applied.value));
+  return isThresholdValueDraftApplied(settings);
+}
+
+export function isReagentThresholdDraftApplied(setting: ReagentThresholdSetting | undefined) {
+  return setting ? isThresholdValueDraftApplied(setting) : false;
+}
+
+export function getAppliedThresholdForCurve(settings: ThresholdSettings, curve: Curve): AppliedThreshold | null {
+  if (settings.mode === "common") return settings.enabled ? settings.applied : null;
+  const reagentSetting = settings.reagentSettings[curve.reagentId];
+  return reagentSetting?.enabled ? reagentSetting.applied : null;
+}
+
+export function hasActiveThresholdForCurves(settings: ThresholdSettings, curves: readonly Curve[]) {
+  return curves.some((curve) => getAppliedThresholdForCurve(settings, curve) !== null);
+}
+
+export function hasThresholdDraftMismatch(settings: ThresholdSettings, curves: readonly Curve[]) {
+  if (settings.mode === "common") return settings.enabled && !isThresholdDraftApplied(settings);
+  const reagentIds = new Set(curves.map((curve) => curve.reagentId));
+  return [...reagentIds].some((reagentId) => {
+    const setting = settings.reagentSettings[reagentId];
+    return setting?.enabled && !isReagentThresholdDraftApplied(setting);
+  });
+}
+
+export function calculateConfiguredThresholdResults(curves: readonly Curve[], settings: ThresholdSettings) {
+  return curves.flatMap((curve) => {
+    const applied = getAppliedThresholdForCurve(settings, curve);
+    return applied ? [calculateThresholdResult(curve, applied.value)] : [];
+  });
 }
 
 export function calculateThresholdResults(curves: Curve[], threshold: number) {
@@ -401,4 +445,10 @@ function validateThresholdInput(curve: Curve, threshold: number) {
 
 function normalizeNegativeZero(value: number) {
   return Object.is(value, -0) ? 0 : value;
+}
+
+function isThresholdValueDraftApplied(setting: { draftValue: string; applied: AppliedThreshold | null }) {
+  if (!setting.applied) return false;
+  const parsed = parseThresholdInput(setting.draftValue);
+  return parsed.ok && Object.is(normalizeNegativeZero(parsed.value), normalizeNegativeZero(setting.applied.value));
 }

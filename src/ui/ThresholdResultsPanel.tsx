@@ -18,6 +18,7 @@ type ResultFilter = "all" | "crossed" | "review" | "not-reached";
 export function ThresholdResultsPanel({
   enabled,
   threshold,
+  thresholdMode,
   curves,
   results,
   legendItems,
@@ -25,6 +26,7 @@ export function ThresholdResultsPanel({
 }: {
   enabled: boolean;
   threshold: number | null;
+  thresholdMode: "common" | "perReagent";
   curves: Curve[];
   results: ThresholdResult[];
   legendItems: LegendItem[];
@@ -56,17 +58,21 @@ export function ThresholdResultsPanel({
     <details className="threshold-results-panel">
       <summary>
         <span>Threshold 값 검토</span>
-        <span>{enabled ? `${results.length} curves` : "Off"}</span>
+        <span>{enabled ? `${results.length}/${curves.length} curves` : "Off"}</span>
       </summary>
       <div className="threshold-results-body">
-        {!enabled || threshold === null ? (
+        {!enabled ? (
           <p>Threshold 계산이 비활성 상태입니다.</p>
         ) : results.length === 0 ? (
           <p>현재 선택 곡선이 없습니다.</p>
         ) : (
           <>
             <div className="threshold-results-toolbar">
-              <span>적용값 {formatThresholdValue(threshold)} · raw fluorescence</span>
+              <span>
+                {thresholdMode === "common" && threshold !== null
+                  ? `적용값 ${formatThresholdValue(threshold)}`
+                  : `시약별 적용값 ${new Set(results.map((result) => result.threshold)).size}개`} · raw fluorescence
+              </span>
               <div className="threshold-results-actions">
                 <label>
                   상태
@@ -99,6 +105,11 @@ export function ThresholdResultsPanel({
             <p className="threshold-interpretation-note">
               Positive/ND는 사용자 지정 Threshold 교차 분석 상태이며 임상 양성·음성 판정을 의미하지 않습니다.
             </p>
+            {thresholdMode === "perReagent" && results.length < curves.length && (
+              <p className="threshold-source-warning" role="status">
+                {curves.length - results.length}개 곡선은 해당 시약 Threshold가 설정되지 않아 계산에서 제외되었습니다.
+              </p>
+            )}
             {clipboardMessage && (
               <p className="threshold-clipboard-message" role="status">
                 {clipboardMessage}

@@ -15,8 +15,18 @@ afterEach(() => {
 });
 
 describe("GPT-5.6 audit remediation evidence", () => {
-  it("keeps the immutable v1.0.0 Pages archive byte-identical to its SHA-256 manifest", () => {
-    const archiveRoot = join(projectRoot, "public", "versions", "v1.0.0");
+  it("keeps every immutable Pages archive byte-identical to its SHA-256 manifest", () => {
+    assertArchivedRelease("1.0.0", "fdd3b31ea67b3db769b2c4287e23e1ac79fe9274");
+    assertArchivedRelease("1.1.0", "60b94148ff95824cfe2cde44ca11f6eab782676c");
+    const archiveScript = readFileSync(join(projectRoot, "scripts", "archive-version.mjs"), "utf8");
+    expect(archiveScript).not.toContain("manifest-only");
+    expect(archiveScript).toContain('"status", "--porcelain", "--untracked-files=all"');
+    expect(archiveScript).toContain('["run", "build"]');
+    expect(archiveScript).toContain("VITE_BASE_PATH: basePath");
+  });
+
+  function assertArchivedRelease(version: string, sourceCommit: string) {
+    const archiveRoot = join(projectRoot, "public", "versions", `v${version}`);
     const manifest = JSON.parse(readFileSync(join(archiveRoot, "release-manifest.json"), "utf8")) as {
       version: string;
       sourceCommit: string;
@@ -24,11 +34,11 @@ describe("GPT-5.6 audit remediation evidence", () => {
       files: Array<{ path: string; bytes: number; sha256: string }>;
     };
 
-    expect(manifest.version).toBe("1.0.0");
-    expect(manifest.sourceCommit).toBe("fdd3b31ea67b3db769b2c4287e23e1ac79fe9274");
-    expect(manifest.basePath).toBe("/isoamplar-plot-analysis-t/versions/v1.0.0/");
+    expect(manifest.version).toBe(version);
+    expect(manifest.sourceCommit).toBe(sourceCommit);
+    expect(manifest.basePath).toBe(`/isoamplar-plot-analysis-t/versions/v${version}/`);
     expect(
-      execFileSync("git", ["rev-parse", "v1.0.0^{commit}"], { cwd: projectRoot, encoding: "utf8" }).trim()
+      execFileSync("git", ["rev-parse", `v${version}^{commit}`], { cwd: projectRoot, encoding: "utf8" }).trim()
     ).toBe(manifest.sourceCommit);
     const release = RELEASE_HISTORY.find((entry) => entry.version === manifest.version);
     expect(release?.manifestSha256).toBe(
@@ -46,12 +56,7 @@ describe("GPT-5.6 audit remediation evidence", () => {
       expect(createHash("sha256").update(bytes).digest("hex"), file.path).toBe(file.sha256);
     }
     expect(readFileSync(join(archiveRoot, "index.html"), "utf8")).toContain(manifest.basePath);
-    const archiveScript = readFileSync(join(projectRoot, "scripts", "archive-version.mjs"), "utf8");
-    expect(archiveScript).not.toContain("manifest-only");
-    expect(archiveScript).toContain('"status", "--porcelain", "--untracked-files=all"');
-    expect(archiveScript).toContain('["run", "build"]');
-    expect(archiveScript).toContain("VITE_BASE_PATH: basePath");
-  });
+  }
 
   it("rejects a dist tree that changes after the integrity baseline", () => {
     const root = mkdtempSync(join(tmpdir(), "isoamplar-dist-integrity-"));

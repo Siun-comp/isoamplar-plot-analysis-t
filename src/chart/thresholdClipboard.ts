@@ -3,7 +3,7 @@ import type { Curve } from "../data/types";
 import { copyHtmlTableToClipboard } from "./exportChart";
 import { formatThresholdValue } from "./thresholdRender";
 
-const HEADERS = ["검체", "시약", "추정 교차 Cycle", "결과 상태"] as const;
+const HEADERS = ["검체", "시약", "적용 Threshold", "추정 교차 Cycle", "결과 상태"] as const;
 
 export async function copyThresholdResultsExcelTableToClipboard(args: {
   curves: readonly Curve[];
@@ -24,6 +24,7 @@ export function createThresholdResultsExcelClipboardPayload(args: {
     return {
       specimen: curve.specimenLabel,
       reagent: curve.reagentLabel,
+      threshold: result.threshold,
       estimatedCycle: getEstimatedCrossingCycle(result),
       status: formatThresholdClipboardStatus(result)
     };
@@ -35,6 +36,7 @@ export function createThresholdResultsExcelClipboardPayload(args: {
       (row) => `<tr>
     <td style="${textCellStyle()}">${escapeExcelHtmlText(row.specimen)}</td>
     <td style="${textCellStyle()}">${escapeExcelHtmlText(row.reagent)}</td>
+    <td style="${numberCellStyle()}">${formatThresholdValue(row.threshold)}</td>
     <td style="${numberCellStyle()}">${row.estimatedCycle === null ? "" : formatThresholdValue(row.estimatedCycle)}</td>
     <td style="${textCellStyle()}">${escapeExcelHtmlText(row.status)}</td>
   </tr>`
@@ -56,6 +58,7 @@ export function createThresholdResultsExcelClipboardPayload(args: {
       [
         sanitizeExcelPlainText(row.specimen),
         sanitizeExcelPlainText(row.reagent),
+        formatThresholdValue(row.threshold),
         row.estimatedCycle === null ? "" : formatThresholdValue(row.estimatedCycle),
         sanitizeExcelPlainText(row.status)
       ].join("\t")

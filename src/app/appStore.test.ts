@@ -963,9 +963,11 @@ describe("app store style preset and legend order", () => {
     expect(state.dirty).toBe(true);
     expect(state.importError).toBeNull();
     expect(state.thresholdSettings).toEqual({
+      mode: "common",
       enabled: false,
       draftValue: "",
       applied: null,
+      reagentSettings: {},
       showInPreview: true,
       includeInPlotExport: true
     });

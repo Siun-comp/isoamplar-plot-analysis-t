@@ -4,7 +4,21 @@
 Active release gate
 
 ## 최종 갱신
-2026-08-03
+2026-09-02
+
+## v1.2.0 시약별 Threshold·색상 팔레트 게이트
+- [x] v1.1.0 정적 실행판과 SHA-256 manifest 보존
+- [x] 공통/시약별 모드 전환 시 각 설정 보존
+- [x] 정확한 `reagentId` 기준 적용, 신규 시약 미설정, 미설정 curve ND 오분류 방지
+- [x] 시약별 입력 전체 선검증 및 부분 적용 없는 원자적 `모두 적용`
+- [x] Preview/Plot Export 동일 다중 Threshold projection과 동일 값 병합
+- [x] Threshold Excel clipboard 5열 및 Selected Data XLSX schema 4 근거
+- [x] Analysis XLSX schema 6 roundtrip과 schema 5 Common migration
+- [x] 모든 색상 팝업의 선택형 8색 정사각형 팔레트와 기존 HEX/picker 유지
+- [x] 전체 Vitest 45 files / 393 tests, audit 1/1, dependency vulnerabilities 0, Pages build, fresh Chromium 13/13
+- [x] Playwright 전후 complete `dist` byte-identical: `d4c5651a323f6158ca5323b739121c308a483325ed50f2a8736678b57347c6e0`
+- [x] 데이터 무결성·데스크톱 UX 재감사 잔여 항목 해소: 시약별 전부 미설정 XLSX 근거와 긴 Threshold 라벨 수치 보존. 전문가 재감사는 사용 한도 중단 전 핵심 불변조건을 확인했고, lead가 기록된 잔여 검사를 완료하여 release blocker 없음.
+- [ ] commit/tag/push/Pages 배포 및 최신/v1.1/v1.0 공개 smoke
 
 ## v1.1.0 단일 유지보수 T판 게이트
 - [x] 배포 전 T판 `v1.0.0` 정적 빌드 및 SHA-256 manifest 보존

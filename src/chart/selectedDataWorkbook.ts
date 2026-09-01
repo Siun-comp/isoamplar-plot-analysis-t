@@ -2,10 +2,11 @@ import type * as XLSX from "xlsx";
 import type { ChartScaleState } from "./chartScale";
 import type { Curve, PcrWarning, WarningSourceRef } from "../data/types";
 import {
-  calculateThresholdResults,
+  calculateConfiguredThresholdResults,
   createDefaultThresholdSettings,
   formatThresholdAnalysisStatus,
-  isThresholdDraftApplied,
+  hasActiveThresholdForCurves,
+  hasThresholdDraftMismatch,
   type ThresholdResult,
   type ThresholdSettings
 } from "../analysis/threshold";
@@ -15,7 +16,8 @@ type WorkbookCellValue = string | number | boolean | undefined;
 
 export const SELECTED_DATA_ROLE_SHEET_NAME = "_IsoAmplarSelectedData";
 export const SELECTED_DATA_WORKBOOK_MARKER = "IsoAmplarSelectedData";
-export const SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 3;
+export const SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 4;
+export const PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION_3 = 3;
 export const PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 2;
 export const LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION = 1;
 
@@ -47,7 +49,7 @@ export type SelectedDataWorkbookResult =
   | { ok: false; reason: string };
 
 export type SelectedDataWorkbookRole =
-  | { kind: "selected-data"; schemaVersion: 1 | 2 | 3 }
+  | { kind: "selected-data"; schemaVersion: 1 | 2 | 3 | 4 }
   | { kind: "not-selected-data" }
   | { kind: "invalid-selected-data"; message: string };
 
@@ -90,13 +92,10 @@ export async function createSelectedDataWorkbook(
   const headers = createUniqueHeaders(args.curves, labels);
   const warnings = collectRelevantWarnings(args.curves, args.warnings);
   const thresholdSettings = args.thresholdSettings ?? createDefaultThresholdSettings();
-  if (thresholdSettings.enabled && !isThresholdDraftApplied(thresholdSettings)) {
+  if (hasThresholdDraftMismatch(thresholdSettings, args.curves)) {
     return { ok: false, reason: "Threshold 입력값을 적용하거나 적용값으로 복원한 뒤 저장하십시오." };
   }
-  const thresholdResults =
-    thresholdSettings.enabled && thresholdSettings.applied
-      ? calculateThresholdResults([...args.curves], thresholdSettings.applied.value)
-      : [];
+  const thresholdResults = calculateConfiguredThresholdResults(args.curves, thresholdSettings);
 
   appendSheet(xlsx, workbook, PLOTTED_DATA_SHEET_NAME, createPlottedDataRows(args.curves, headers));
   appendSheet(
@@ -146,8 +145,9 @@ export function inspectSelectedDataWorkbookRole(workbook: XLSX.WorkBook): Select
   if (
     roleSheet.A2?.v !== "schemaVersion" ||
     schemaVersion !== LEGACY_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION &&
-      schemaVersion !== PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION &&
-      schemaVersion !== SELECTED_DATA_WORKBOOK_SCHEMA_VERSION
+    schemaVersion !== PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION &&
+    schemaVersion !== PREVIOUS_SELECTED_DATA_WORKBOOK_SCHEMA_VERSION_3 &&
+    schemaVersion !== SELECTED_DATA_WORKBOOK_SCHEMA_VERSION
   ) {
     return { kind: "invalid-selected-data", message: "Selected Data XLSX schema version is unsupported." };
   }
@@ -316,7 +316,8 @@ function createExportInfoRows(
     ["Applied scale note", "Display metadata only; exported rows are not cropped by the applied scale."],
     ["Exported rows", "Full common X range"],
     ["Fluorescence transform", "None"],
-    ["Threshold enabled", thresholdSettings.enabled],
+    ["Threshold mode", thresholdSettings.mode],
+    ["Threshold enabled", hasActiveThresholdForCurves(thresholdSettings, args.curves)],
     ["Threshold applied", thresholdSettings.applied?.value ?? undefined],
     ["Threshold rule ID", thresholdSettings.applied?.ruleId ?? undefined],
     ["Threshold calculation", "Full raw X/Y arrays; first adjacent upward crossing; no null-gap interpolation."],
@@ -332,8 +333,16 @@ function createThresholdResultRows(
   settings: ThresholdSettings,
   results: readonly ThresholdResult[]
 ): WorkbookCellValue[][] {
+  const hasActiveThreshold = hasActiveThresholdForCurves(settings, args.curves);
   const rows: WorkbookCellValue[][] = [
-    ["Threshold status", settings.enabled ? "Applied" : "Threshold disabled"],
+    [
+      "Threshold status",
+      hasActiveThreshold
+        ? "Applied"
+        : settings.mode === "perReagent" && args.curves.length > 0
+          ? "No configured reagent Thresholds"
+          : "Threshold disabled"
+    ],
     [
       "Order",
       "Curve ID",
@@ -361,37 +370,67 @@ function createThresholdResultRows(
       "Note"
     ]
   ];
-  if (!settings.enabled) return rows;
+  if (!hasActiveThreshold && settings.mode !== "perReagent") return rows;
 
-  results.forEach((result, index) => {
-    const curve = args.curves[index];
-    const observed = result.firstObservedAtOrAbovePoint;
-    const primary = result.outcome === "crossed" ? result.primaryEvent : null;
+  const resultByCurveId = new Map(results.map((result) => [result.curveId, result]));
+  args.curves.forEach((curve, curveIndex) => {
+    const result = resultByCurveId.get(curve.curveId);
+    if (result) {
+      const observed = result.firstObservedAtOrAbovePoint;
+      const primary = result.outcome === "crossed" ? result.primaryEvent : null;
+      rows.push([
+        curveIndex + 1,
+        result.curveId,
+        lookupLabel(args.analysisLabelsByCurveId, result.curveId) ?? labels[curveIndex],
+        curve.specimenLabel,
+        curve.reagentLabel,
+        curve.source.sourceInstanceId ?? "",
+        curve.source.fileName,
+        curve.source.columnLetter,
+        result.threshold,
+        result.ruleId,
+        result.outcome,
+        formatThresholdAnalysisStatus(result.outcome, result.multipleUpwardCrossings),
+        result.candidateCount,
+        result.multipleUpwardCrossings,
+        observed?.index,
+        observed?.x,
+        observed?.y,
+        primary?.rightPoint?.x,
+        primary?.interpolatedCycle ?? undefined,
+        primary?.leftPoint?.x,
+        primary?.leftPoint?.y,
+        primary?.rightPoint?.x,
+        primary?.rightPoint?.y,
+        createThresholdResultNote(result)
+      ]);
+      return;
+    }
     rows.push([
-      index + 1,
-      result.curveId,
-      lookupLabel(args.analysisLabelsByCurveId, result.curveId) ?? labels[index],
+      curveIndex + 1,
+      curve.curveId,
+      lookupLabel(args.analysisLabelsByCurveId, curve.curveId) ?? labels[curveIndex],
       curve.specimenLabel,
       curve.reagentLabel,
       curve.source.sourceInstanceId ?? "",
       curve.source.fileName,
       curve.source.columnLetter,
-      result.threshold,
-      result.ruleId,
-      result.outcome,
-      formatThresholdAnalysisStatus(result.outcome, result.multipleUpwardCrossings),
-      result.candidateCount,
-      result.multipleUpwardCrossings,
-      observed?.index,
-      observed?.x,
-      observed?.y,
-      primary?.rightPoint?.x,
-      primary?.interpolatedCycle ?? undefined,
-      primary?.leftPoint?.x,
-      primary?.leftPoint?.y,
-      primary?.rightPoint?.x,
-      primary?.rightPoint?.y,
-      createThresholdResultNote(result)
+      undefined,
+      undefined,
+      "unconfigured",
+      "Threshold 미설정",
+      undefined,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "Per-reagent Threshold is not configured for this curve."
     ]);
   });
   return rows;
@@ -404,11 +443,15 @@ function createThresholdEventRows(
   results: readonly ThresholdResult[]
 ): WorkbookCellValue[][] {
   const rows: WorkbookCellValue[][] = [
-    ["Threshold status", settings.enabled ? "Applied" : "Threshold disabled"],
+    ["Threshold status", hasActiveThresholdForCurves(settings, args.curves) ? "Applied" : "Threshold disabled"],
     [
       "Curve order",
       "Curve ID",
       "Analysis label",
+      "Reagent ID",
+      "Reagent",
+      "Applied Threshold",
+      "Rule ID",
       "Event type",
       "Event relation",
       "Event number",
@@ -431,15 +474,22 @@ function createThresholdEventRows(
       "Source references JSON"
     ]
   ];
-  if (!settings.enabled) return rows;
+  if (!hasActiveThresholdForCurves(settings, args.curves)) return rows;
 
-  results.forEach((result, curveIndex) => {
+  results.forEach((result) => {
+    const curveIndex = args.curves.findIndex((curve) => curve.curveId === result.curveId);
+    if (curveIndex < 0) return;
+    const curve = args.curves[curveIndex];
     result.events.forEach((event) => {
       const sources = event.sourceReferences;
       rows.push([
         curveIndex + 1,
         result.curveId,
         lookupLabel(args.analysisLabelsByCurveId, result.curveId) ?? labels[curveIndex],
+        curve.reagentId,
+        curve.reagentLabel,
+        result.threshold,
+        result.ruleId,
         event.eventType,
         event.relation,
         event.eventIndex + 1,

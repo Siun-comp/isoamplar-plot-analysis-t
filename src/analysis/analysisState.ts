@@ -25,12 +25,13 @@ import {
   type ThresholdSettings
 } from "./threshold";
 
-export const ANALYSIS_STATE_SCHEMA_VERSION = 5;
+export const ANALYSIS_STATE_SCHEMA_VERSION = 6;
 export const THRESHOLD_ANALYSIS_SCHEMA_VERSION = 5;
 const LEGACY_ANALYSIS_STATE_SCHEMA_VERSION = 1;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION = 2;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 = 3;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4 = 4;
+const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_5 = 5;
 
 export type SourceFileSummary = {
   sourceKind?: DatasetSourceKind;
@@ -156,11 +157,22 @@ export function createDefaultExportSettings(): ExportSettings {
 
 function cloneThresholdSettings(settings: ThresholdSettings): ThresholdSettings {
   return {
+    mode: settings.mode,
     enabled: settings.enabled,
     draftValue: settings.draftValue,
     applied: settings.applied
       ? { value: settings.applied.value, ruleId: settings.applied.ruleId }
       : null,
+    reagentSettings: Object.fromEntries(
+      Object.entries(settings.reagentSettings).map(([reagentId, setting]) => [
+        reagentId,
+        {
+          enabled: setting.enabled,
+          draftValue: setting.draftValue,
+          applied: setting.applied ? { value: setting.applied.value, ruleId: setting.applied.ruleId } : null
+        }
+      ])
+    ),
     showInPreview: settings.showInPreview,
     includeInPlotExport: settings.includeInPlotExport
   };
@@ -287,6 +299,7 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4 &&
+    payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_5 &&
     payload.schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
   ) {
     throw new Error("Unsupported Analysis XLSX schema version.");
@@ -347,7 +360,10 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
   validateCurveOverrides(migratedPayload.curveOverrides, datasetCurveIds);
   validateLegendSettings(migratedPayload.legendSettings, datasetCurveIds);
   validateExportSettings(migratedPayload.exportSettings);
-  validateThresholdSettings(migratedPayload.thresholdSettings);
+  validateThresholdSettings(
+    migratedPayload.thresholdSettings,
+    new Set(dataset.reagents.map((reagent) => reagent.id))
+  );
   validateSourceFiles(migratedPayload.sourceFiles);
   const relationshipIndex = createDatasetRelationshipIndex(dataset);
   validateDatasetRelationships(dataset, relationshipIndex);
@@ -397,7 +413,9 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
     styleRules,
     selectionSets: hasSelectionSetSchema ? payload.selectionSets : [],
     activeSelectionSetId: hasSelectionSetSchema ? payload.activeSelectionSetId : null,
-    thresholdSettings: hasThresholdSchema ? payload.thresholdSettings : createDefaultThresholdSettings(),
+    thresholdSettings: hasThresholdSchema
+      ? migrateThresholdSettings(payload.thresholdSettings)
+      : createDefaultThresholdSettings(),
     legendSettings:
       "legendSettings" in payload && isRecord(payload.legendSettings)
         ? {
@@ -409,6 +427,16 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
           }
         : createDefaultLegendSettings(),
     exportSettings: "exportSettings" in payload ? payload.exportSettings : createDefaultExportSettings()
+  };
+}
+
+function migrateThresholdSettings(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  if ("mode" in value || "reagentSettings" in value) return value;
+  return {
+    ...value,
+    mode: "common",
+    reagentSettings: {}
   };
 }
 
@@ -966,35 +994,61 @@ function validateExportSettings(value: unknown): asserts value is ExportSettings
   assertOneOf(value.imageLayout, imageExportLayouts, "exportSettings.imageLayout");
 }
 
-function validateThresholdSettings(value: unknown): asserts value is ThresholdSettings {
+function validateThresholdSettings(
+  value: unknown,
+  datasetReagentIds: Set<string>
+): asserts value is ThresholdSettings {
   if (!isRecord(value)) {
     throw new Error("Analysis state thresholdSettings restore data is invalid.");
   }
 
   assertExactKeys(
     value,
-    ["enabled", "draftValue", "applied", "showInPreview", "includeInPlotExport"],
+    ["mode", "enabled", "draftValue", "applied", "reagentSettings", "showInPreview", "includeInPlotExport"],
     "thresholdSettings"
   );
 
+  assertOneOf(value.mode, ["common", "perReagent"] as const, "thresholdSettings.mode");
   assertBoolean(value.enabled, "thresholdSettings.enabled");
   assertString(value.draftValue, "thresholdSettings.draftValue");
   assertBoolean(value.showInPreview, "thresholdSettings.showInPreview");
   assertBoolean(value.includeInPlotExport, "thresholdSettings.includeInPlotExport");
 
-  if (value.applied !== null) {
-    if (!isRecord(value.applied)) throw new Error("thresholdSettings.applied is invalid.");
-    assertExactKeys(value.applied, ["value", "ruleId"], "thresholdSettings.applied");
-    if (typeof value.applied.value !== "number" || !Number.isFinite(value.applied.value)) {
-      throw new Error("thresholdSettings.applied.value must be a finite number.");
-    }
-    if (value.applied.ruleId !== THRESHOLD_RULE_ID) {
-      throw new Error("thresholdSettings.applied.ruleId is unsupported.");
-    }
-  }
+  validateAppliedThreshold(value.applied, "thresholdSettings.applied");
 
   if (value.enabled && value.applied === null) {
     throw new Error("thresholdSettings.enabled requires an applied Threshold.");
+  }
+
+  if (!isRecord(value.reagentSettings)) {
+    throw new Error("thresholdSettings.reagentSettings is invalid.");
+  }
+  Object.entries(value.reagentSettings).forEach(([reagentId, setting]) => {
+    if (!datasetReagentIds.has(reagentId)) {
+      throw new Error("thresholdSettings.reagentSettings contains an unknown reagentId.");
+    }
+    if (!isRecord(setting)) {
+      throw new Error(`thresholdSettings.reagentSettings.${reagentId} is invalid.`);
+    }
+    assertExactKeys(setting, ["enabled", "draftValue", "applied"], `thresholdSettings.reagentSettings.${reagentId}`);
+    assertBoolean(setting.enabled, `thresholdSettings.reagentSettings.${reagentId}.enabled`);
+    assertString(setting.draftValue, `thresholdSettings.reagentSettings.${reagentId}.draftValue`);
+    validateAppliedThreshold(setting.applied, `thresholdSettings.reagentSettings.${reagentId}.applied`);
+    if (setting.enabled && setting.applied === null) {
+      throw new Error(`thresholdSettings.reagentSettings.${reagentId}.enabled requires an applied Threshold.`);
+    }
+  });
+}
+
+function validateAppliedThreshold(value: unknown, path: string) {
+  if (value === null) return;
+  if (!isRecord(value)) throw new Error(`${path} is invalid.`);
+  assertExactKeys(value, ["value", "ruleId"], path);
+  if (typeof value.value !== "number" || !Number.isFinite(value.value)) {
+    throw new Error(`${path}.value must be a finite number.`);
+  }
+  if (value.ruleId !== THRESHOLD_RULE_ID) {
+    throw new Error(`${path}.ruleId is unsupported.`);
   }
 }
 

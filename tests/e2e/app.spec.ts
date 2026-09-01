@@ -143,16 +143,16 @@ test("renders the upload-first PCR workspace", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "그래프 미리보기" })).toBeVisible();
   await expect(page.getByText("원본 Excel은 첫 번째 시트만 읽고, 모든 데이터는 브라우저 안에서 처리합니다.")).toBeVisible();
 
-  await page.getByRole("button", { name: "버전 v1.1.0 및 변경 이력" }).click();
+  await page.getByRole("button", { name: "버전 v1.2.0 및 변경 이력" }).click();
   const versionDialog = page.getByRole("dialog", { name: "버전 및 변경 이력" });
   await expect(versionDialog).toBeVisible();
   await expect(versionDialog.getByText(/현재 T판이 유일한 유지보수 판본/)).toBeVisible();
   const archivePagePromise = page.context().waitForEvent("page");
-  await versionDialog.getByRole("link", { name: "이 버전 열기" }).click();
+  await versionDialog.locator('section[aria-label="v1.1.0"]').getByRole("link", { name: "이 버전 열기" }).click();
   const archivePage = await archivePagePromise;
   await archivePage.waitForLoadState("domcontentloaded");
   await expect(archivePage.getByRole("heading", { name: "IsoAmplar Plot Analysis T" })).toBeVisible();
-  expect(new URL(archivePage.url()).pathname).toContain("/versions/v1.0.0/");
+  expect(new URL(archivePage.url()).pathname).toContain("/versions/v1.1.0/");
   await archivePage.close();
   await versionDialog.getByRole("button", { name: "버전 이력 닫기" }).click();
 });
@@ -347,6 +347,11 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
   await page.locator(".settings-accordion summary", { hasText: "Style" }).click();
   await expect(page.getByLabel("현재 스타일 기준")).toContainText("마커 시약별");
   await expect(page.getByLabel("마커 기준")).toBeVisible();
+  await page.getByLabel("A2 color editor").click();
+  await expect(page.locator(".color-template-grid button")).toHaveCount(8);
+  await page.getByRole("button", { name: "파란색 #0926FB" }).click();
+  await expect(page.getByRole("button", { name: "파란색 #0926FB" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Escape");
   await page.getByLabel("선 기준").selectOption("reagent");
   await page.getByLabel("A2 line and marker editor").click();
   await page.getByRole("button", { name: "A2 line dashed" }).click();
@@ -745,7 +750,7 @@ test("preserves formatted Excel identity and exposes actionable warning provenan
   const exportedWorkbook = XLSX.read(readFileSync(downloadPath as string), { type: "buffer", raw: true });
   expect(exportedWorkbook.SheetNames).toContain("HeaderProvenance");
   expect(exportedWorkbook.SheetNames).toContain("Warnings");
-  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
+  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(6);
   const warningRows = XLSX.utils.sheet_to_json<unknown[]>(exportedWorkbook.Sheets.Warnings, { header: 1, blankrows: false });
   expect(warningRows[0]).toEqual(expect.arrayContaining(["Handling", "Source ID", "Display value", "Formula cache"]));
 });
@@ -888,7 +893,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
   const analysisDownload = await savePromise;
   await analysisDownload.saveAs(analysisPath);
   const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
-  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(6);
   expect(analysisWorkbook.SheetNames).toContain("SelectionSets");
 
   await page.getByTestId("analysis-restore-input").setInputFiles(analysisPath);
@@ -920,7 +925,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
     "_IsoAmplarSelectedData"
   ]);
   expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.A1?.v).toBe("IsoAmplarSelectedData");
-  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(3);
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(4);
   expect(selectedWorkbook.Sheets.PlottedData["!ref"]).toBe("A1:B13");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
@@ -951,7 +956,7 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   await expect(page.getByText("선택 3 · Positive 1 · 검토 필요 2")).toBeVisible();
   expect(await yAxis.locator(".scale-auto-domain").textContent()).toBe(autoRangeBefore);
   await page.screenshot({
-    path: testInfo.outputPath("threshold-v110-workspace.png"),
+    path: testInfo.outputPath("threshold-common-workspace.png"),
     animations: "disabled"
   });
 
@@ -966,10 +971,10 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   await expect(resultsPanel.getByRole("status")).toHaveText("3개 결과를 복사했습니다.");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     [
-      "검체\t시약\t추정 교차 Cycle\t결과 상태",
-      "Synthetic crossing\tAssay 01\t3.5\tPositive",
-      "Synthetic gap\tAssay 02\t\t결측 구간",
-      "Synthetic starts above\tAssay 03\t\t시작점 초과"
+      "검체\t시약\t적용 Threshold\t추정 교차 Cycle\t결과 상태",
+      "Synthetic crossing\tAssay 01\t5\t3.5\tPositive",
+      "Synthetic gap\tAssay 02\t5\t\t결측 구간",
+      "Synthetic starts above\tAssay 03\t5\t\t시작점 초과"
     ].join("\r\n")
   );
   const richClipboard = await page.evaluate(async () => {
@@ -1026,12 +1031,22 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   await page.getByRole("checkbox", { name: "Plot Export 포함" }).check();
   await page.getByRole("textbox", { name: "Raw fluorescence Threshold" }).fill("5");
   await page.getByRole("button", { name: "적용", exact: true }).click();
+  await thresholdDetails.getByRole("button", { name: "시약별", exact: true }).click();
+  await thresholdDetails.getByRole("textbox", { name: "Assay 01 Raw fluorescence Threshold" }).fill("5");
+  await thresholdDetails.getByRole("textbox", { name: "Assay 02 Raw fluorescence Threshold" }).fill("6");
+  await thresholdDetails.getByRole("button", { name: "모두 적용" }).click();
+  await expect(thresholdDetails.getByText("적용됨")).toHaveCount(2);
+  await expect(thresholdDetails.getByText("미설정")).toHaveCount(1);
+  await page.getByRole("checkbox", { name: "미리보기 표시" }).check();
+  await expect(page.getByText("선택 2 · Positive 1 · 검토 필요 1")).toBeVisible();
+  await expect(resultsPanel).toContainText("1개 곡선은 해당 시약 Threshold가 설정되지 않아 계산에서 제외되었습니다.");
+  await page.screenshot({ path: testInfo.outputPath("threshold-v120-per-reagent.png"), animations: "disabled" });
   const selectedDataPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "선택 데이터 XLSX 저장" }).click();
   const selectedDataDownload = await selectedDataPromise;
   await selectedDataDownload.saveAs(selectedDataPath);
   const selectedWorkbook = XLSX.read(readFileSync(selectedDataPath), { type: "buffer", raw: true });
-  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(3);
+  expect(selectedWorkbook.Sheets._IsoAmplarSelectedData.B2?.v).toBe(4);
   expect(selectedWorkbook.SheetNames).toContain("ThresholdResults");
   expect(selectedWorkbook.SheetNames).toContain("ThresholdEvents");
   const thresholdResultRows = XLSX.utils.sheet_to_json<unknown[]>(selectedWorkbook.Sheets.ThresholdResults, {
@@ -1042,8 +1057,9 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   expect(thresholdResultRows.slice(2).map((row) => row[10])).toEqual([
     "crossed",
     "indeterminate-gap",
-    "starts-above-threshold"
+    "unconfigured"
   ]);
+  expect(thresholdResultRows.slice(2).map((row) => row[8])).toEqual([5, 6, undefined]);
   expect(thresholdResultRows[2][15]).toBe(4);
   expect(thresholdResultRows[2][16]).toBe(6);
   expect(thresholdResultRows[2][18]).toBe(3.5);
@@ -1051,8 +1067,12 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
     header: 1,
     blankrows: false
   });
-  expect(eventRows.slice(2).some((row) => row[3] === "indeterminate-gap")).toBe(true);
-  expect(eventRows.slice(2).some((row) => row[3] === "crossing")).toBe(true);
+  const eventHeaders = new Map((eventRows[1] as string[]).map((header, index) => [header, index]));
+  expect(eventRows.slice(2).some((row) => row[eventHeaders.get("Event type") as number] === "indeterminate-gap")).toBe(true);
+  expect(eventRows.slice(2).some((row) => row[eventHeaders.get("Event type") as number] === "crossing")).toBe(true);
+  expect(eventRows.slice(2).map((row) => row[eventHeaders.get("Applied Threshold") as number])).toEqual(
+    expect.arrayContaining([5, 6])
+  );
 
   const analysisDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "분석 저장" }).click();
@@ -1060,17 +1080,29 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   expect(analysisDownload.suggestedFilename()).toBe("synthetic-threshold-source_analysis4.xlsx");
   await analysisDownload.saveAs(analysisPath);
   const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
-  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(5);
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(6);
+  const reagentThresholdRows = XLSX.utils.sheet_to_json<unknown[]>(analysisWorkbook.Sheets.ReagentThresholds, {
+    header: 1,
+    blankrows: false
+  });
+  expect(reagentThresholdRows.slice(1, 4).map((row) => [row[1], row[4]])).toEqual([
+    ["Assay 01", 5],
+    ["Assay 02", 6],
+    ["Assay 03", ""]
+  ]);
 
   await page.getByTestId("analysis-restore-input").setInputFiles(analysisPath);
   await expect(page.locator(".analysis-tab-button")).toHaveCount(2);
   const restoredThresholdSummary = page.locator(".settings-accordion > details > summary", { hasText: "Threshold" });
   const restoredThresholdDetails = restoredThresholdSummary.locator("..");
   if ((await restoredThresholdDetails.getAttribute("open")) === null) await restoredThresholdSummary.click();
-  await expect(page.getByRole("textbox", { name: "Raw fluorescence Threshold" })).toHaveValue("5");
-  await expect(page.getByRole("checkbox", { name: "미리보기 표시" })).not.toBeChecked();
+  await expect(restoredThresholdDetails.getByRole("button", { name: "시약별", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(restoredThresholdDetails.getByRole("textbox", { name: "Assay 01 Raw fluorescence Threshold" })).toHaveValue("5");
+  await expect(restoredThresholdDetails.getByRole("textbox", { name: "Assay 02 Raw fluorescence Threshold" })).toHaveValue("6");
+  await expect(restoredThresholdDetails.getByRole("textbox", { name: "Assay 03 Raw fluorescence Threshold" })).toHaveValue("");
+  await expect(page.getByRole("checkbox", { name: "미리보기 표시" })).toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Plot Export 포함" })).toBeChecked();
-  await expect(page.getByText("선택 3 · Positive 1 · 검토 필요 2")).toBeVisible();
+  await expect(page.getByText("선택 2 · Positive 1 · 검토 필요 1")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 

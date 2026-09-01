@@ -65,6 +65,7 @@ describe("ThresholdResultsPanel", () => {
       <ThresholdResultsPanel
         enabled
         threshold={5}
+        thresholdMode="common"
         curves={[curve]}
         results={[result]}
         legendItems={[legend]}

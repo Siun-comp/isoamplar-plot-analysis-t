@@ -10,16 +10,18 @@ import type {
   StyleRules
 } from "../data/types";
 
-export const defaultChartColors = [
-  "#7030A0",
-  "#0926FB",
-  "#00B050",
-  "#FFC000",
-  "#FF0000",
-  "#767171",
-  "#4ACCE6",
-  "#EB45BC"
-];
+export const defaultChartPalette = [
+  { name: "보라색", value: "#7030A0" },
+  { name: "파란색", value: "#0926FB" },
+  { name: "초록색", value: "#00B050" },
+  { name: "노란색", value: "#FFC000" },
+  { name: "빨간색", value: "#FF0000" },
+  { name: "회색", value: "#767171" },
+  { name: "하늘색", value: "#4ACCE6" },
+  { name: "분홍색", value: "#EB45BC" }
+] as const;
+
+export const defaultChartColors = defaultChartPalette.map((entry) => entry.value);
 
 const lineTypeCycle: LineType[] = ["solid", "dashed", "dotted"];
 

@@ -5,8 +5,9 @@ import { buildReportLegendProjection } from "./reportLegend";
 import type { ReportLegendProjection } from "./reportLegend";
 import type { Curve, CurveStyleOverride, GroupingMode, LegendSettings, PcrDataset, StyleRules } from "../data/types";
 import type { LegendItem } from "./chartProjection";
-import type { AppliedThreshold } from "../analysis/threshold";
-import { createThresholdMarkLine } from "./thresholdRender";
+import type { AppliedThreshold, ThresholdSettings } from "../analysis/threshold";
+import type { ChartThresholdMarker } from "./thresholdRender";
+import { buildChartThresholdMarkers, createThresholdMarkLine } from "./thresholdRender";
 
 export type ChartBuildResult = {
   option: EChartsCoreOption;
@@ -27,8 +28,20 @@ export function buildPcrChartOption(args: {
   legendSettings?: LegendSettings;
   highlightedCurveId?: string | null;
   threshold?: AppliedThreshold | null;
+  thresholds?: readonly ChartThresholdMarker[];
+  thresholdSettings?: ThresholdSettings | null;
 }): ChartBuildResult {
   const projection = buildChartProjection(args);
+  const thresholdMarkers =
+    args.thresholds ??
+    (args.thresholdSettings && args.dataset
+      ? buildChartThresholdMarkers({
+          curves: projection.visibleCurves,
+          reagents: args.dataset.reagents,
+          settings: args.thresholdSettings,
+          reagentColors: args.styleRules?.reagentColors
+        })
+      : []);
   const legendProjection = args.legendSettings
     ? buildReportLegendProjection({
         curves: projection.visibleCurves,
@@ -52,7 +65,7 @@ export function buildPcrChartOption(args: {
       color: defaultChartColors,
       grid: {
         left: 88,
-        right: 24,
+        right: thresholdMarkers.length > 1 ? 118 : 24,
         top: 30,
         bottom: 54,
         containLabel: false
@@ -156,7 +169,9 @@ export function buildPcrChartOption(args: {
           emphasis: {
             disabled: true
           },
-          ...(index === 0 && args.threshold ? { markLine: createThresholdMarkLine(args.threshold) } : {})
+          ...(index === 0 && (args.threshold || thresholdMarkers.length)
+            ? { markLine: createThresholdMarkLine(thresholdMarkers.length ? thresholdMarkers : args.threshold as AppliedThreshold) }
+            : {})
         };
       })
     }

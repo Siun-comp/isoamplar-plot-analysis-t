@@ -109,3 +109,5 @@ Before a user visible release:
 - Verify production build behavior under a GitHub Pages style base path.
 - Verify image download and clipboard fallback behavior.
 - Update `CHANGELOG.md`.
+
+The existing v1.1 user guide is a historical artifact. Do not regenerate or update its Markdown/PDF for later releases unless the user explicitly requests that work again (D062).

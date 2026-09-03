@@ -18,6 +18,14 @@ describe("GPT-5.6 audit remediation evidence", () => {
   it("keeps every immutable Pages archive byte-identical to its SHA-256 manifest", () => {
     assertArchivedRelease("1.0.0", "fdd3b31ea67b3db769b2c4287e23e1ac79fe9274");
     assertArchivedRelease("1.1.0", "60b94148ff95824cfe2cde44ca11f6eab782676c");
+    assertArchivedRelease("1.2.0", "a2dc1e2f1191b4f21178cba307c77558b49f73ab", {
+      tagCommit: "693609364fb83f5df75da1f8c6109de85ce316b8",
+      allowedTagToSourceChanges: [
+        "DEVELOPMENT_STATE.md",
+        "docs/08_RELEASE_CHECKLIST_KR.md",
+        "docs/13_AUDIT_REMEDIATION_TRACEABILITY.md"
+      ]
+    });
     const archiveScript = readFileSync(join(projectRoot, "scripts", "archive-version.mjs"), "utf8");
     expect(archiveScript).not.toContain("manifest-only");
     expect(archiveScript).toContain('"status", "--porcelain", "--untracked-files=all"');
@@ -25,7 +33,11 @@ describe("GPT-5.6 audit remediation evidence", () => {
     expect(archiveScript).toContain("VITE_BASE_PATH: basePath");
   });
 
-  function assertArchivedRelease(version: string, sourceCommit: string) {
+  function assertArchivedRelease(
+    version: string,
+    sourceCommit: string,
+    sourceDrift?: { tagCommit: string; allowedTagToSourceChanges: string[] }
+  ) {
     const archiveRoot = join(projectRoot, "public", "versions", `v${version}`);
     const manifest = JSON.parse(readFileSync(join(archiveRoot, "release-manifest.json"), "utf8")) as {
       version: string;
@@ -37,9 +49,24 @@ describe("GPT-5.6 audit remediation evidence", () => {
     expect(manifest.version).toBe(version);
     expect(manifest.sourceCommit).toBe(sourceCommit);
     expect(manifest.basePath).toBe(`/isoamplar-plot-analysis-t/versions/v${version}/`);
-    expect(
-      execFileSync("git", ["rev-parse", `v${version}^{commit}`], { cwd: projectRoot, encoding: "utf8" }).trim()
-    ).toBe(manifest.sourceCommit);
+    const tagCommit = execFileSync("git", ["rev-parse", `v${version}^{commit}`], {
+      cwd: projectRoot,
+      encoding: "utf8"
+    }).trim();
+    if (sourceDrift) {
+      expect(tagCommit).toBe(sourceDrift.tagCommit);
+      expect(
+        execFileSync("git", ["diff", "--name-only", tagCommit, manifest.sourceCommit], {
+          cwd: projectRoot,
+          encoding: "utf8"
+        })
+          .trim()
+          .split(/\r?\n/u)
+          .filter(Boolean)
+      ).toEqual(sourceDrift.allowedTagToSourceChanges);
+    } else {
+      expect(tagCommit).toBe(manifest.sourceCommit);
+    }
     const release = RELEASE_HISTORY.find((entry) => entry.version === manifest.version);
     expect(release?.manifestSha256).toBe(
       createHash("sha256").update(readFileSync(join(archiveRoot, "release-manifest.json"))).digest("hex")

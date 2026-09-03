@@ -25,13 +25,14 @@ import {
   type ThresholdSettings
 } from "./threshold";
 
-export const ANALYSIS_STATE_SCHEMA_VERSION = 6;
+export const ANALYSIS_STATE_SCHEMA_VERSION = 7;
 export const THRESHOLD_ANALYSIS_SCHEMA_VERSION = 5;
 const LEGACY_ANALYSIS_STATE_SCHEMA_VERSION = 1;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION = 2;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 = 3;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4 = 4;
 const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_5 = 5;
+const PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_6 = 6;
 
 export type SourceFileSummary = {
   sourceKind?: DatasetSourceKind;
@@ -67,6 +68,7 @@ export type AnalysisState = {
 export type SerializedSelectionState = {
   groupingMode: SelectionState["groupingMode"];
   selectedCurveIds: string[];
+  excludedCurveIds: string[];
   collapsedGroupIds: string[];
   orderedCurveIds: string[];
 };
@@ -195,6 +197,7 @@ export function serializeSelectionState(selection: SelectionState): SerializedSe
   return {
     groupingMode: selection.groupingMode,
     selectedCurveIds: [...selection.selectedCurveIds],
+    excludedCurveIds: [...selection.excludedCurveIds],
     collapsedGroupIds: [...selection.collapsedGroupIds],
     orderedCurveIds: [...selection.orderedCurveIds]
   };
@@ -204,6 +207,7 @@ export function deserializeSelectionState(selection: SerializedSelectionState): 
   return {
     groupingMode: selection.groupingMode,
     selectedCurveIds: new Set(selection.selectedCurveIds),
+    excludedCurveIds: new Set(selection.excludedCurveIds),
     collapsedGroupIds: new Set(selection.collapsedGroupIds),
     orderedCurveIds: [...selection.orderedCurveIds]
   };
@@ -300,6 +304,7 @@ export function validateSerializedAnalysisState(payload: unknown): SerializedAna
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_3 &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4 &&
     payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_5 &&
+    payload.schemaVersion !== PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_6 &&
     payload.schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
   ) {
     throw new Error("Unsupported Analysis XLSX schema version.");
@@ -390,6 +395,7 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
     typeof payload.schemaVersion === "number" && payload.schemaVersion >= PREVIOUS_ANALYSIS_STATE_SCHEMA_VERSION_4;
   const hasThresholdSchema =
     typeof payload.schemaVersion === "number" && payload.schemaVersion >= THRESHOLD_ANALYSIS_SCHEMA_VERSION;
+  const hasExclusionSchema = payload.schemaVersion === ANALYSIS_STATE_SCHEMA_VERSION;
   const needsProvenanceMigration = !hasProvenanceSchema;
   const styleRules = isRecord(payload.styleRules)
     ? {
@@ -411,6 +417,12 @@ function migrateSerializedAnalysisPayload(payload: Record<string, unknown>): Rec
     dataset,
     sourceFiles,
     styleRules,
+    selection: isRecord(payload.selection)
+      ? {
+          ...payload.selection,
+          excludedCurveIds: hasExclusionSchema ? payload.selection.excludedCurveIds : []
+        }
+      : payload.selection,
     selectionSets: hasSelectionSetSchema ? payload.selectionSets : [],
     activeSelectionSetId: hasSelectionSetSchema ? payload.activeSelectionSetId : null,
     thresholdSettings: hasThresholdSchema
@@ -847,13 +859,24 @@ function validateSelection(value: unknown, datasetCurveIds: Set<string>): assert
 
   assertOneOf(value.groupingMode, groupingModes, "selection.groupingMode");
   assertUniqueStringArray(value.selectedCurveIds, "selection.selectedCurveIds");
+  assertUniqueStringArray(value.excludedCurveIds, "selection.excludedCurveIds");
   assertUniqueStringArray(value.collapsedGroupIds, "selection.collapsedGroupIds");
   assertUniqueStringArray(value.orderedCurveIds, "selection.orderedCurveIds");
   assertSameStringSet(value.orderedCurveIds, datasetCurveIds, "selection.orderedCurveIds");
 
-  value.selectedCurveIds.forEach((curveId) => {
+  const selectedCurveIds = value.selectedCurveIds as string[];
+  const excludedCurveIds = value.excludedCurveIds as string[];
+  selectedCurveIds.forEach((curveId) => {
     if (!datasetCurveIds.has(curveId)) {
       throw new Error("selection.selectedCurveIds contains an unknown curveId.");
+    }
+  });
+  excludedCurveIds.forEach((curveId) => {
+    if (!datasetCurveIds.has(curveId)) {
+      throw new Error("selection.excludedCurveIds contains an unknown curveId.");
+    }
+    if (selectedCurveIds.includes(curveId)) {
+      throw new Error("A curve cannot be both selected and excluded.");
     }
   });
 }

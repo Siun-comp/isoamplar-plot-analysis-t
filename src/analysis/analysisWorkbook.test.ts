@@ -47,6 +47,7 @@ describe("Analysis XLSX workbook", () => {
     dataset.curves[0].stats = createStats(dataset.curves[0].y);
     const selection = createInitialSelectionState(dataset);
     selection.selectedCurveIds.add(dataset.curves[0].curveId);
+    selection.excludedCurveIds.add(dataset.curves[1].curveId);
     const collapsedReagentGroupId = createGroupId("reagent", dataset.reagents[0].id);
     selection.collapsedGroupIds.add(collapsedReagentGroupId);
     selection.orderedCurveIds = [
@@ -141,6 +142,7 @@ describe("Analysis XLSX workbook", () => {
       "Warnings",
       "SelectionSets",
       "ReagentThresholds",
+      "ExcludedCurves",
       ANALYSIS_RESTORE_SHEET_NAME
     ]);
     const hiddenSheetMeta = workbook.Workbook?.Sheets?.find((sheet) => sheet.name === ANALYSIS_RESTORE_SHEET_NAME);
@@ -150,6 +152,10 @@ describe("Analysis XLSX workbook", () => {
     expect(workbook.Sheets.ImportedData.A3?.v).toBe("Analysis label");
     expect(workbook.Sheets.ImportedData.B3?.v).toBe("Report A1");
     expect(workbook.Sheets.ImportedData.B4?.v).toBe(dataset.curves[0].curveId);
+    const importedRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.ImportedData, { header: 1, blankrows: false });
+    expect(importedRows.find((row) => row[0] === "Analysis state")?.[2]).toBe("Excluded");
+    const excludedRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.ExcludedCurves, { header: 1, blankrows: false });
+    expect(excludedRows[1]).toContain(dataset.curves[1].curveId);
     const headerRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.HeaderProvenance, { header: 1, blankrows: false });
     expect(headerRows[0]).toContain("Display value");
     expect(headerRows[0]).toContain("Raw value");
@@ -172,6 +178,7 @@ describe("Analysis XLSX workbook", () => {
     ]);
     const settingsRows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets.Settings, { header: 1, blankrows: false });
     expect(settingsRows).toContainEqual(["X scale draft mode", "fixed"]);
+    expect(settingsRows).toContainEqual(["Excluded curve count", 1]);
     expect(settingsRows).toContainEqual(["X fixed min", "18.5"]);
     expect(settingsRows).toContainEqual(["Y fixed max", "900000"]);
     expect(settingsRows).toContainEqual(["X applied mode", "fixed"]);

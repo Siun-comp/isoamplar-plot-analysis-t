@@ -29,15 +29,18 @@ export function SelectionSetPanel() {
   const activeSet = selectionSets.find((selectionSet) => selectionSet.selectionSetId === activeSelectionSetId) ?? null;
   const candidateSet = selectionSets.find((selectionSet) => selectionSet.selectionSetId === candidateId) ?? null;
   const targetSet = selectionSets.find((selectionSet) => selectionSet.selectionSetId === targetSetId) ?? null;
+  const excludedCurveIds = selection?.excludedCurveIds ?? new Set<string>();
+  const activeSetCurveIds = activeSet?.curveIds.filter((curveId) => !excludedCurveIds.has(curveId)) ?? [];
+  const targetActiveCurveIds = targetSet?.curveIds.filter((curveId) => !excludedCurveIds.has(curveId)) ?? [];
   const activeModified = Boolean(
-    activeSet && selection && !hasSameSelectionSetMembership(selection.selectedCurveIds, activeSet.curveIds)
+    activeSet && selection && !hasSameSelectionSetMembership(selection.selectedCurveIds, activeSetCurveIds)
   );
   const selectedCurveIds = selection?.selectedCurveIds ?? new Set<string>();
   const updateAddedCount = targetSet
-    ? [...selectedCurveIds].filter((curveId) => !targetSet.curveIds.includes(curveId)).length
+    ? [...selectedCurveIds].filter((curveId) => !targetActiveCurveIds.includes(curveId)).length
     : 0;
   const updateRemovedCount = targetSet
-    ? targetSet.curveIds.filter((curveId) => !selectedCurveIds.has(curveId)).length
+    ? targetActiveCurveIds.filter((curveId) => !selectedCurveIds.has(curveId)).length
     : 0;
 
   useEffect(() => {
@@ -133,7 +136,7 @@ export function SelectionSetPanel() {
               >
                 {selectionSets.map((selectionSet) => (
                   <option key={selectionSet.selectionSetId} value={selectionSet.selectionSetId}>
-                    {selectionSet.name} ({selectionSet.curveIds.length})
+                    {selectionSet.name} ({selectionSet.curveIds.filter((curveId) => !excludedCurveIds.has(curveId)).length})
                   </option>
                 ))}
               </select>
@@ -251,7 +254,7 @@ export function SelectionSetPanel() {
           aria-describedby="selection-set-update-description"
         >
           <p id="selection-set-update-description">
-            {targetSet.name}: {targetSet.curveIds.length}개 → {selection.selectedCurveIds.size}개
+            {targetSet.name}: {targetActiveCurveIds.length}개 → {selection.selectedCurveIds.size}개
             {` (추가 ${updateAddedCount}개 / 제외 ${updateRemovedCount}개)`}
           </p>
           <div className="selection-set-confirm-actions">

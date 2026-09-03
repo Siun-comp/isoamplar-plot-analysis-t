@@ -7,16 +7,18 @@ Single project state snapshot for resuming work after context compression.
 Active
 
 ## Last Updated
-2026-09-02
+2026-09-04
 
 ## CURRENT TRUTH
 
 - Active branch: `codex/audit-remediation`; release promotion targets only the `threshold` remote repository `isoamplar-plot-analysis-t`.
 - `IsoAmplar Plot Analysis T` is the sole maintained product. The original non-T deployment is an unmaintained historical rollback artifact and receives no further feature patches.
-- Current deployed stable release is semantic version `1.2.0`. It adds common/per-reagent Threshold modes and an eight-swatch shortcut palette without changing raw fluorescence or existing free-form color controls. The verified v1.1.0 runtime is archived under `public/versions/v1.1.0/` with SHA-256 evidence.
+- Current deployed stable release is semantic version `1.2.0`; v1.3.0 is the locally verified release candidate. v1.3.0 adds reversible exact-curve analysis exclusion while preserving raw fluorescence, provenance, Selection Sets, and full Analysis XLSX continuity. The verified v1.2.0 runtime is archived under `public/versions/v1.2.0/` with SHA-256 evidence.
 - By D062, the existing v1.1 Korean user guide remains a historical artifact and is no longer regenerated for each release. Current behavior is documented through requirements, I/O, acceptance, changelog, release history, and this state file.
 - v1.1.0 adds blank/literal-`-` reagent-column exclusion without losing physical specimen inheritance anchors, extension-free default analysis names, date-neutral Analysis XLSX save names, editable FAM/HEX Y presets, common non-clinical Positive/ND Threshold status projections, Selected Data XLSX schema 3, and an in-app version/history dialog with archived-runtime links.
 - v1.2.0 Analysis XLSX uses schema 6 and preserves the full dataset, settings, Selection Sets, and both Common/per-reagent Threshold configurations. Schema 5 restores into Common mode, and older supported schemas still migrate before semantic validation.
+- v1.3.0 Analysis XLSX uses schema 7 and adds exact `curveId` exclusions while retaining the full imported dataset. Schemas 1-6 migrate with no excluded curves.
+- v1.3.0 local verification passes 45 Vitest files / 399 tests, audit 1/1, zero production dependency vulnerabilities, Pages-base production build, and fresh Chromium 14/14. The complete `dist` tree stayed byte-identical before/after Playwright at `925692d6a95657e840b62d413de2e9fbdc50251e32b8897e43ec534f2981cf96`; 1280x720 exclusion/restore and duplicate-source dialogs had no overflow or browser warning/error.
 - v1.2.0 local verification passes 45 Vitest files / 393 tests, audit 1/1, zero production dependency vulnerabilities, Pages-base production build, and fresh Chromium 13/13. The complete `dist` tree stayed byte-identical before/after Playwright at `d4c5651a323f6158ca5323b739121c308a483325ed50f2a8736678b57347c6e0`.
 - Source-local specimen-header inheritance remains authoritative for Excel and full-table Quick Paste. The first included curve must resolve to a same-source explicit specimen; ignored reagent columns never create curves but may supply an explicit inheritance anchor for later included columns.
 - The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
@@ -42,7 +44,7 @@ Active
 - Latest S11 pre-commit verification: the standard suite passed 32 files / 265 tests; isolated audit probe passed 1/1; production dependency audit found 0 vulnerabilities; Pages-base build and fresh Chromium passed 11/11 with fail-on-flaky. Complete dist tree hash `1012572727dd66d74763775f828fef165baa24012c61c770db6617e90d6cce46` was byte-identical before and after Playwright. A representative workbook outside the repository passed local-only import, all-curve selection, nonblank canvas, P1/P2 application, and browser-error checks without copying labels, values, or paths into evidence.
 - Final branch CI run `29156244025` and Pages run `29156323546` succeeded for SHA `eae3281fb8f9bbbd900fab528be3e094b93b555a`. Public smoke compared all 25 known `dist` files byte-for-byte and passed synthetic XLSX import, reagent-first collapsed state, nonblank chart, P2/Box zoom/Previous scale, dashed-line/circle-marker legend identity, opaque white PNG, Analysis XLSX restore, zero unexpected external requests, and zero browser errors. Initial Pages run `29156159533` failed before build on historical Markdown whitespace and did not deploy.
 - User data remains browser-local. No real workbook, patient/specimen record, or actual fluorescence dataset is checked into S1 fixtures.
-- The user has granted standing approval for v1.2.0 commit, tag, push, and maintained T-repository Pages deployment after local release gates pass.
+- The user has granted standing approval for versioned commit, tag, push, and maintained T-repository Pages deployment after local release gates pass.
 
 ## Compression-Safe Summary
 - IsoAmplar Plot Analysis T is the sole maintained Threshold-capable product built from the validated desktop workflow. The original non-T repository and Pages deployment are historical rollback artifacts only.
@@ -72,20 +74,24 @@ Active
 - Threshold is part of the sole maintained T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and clinical interpretation. `Positive`/`ND` are explicitly user-set Threshold crossing-status labels, not clinical classifications.
 
 ## Current Goal
-Maintain the deployed v1.2.0 release and collect real-use feedback without changing raw fluorescence semantics or Analysis XLSX continuity.
+Release v1.3.0 with reversible, duplicate-safe analysis exclusion while preserving raw fluorescence and Analysis XLSX continuity.
 
 ## Current Milestone
-M17 v1.2.0 per-reagent Threshold and color-template refinement is complete and deployed.
+M18 v1.3.0 exact curve exclusion/restore passed local release verification and is ready for promotion.
 
 ## Last Completed Step
-Released v1.2.0 from `6936093`, completed Pages run `33558251077`, and passed public latest/v1.1/v1.0 smoke with no browser console warning/error. The v1.1 archive byte-fidelity fix preserves the original manifest exactly.
+Completed full unit/audit/dependency/build/Chromium/dist-integrity and desktop visual verification for schema 7 `curveId` exclusion/restore. Archived the deployed v1.2.0 runtime before source changes.
 
 ## Exact Next 3 Tasks
-1. Use v1.2.0 with representative browser-local data and record only reproducible usability or correctness findings.
-2. Preserve Analysis XLSX files when an analysis must be continued later; do not expect latest schema files to open in archived runtimes.
-3. For a future patch, update requirements/tests/changelog/state and keep the user guide unchanged unless D062 is explicitly reversed.
+1. Integrate final independent domain/data and QA/release audit findings.
+2. Commit, tag, and push only the maintained `threshold` repository, then wait for Pages success.
+3. Public-smoke latest v1.3.0 and immutable v1.2/v1.1/v1.0 runtimes, then record deployment evidence.
 
 ## Latest Changed Files
+- v1.3.0 runtime/state: `src/data/types.ts`, `src/selection/selectionState.ts`, `src/app/appStore.ts`, `src/analysis/analysisState.ts`, `src/analysis/analysisWorkbook.ts`
+- v1.3.0 UI: `src/ui/DataSelectionPanel.tsx`, `src/ui/DataExclusionDialog.tsx`, `src/ui/SelectionSetPanel.tsx`, `src/ui/SettingsPanel.tsx`, `src/styles.css`
+- v1.3.0 tests: `src/app/App.test.tsx`, `src/app/appStore.test.ts`, `src/analysis/analysisState.test.ts`, `src/analysis/analysisWorkbook.test.ts`, `src/app/releaseHistory.test.ts`, `tests/e2e/app.spec.ts`
+- v1.3.0 release/docs: `public/versions/v1.2.0/`, `src/releaseHistory.ts`, `package.json`, `package-lock.json`, `README.md`, `CHANGELOG.md`, `DECISIONS.md`, `docs/02_FUNCTIONAL_REQUIREMENTS_EN.md`, `docs/03_INPUT_OUTPUT_SPEC_EN.md`, `docs/04_TEST_PLAN_ACCEPTANCE_EN.md`, `docs/08_RELEASE_CHECKLIST_KR.md`, `docs/13_AUDIT_REMEDIATION_TRACEABILITY.md`
 - `package.json`, `package-lock.json`
 - `src/releaseHistory.ts`
 - `src/ui/VersionHistoryDialog.tsx`
@@ -541,6 +547,7 @@ Released v1.2.0 from `6936093`, completed Pages run `33558251077`, and passed pu
 - `D035`: Analysis labels replace report-only labels and apply consistently to chart legends, report legend outputs, plotted-data CSV headers, and Analysis XLSX restore state.
 
 ## Verification Status
+- 2026-09-04 v1.3.0 final local gate: `npm test` passed 45 files / 399 tests; `npm run test:audit` passed 1/1; production dependency audit found 0 vulnerabilities; Pages-base build and fresh Chromium passed 14/14 with `--fail-on-flaky-tests`; complete `dist` SHA-256 `925692d6a95657e840b62d413de2e9fbdc50251e32b8897e43ec534f2981cf96` was byte-identical after Playwright. Download/readback covered active-only Selected Data XLSX versus full-dataset Analysis XLSX schema 7. The 1280x720 local browser visual check covered single-source exclusion, restore-unselected, and duplicate-name source-scope selection with zero warning/error. Independent data-integrity review returned GO. QA/release review's two evidence findings were closed by updating the final dist hash and extending archive CI to verify every v1.2.0 byte plus the exact documentation-only tag-to-source drift; no release blocker remains.
 - 2026-08-03 v1.1.0 final local gate: `npm test` passed 45 files / 381 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; Pages-base production build passed; fresh Chromium passed 13/13 with `--fail-on-flaky-tests`; complete `dist` SHA-256 `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c` was byte-identical after Playwright. The 20-page PDF was regenerated, rendered through Poppler, inspected as a complete contact sheet and at full resolution on the changed troubleshooting pages, and contained no replacement characters. Independent data-integrity and release/UX re-audits returned GO after the last excluded-column warning provenance regression was fixed and tested.
 - 2026-08-03 v1.1.0 deployment: release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` and annotated `v1.0.0`/`v1.1.0` tags were pushed only to `threshold`; Pages run `30802527069` passed all jobs including 13 Chromium tests. Public latest and archived v1.0.0 smoke passed with correct version/preset UI and no console warning/error.
 - 2026-07-14 Threshold final local gate: `npm run test` passed 41 files / 336 tests; `npm run test:audit` passed 1/1; `npm audit --omit=dev --audit-level=high` found 0 vulnerabilities; production build passed; fresh Chromium passed 13/13. The complete `dist` tree remained byte-identical before/after Playwright at `e178d3bf3e95be3a64f04959968a39c3995ee9e1c459139598424588b64c2d8c`.

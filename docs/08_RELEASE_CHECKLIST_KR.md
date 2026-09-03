@@ -4,7 +4,7 @@
 Active release gate
 
 ## 최종 갱신
-2026-09-02
+2026-09-04
 
 ## v1.2.0 시약별 Threshold·색상 팔레트 게이트
 - [x] v1.1.0 정적 실행판과 SHA-256 manifest 보존
@@ -140,6 +140,21 @@ Active release gate
 - legend identity/style가 preview와 export에서 다름
 - Analysis XLSX restore가 dataset/settings를 정확히 복원하지 못함
 - 예상하지 않은 runtime network request 또는 심각한 browser error
+
+## v1.3.0 분석 제외/복구 게이트
+
+- [x] 개별 curve 제외/복구가 정확한 `curveId` 한 개에만 적용됨
+- [x] 동명 그룹이 여러 source instance에 걸치면 원본별 범위를 확인하기 전 실행되지 않음
+- [x] 제외 곡선이 Plot, Legend, Threshold, Selected Data XLSX/CSV에서 빠짐
+- [x] Selection Set 원래 구성은 보존되고 적용 시 활성 곡선만 선택됨
+- [x] 동일 이름 append 곡선이 기존 제외 상태를 상속하지 않음
+- [x] Analysis XLSX schema 7이 전체 원본과 제외 상태를 정확히 복원함
+- [x] v1.2.0 immutable archive manifest 검증 통과
+- [x] v1.2.0 tag 이후 archive source까지 변경이 배포 증적 문서 3개뿐임을 CI에서 검증
+- [x] Vitest 45 files / 399 tests, audit 1/1, production dependency vulnerabilities 0
+- [x] Pages-base production build와 fresh Chromium 14/14
+- [x] complete `dist` pre/post Playwright byte-identical: `925692d6a95657e840b62d413de2e9fbdc50251e32b8897e43ec534f2981cf96`
+- [x] 1280x720 단일/복수 원본 제외 및 복구 dialog 시각 검수, browser warning/error 0
 
 ## 롤백 절차
 1. 마지막 정상 SHA와 실패 candidate SHA를 기록한다.

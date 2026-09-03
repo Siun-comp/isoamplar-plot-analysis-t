@@ -91,7 +91,7 @@ describe("App PCR workspace", () => {
     expect(screen.getByText("연구·개발용 시각화 · 임상 판독 기능 없음")).toBeInTheDocument();
     expect(screen.getByText("Developer Jang Si Un")).toBeInTheDocument();
     expect(screen.getByText("Browser-local analysis")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "버전 v1.2.0 및 변경 이력" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "버전 v1.3.0 및 변경 이력" })).toBeInTheDocument();
     expect(screen.queryByText("MVP implementation")).not.toBeInTheDocument();
     expect(screen.queryByText("Release validation")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Analysis 1" })).toHaveAttribute("aria-selected", "true");
@@ -110,11 +110,12 @@ describe("App PCR workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "버전 v1.2.0 및 변경 이력" }));
+    await user.click(screen.getByRole("button", { name: "버전 v1.3.0 및 변경 이력" }));
     const dialog = screen.getByRole("dialog", { name: "버전 및 변경 이력" });
     expect(within(dialog).getByText("현재 버전")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("link", { name: "이 버전 열기" }).map((link) => link.getAttribute("href")))
       .toEqual(expect.arrayContaining([
+        expect.stringContaining("versions/v1.2.0/"),
         expect.stringContaining("versions/v1.1.0/"),
         expect.stringContaining("versions/v1.0.0/")
       ]));
@@ -224,6 +225,34 @@ describe("App PCR workspace", () => {
     expect(useAppStore.getState().selection?.selectedCurveIds.has(secondCurveId)).toBe(true);
     expect(subgroupCheckbox).toHaveAttribute("aria-checked", "mixed");
   }, 10000);
+
+  it("excludes and restores one exact curve without deleting imported data", async () => {
+    const user = userEvent.setup();
+    const dataset = createOneSpecimenEightReagentDataset();
+    act(() => {
+      useAppStore.getState().loadDataset(dataset);
+    });
+    render(<App />);
+
+    const selectionPanel = screen.getByRole("complementary", { name: "데이터 선택" });
+    const a1Toggle = within(selectionPanel).getByRole("button", { name: /A1/u });
+    const a1Group = a1Toggle.closest(".tree-group") as HTMLElement;
+    await user.click(within(a1Group).getByRole("button", { name: "그룹을 분석에서 제외" }));
+    const excludeDialog = screen.getByRole("dialog", { name: "분석에서 제외" });
+    expect(within(excludeDialog).getByText(/sample_1x8.xlsx/u)).toBeInTheDocument();
+    await user.click(within(excludeDialog).getByRole("button", { name: "1개 제외" }));
+
+    expect(useAppStore.getState().dataset?.curves).toHaveLength(8);
+    expect(useAppStore.getState().selection?.excludedCurveIds).toEqual(new Set([dataset.curves[0].curveId]));
+    expect(screen.getByText("표시 7")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "제외 항목 1" }));
+    const restoreDialog = screen.getByRole("dialog", { name: "제외 항목 관리" });
+    await user.click(within(restoreDialog).getByRole("button", { name: "복구" }));
+    expect(useAppStore.getState().selection?.excludedCurveIds.size).toBe(0);
+    expect(useAppStore.getState().selection?.selectedCurveIds.size).toBe(0);
+    expect(screen.getByText("표시 8")).toBeInTheDocument();
+  });
 
   it("creates, renames, switches, and confirms dirty close for analysis tabs", async () => {
     const user = userEvent.setup();

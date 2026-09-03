@@ -100,6 +100,7 @@ type SelectionSetUndoSnapshot = {
 };
 
 export type SelectionSetMutationResult = { ok: true; selectionSetId?: string } | { ok: false; message: string };
+export type CurveExclusionMutationResult = { ok: true; changedCount: number } | { ok: false; message: string };
 export type ThresholdMutationResult = { ok: true } | { ok: false; message: string };
 
 export type AnalysisTabState = Omit<AnalysisState, "dataset" | "selection"> & {
@@ -229,6 +230,8 @@ type AppStore = AppState & {
   setGroupingMode: (groupingMode: GroupingMode) => void;
   toggleCurve: (curveId: string) => void;
   setCurvesSelected: (curveIds: Iterable<string>, selected: boolean) => void;
+  excludeCurves: (curveIds: Iterable<string>) => CurveExclusionMutationResult;
+  restoreExcludedCurves: (curveIds: Iterable<string>) => CurveExclusionMutationResult;
   toggleGroup: (groupId: string) => void;
   setAllGroupsCollapsed: (collapsed: boolean) => void;
   createSelectionSet: (name: string) => SelectionSetMutationResult;
@@ -1294,6 +1297,45 @@ export const useAppStore = create<AppStore>()(
         markDirtyAndPersistActive(state);
       });
     },
+    excludeCurves: (curveIds) => {
+      let result: CurveExclusionMutationResult = { ok: false, message: "분석 데이터가 없습니다." };
+      set((state) => {
+        if (!state.dataset || !state.selection) return;
+        const datasetCurveIds = new Set(state.dataset.curves.map((curve) => curve.curveId));
+        const exactCurveIds = [...new Set(curveIds)].filter(
+          (curveId) => datasetCurveIds.has(curveId) && !state.selection?.excludedCurveIds.has(curveId)
+        );
+        if (exactCurveIds.length === 0) {
+          result = { ok: true, changedCount: 0 };
+          return;
+        }
+        exactCurveIds.forEach((curveId) => {
+          state.selection?.excludedCurveIds.add(curveId);
+          state.selection?.selectedCurveIds.delete(curveId);
+        });
+        state.selectionSetUndo = null;
+        state.lastPresetUndo = null;
+        markDirtyAndPersistActive(state);
+        result = { ok: true, changedCount: exactCurveIds.length };
+      });
+      return result;
+    },
+    restoreExcludedCurves: (curveIds) => {
+      let result: CurveExclusionMutationResult = { ok: false, message: "분석 데이터가 없습니다." };
+      set((state) => {
+        if (!state.dataset || !state.selection) return;
+        const exactCurveIds = [...new Set(curveIds)].filter((curveId) => state.selection?.excludedCurveIds.has(curveId));
+        if (exactCurveIds.length === 0) {
+          result = { ok: true, changedCount: 0 };
+          return;
+        }
+        exactCurveIds.forEach((curveId) => state.selection?.excludedCurveIds.delete(curveId));
+        state.selectionSetUndo = null;
+        markDirtyAndPersistActive(state);
+        result = { ok: true, changedCount: exactCurveIds.length };
+      });
+      return result;
+    },
     toggleGroup: (groupId) => {
       set((state) => {
         if (!state.selection) return;
@@ -1349,7 +1391,10 @@ export const useAppStore = create<AppStore>()(
         if (!selectionSet) return;
         if (
           state.activeSelectionSetId === selectionSetId &&
-          hasSameSelectionSetMembership(state.selection.selectedCurveIds, selectionSet.curveIds)
+          hasSameSelectionSetMembership(
+            state.selection.selectedCurveIds,
+            selectionSet.curveIds.filter((curveId) => !state.selection?.excludedCurveIds.has(curveId))
+          )
         ) {
           result = { ok: true };
           return;
@@ -1359,7 +1404,9 @@ export const useAppStore = create<AppStore>()(
           activeSelectionSetId: state.activeSelectionSetId,
           datasetId: state.dataset.datasetId
         };
-        state.selection.selectedCurveIds = new Set(selectionSet.curveIds);
+        state.selection.selectedCurveIds = new Set(
+          selectionSet.curveIds.filter((curveId) => !state.selection?.excludedCurveIds.has(curveId))
+        );
         state.activeSelectionSetId = selectionSetId;
         markDirtyAndPersistActive(state);
         result = { ok: true };
@@ -1373,7 +1420,10 @@ export const useAppStore = create<AppStore>()(
         const selectionSet = state.selectionSets.find((item) => item.selectionSetId === state.activeSelectionSetId);
         if (!selectionSet) return;
         const curveIds = createOrderedSelectionSetCurveIds(
-          state.selection.selectedCurveIds,
+          new Set([
+            ...state.selection.selectedCurveIds,
+            ...selectionSet.curveIds.filter((curveId) => state.selection?.excludedCurveIds.has(curveId))
+          ]),
           state.selection.orderedCurveIds
         );
         if (curveIds.length === 0) {
@@ -1434,7 +1484,9 @@ export const useAppStore = create<AppStore>()(
         }
         const datasetCurveIds = new Set(state.dataset.curves.map((curve) => curve.curveId));
         state.selection.selectedCurveIds = new Set(
-          state.selectionSetUndo.selectedCurveIds.filter((curveId) => datasetCurveIds.has(curveId))
+          state.selectionSetUndo.selectedCurveIds.filter(
+            (curveId) => datasetCurveIds.has(curveId) && !state.selection?.excludedCurveIds.has(curveId)
+          )
         );
         state.activeSelectionSetId = state.selectionSets.some(
           (selectionSet) => selectionSet.selectionSetId === state.selectionSetUndo?.activeSelectionSetId
@@ -1657,6 +1709,9 @@ function appendDatasetToAnalysis(state: AppState, analysisId: string, appendedDa
       groupingMode: previousSelection?.groupingMode ?? "reagent",
       selectedCurveIds: new Set(
         [...(previousSelection?.selectedCurveIds ?? new Set<string>())].filter((curveId) => mergedCurveIds.has(curveId))
+      ),
+      excludedCurveIds: new Set(
+        [...(previousSelection?.excludedCurveIds ?? new Set<string>())].filter((curveId) => mergedCurveIds.has(curveId))
       ),
       collapsedGroupIds,
       orderedCurveIds: [
@@ -1903,6 +1958,7 @@ function cloneSelection(selection: SelectionState | null): SelectionState | null
   return {
     groupingMode: selection.groupingMode,
     selectedCurveIds: new Set(selection.selectedCurveIds),
+    excludedCurveIds: new Set(selection.excludedCurveIds),
     collapsedGroupIds: new Set(selection.collapsedGroupIds),
     orderedCurveIds: [...selection.orderedCurveIds]
   };

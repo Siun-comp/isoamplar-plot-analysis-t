@@ -76,6 +76,12 @@ export function SettingsPanel() {
   const setExportMessage = useAppStore((state) => state.setExportMessage);
   const labelMode = selection?.groupingMode ?? "reagent";
   const selectedCurveIds = selection?.selectedCurveIds ?? new Set<string>();
+  const excludedCurveIds = selection?.excludedCurveIds ?? new Set<string>();
+  const activeCurves = dataset?.curves.filter((curve) => !excludedCurveIds.has(curve.curveId)) ?? [];
+  const activeSpecimenIds = new Set(activeCurves.map((curve) => curve.specimenId));
+  const activeReagentIds = new Set(activeCurves.map((curve) => curve.reagentId));
+  const activeSpecimens = dataset?.specimens.filter((specimen) => activeSpecimenIds.has(specimen.id)) ?? [];
+  const activeReagents = dataset?.reagents.filter((reagent) => activeReagentIds.has(reagent.id)) ?? [];
   const orderedCurveIds = selection?.orderedCurveIds;
   const chartProjection = buildChartProjection({
     dataset,
@@ -144,7 +150,7 @@ export function SettingsPanel() {
       </details>
       <details>
         <summary>Threshold</summary>
-        <ThresholdSettingsPanel curves={selectedCurves} reagents={dataset?.reagents ?? []} hasDataset={Boolean(dataset)} />
+        <ThresholdSettingsPanel curves={selectedCurves} reagents={activeReagents} hasDataset={activeCurves.length > 0} />
       </details>
       <details>
         <summary>Style</summary>
@@ -193,7 +199,7 @@ export function SettingsPanel() {
           <GroupStyleEditor
             title="검체 스타일"
             target="specimen"
-            entities={dataset?.specimens ?? []}
+            entities={activeSpecimens}
             colorRules={styleRules.specimenColors}
             defaultColors={specimenDefaultColors}
             lineRules={styleRules.specimenLineTypes}
@@ -206,7 +212,7 @@ export function SettingsPanel() {
           <GroupStyleEditor
             title="시약 스타일"
             target="reagent"
-            entities={dataset?.reagents ?? []}
+            entities={activeReagents}
             colorRules={styleRules.reagentColors}
             defaultColors={reagentDefaultColors}
             lineRules={styleRules.reagentLineTypes}

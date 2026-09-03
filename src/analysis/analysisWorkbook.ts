@@ -25,6 +25,7 @@ const IMPORTED_DATA_SHEET_NAME = "ImportedData";
 const WARNINGS_SHEET_NAME = "Warnings";
 const SELECTION_SETS_SHEET_NAME = "SelectionSets";
 const REAGENT_THRESHOLDS_SHEET_NAME = "ReagentThresholds";
+const EXCLUDED_CURVES_SHEET_NAME = "ExcludedCurves";
 const CHUNK_SIZE = 30000;
 
 export type AnalysisWorkbookMetrics = {
@@ -60,10 +61,16 @@ export async function exportAnalysisWorkbookBufferWithMetrics(state: AnalysisSta
   appendSheet(xlsx, workbook, READ_ME_SHEET_NAME, createReadmeRows());
   appendSheet(xlsx, workbook, SETTINGS_SHEET_NAME, createSettingsRows(state, prepared.metrics));
   appendSheet(xlsx, workbook, HEADER_PROVENANCE_SHEET_NAME, createHeaderProvenanceRows(state.dataset.curves));
-  appendSheet(xlsx, workbook, IMPORTED_DATA_SHEET_NAME, createImportedDataRows(state.dataset.curves, state.curveOverrides));
+  appendSheet(
+    xlsx,
+    workbook,
+    IMPORTED_DATA_SHEET_NAME,
+    createImportedDataRows(state.dataset.curves, state.curveOverrides, state.selection.excludedCurveIds)
+  );
   appendSheet(xlsx, workbook, WARNINGS_SHEET_NAME, createWarningsRows(state.dataset.warnings));
   appendSheet(xlsx, workbook, SELECTION_SETS_SHEET_NAME, createSelectionSetRows(state));
   appendSheet(xlsx, workbook, REAGENT_THRESHOLDS_SHEET_NAME, createReagentThresholdRows(state));
+  appendSheet(xlsx, workbook, EXCLUDED_CURVES_SHEET_NAME, createExcludedCurveRows(state));
   appendSheet(xlsx, workbook, ANALYSIS_RESTORE_SHEET_NAME, createRestoreRows(prepared));
   hideSheet(workbook, ANALYSIS_RESTORE_SHEET_NAME);
 
@@ -171,6 +178,8 @@ function createSettingsRows(state: AnalysisState, metrics: AnalysisWorkbookMetri
     ["Exported at", new Date().toISOString()],
     ["Schema version", ANALYSIS_STATE_SCHEMA_VERSION],
     ["Imported curve count", state.dataset.curves.length],
+    ["Active curve count", state.dataset.curves.length - state.selection.excludedCurveIds.size],
+    ["Excluded curve count", state.selection.excludedCurveIds.size],
     ["Selected curve count", selectedCount],
     ["Fluorescence point count", metrics.pointCount],
     ["Source count", metrics.sourceCount],
@@ -251,7 +260,7 @@ function createReagentThresholdRows(state: AnalysisState) {
   return rows;
 }
 
-function createImportedDataRows(curves: Curve[], curveOverrides: AnalysisState["curveOverrides"]) {
+function createImportedDataRows(curves: Curve[], curveOverrides: AnalysisState["curveOverrides"], excludedCurveIds?: Set<string>) {
   const maxPoints = curves.reduce((max, curve) => (curve.x.length > max ? curve.x.length : max), 0);
   const rows: unknown[][] = [
     ["Cycle"].concat(curves.map((curve) => curve.specimenLabel)),
@@ -262,13 +271,31 @@ function createImportedDataRows(curves: Curve[], curveOverrides: AnalysisState["
     ["Source name"].concat(curves.map((curve) => curve.source.fileName)),
     ["Source ID"].concat(curves.map((curve) => curve.source.sourceInstanceId ?? "")),
     ["Source column"].concat(curves.map((curve) => curve.source.columnLetter)),
-    ["Paste input mode"].concat(curves.map((curve) => curve.source.inputMode ?? ""))
+    ["Paste input mode"].concat(curves.map((curve) => curve.source.inputMode ?? "")),
+    ["Analysis state"].concat(curves.map((curve) => excludedCurveIds?.has(curve.curveId) ? "Excluded" : "Active"))
   ];
   for (let index = 0; index < maxPoints; index += 1) {
     const row: unknown[] = [curves[0]?.x[index] ?? index + 1];
     for (const curve of curves) row.push(curve.y[index] ?? "");
     rows.push(row);
   }
+  return rows;
+}
+
+function createExcludedCurveRows(state: AnalysisState) {
+  const orderByCurveId = new Map(state.selection.orderedCurveIds.map((curveId, index) => [curveId, index + 1]));
+  const rows: unknown[][] = [[
+    "Display order", "Curve ID", "Analysis state", "Specimen", "Reagent", "Source type",
+    "Source ID", "Source name", "Worksheet", "Column"
+  ]];
+  state.dataset.curves
+    .filter((curve) => state.selection.excludedCurveIds.has(curve.curveId))
+    .sort((a, b) => (orderByCurveId.get(a.curveId) ?? 0) - (orderByCurveId.get(b.curveId) ?? 0))
+    .forEach((curve) => rows.push([
+      orderByCurveId.get(curve.curveId) ?? "", curve.curveId, "Excluded", curve.specimenLabel,
+      curve.reagentLabel, curve.source.sourceKind ?? "excel", curve.source.sourceInstanceId ?? "",
+      curve.source.fileName, curve.source.sheetName, curve.source.columnLetter
+    ]));
   return rows;
 }
 
@@ -287,7 +314,8 @@ function createSelectionSetRows(state: AnalysisState) {
       "Reagent",
       "Source ID",
       "Source name",
-      "Source column"
+      "Source column",
+      "Excluded from active analysis"
     ]
   ];
 
@@ -309,7 +337,8 @@ function createSelectionSetRows(state: AnalysisState) {
         curve.reagentLabel,
         curve.source.sourceInstanceId ?? "",
         curve.source.fileName,
-        curve.source.columnLetter
+        curve.source.columnLetter,
+        state.selection.excludedCurveIds.has(curveId) ? "Yes" : "No"
       ]);
     }
   }
@@ -471,6 +500,7 @@ function readSerializedAnalysisState(worksheet: XLSX.WorkSheet, xlsx: XlsxModule
     schemaVersion !== 3 &&
     schemaVersion !== 4 &&
     schemaVersion !== 5 &&
+    schemaVersion !== 6 &&
     schemaVersion !== ANALYSIS_STATE_SCHEMA_VERSION
   ) {
     throw new Error("Unsupported Analysis XLSX schema version.");

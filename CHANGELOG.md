@@ -1,5 +1,14 @@
 # CHANGELOG.md
 
+## 2026-09-04 - v1.3.0 reversible analysis exclusion
+
+- Added reversible `curveId`-based exclusion for individual curves and specimen/reagent groups without deleting or editing imported fluorescence data.
+- Added source-aware confirmation for duplicate labels, showing file, worksheet, source instance, and physical column before a grouped exclusion is applied.
+- Excluded curves are consistently removed from selection, Plot, Legend, Threshold review/calculation, and selected-data outputs; restoring a curve returns it unselected.
+- Preserved original Selection Set membership while applying sets only to active curves, so a restored curve can rejoin its existing set.
+- Advanced Analysis XLSX to schema 7 with the complete imported dataset, exact exclusion state, visible active/excluded counts, imported-column status, and an `ExcludedCurves` review sheet.
+- Archived the verified v1.2.0 runtime under `versions/v1.2.0/` with a SHA-256 release manifest before v1.3.0 promotion.
+
 ## 2026-09-02 - v1.2.0 per-reagent Threshold and color shortcuts
 
 - Added Common and Per reagent Threshold modes with independent values preserved across mode switches and analysis tabs.

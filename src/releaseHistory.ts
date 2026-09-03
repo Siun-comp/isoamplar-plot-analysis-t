@@ -15,14 +15,26 @@ export type AppRelease = {
 export const RELEASE_HISTORY: readonly AppRelease[] = [
   {
     version: APP_VERSION,
-    releasedOn: "2026-09-02",
-    analysisSchemaVersion: 6,
+    releasedOn: "2026-09-04",
+    analysisSchemaVersion: 7,
     current: true,
     changes: [
-      "공통 또는 정확한 시약별 raw fluorescence Threshold를 선택해 분석할 수 있습니다.",
-      "시약별 Threshold는 일괄 검증·적용되며 미설정 시약을 ND로 오인하지 않습니다.",
-      "Preview와 Plot Export에 동일한 다중 Threshold 선과 충돌 방지 라벨을 적용했습니다.",
-      "모든 색상 팝업에 기존 8색 순서의 정사각형 빠른 선택 팔레트를 추가했습니다."
+      "잘못 입력한 곡선·검체·시약 그룹을 원본 삭제 없이 현재 분석에서 제외하고 복구할 수 있습니다.",
+      "동일 이름이 여러 입력 원본에 존재하면 파일·worksheet·열 단위 범위를 확인한 뒤 제외합니다.",
+      "Analysis XLSX는 전체 imported dataset과 정확한 curveId 제외 상태를 함께 보존합니다.",
+      "선택 세트, Threshold, Plot, Legend 및 선택 데이터 출력이 동일한 제외 상태를 사용합니다."
+    ]
+  },
+  {
+    version: "1.2.0",
+    releasedOn: "2026-09-02",
+    analysisSchemaVersion: 6,
+    current: false,
+    archivePath: "versions/v1.2.0/",
+    manifestSha256: "0f5acc898273bcea5c8366ffc077d3cb4f856972daae8af71e31969c4fe01947",
+    changes: [
+      "공통 또는 정확한 시약별 raw fluorescence Threshold 분석을 추가했습니다.",
+      "기존 8색 순서의 정사각형 빠른 선택 팔레트를 추가했습니다."
     ]
   },
   {

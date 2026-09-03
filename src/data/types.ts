@@ -239,6 +239,7 @@ export type TreeGroupNode = {
 export type SelectionState = {
   groupingMode: GroupingMode;
   selectedCurveIds: Set<string>;
+  excludedCurveIds: Set<string>;
   collapsedGroupIds: Set<string>;
   orderedCurveIds: string[];
 };

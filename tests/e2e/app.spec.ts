@@ -143,16 +143,16 @@ test("renders the upload-first PCR workspace", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "그래프 미리보기" })).toBeVisible();
   await expect(page.getByText("원본 Excel은 첫 번째 시트만 읽고, 모든 데이터는 브라우저 안에서 처리합니다.")).toBeVisible();
 
-  await page.getByRole("button", { name: "버전 v1.2.0 및 변경 이력" }).click();
+  await page.getByRole("button", { name: "버전 v1.3.0 및 변경 이력" }).click();
   const versionDialog = page.getByRole("dialog", { name: "버전 및 변경 이력" });
   await expect(versionDialog).toBeVisible();
   await expect(versionDialog.getByText(/현재 T판이 유일한 유지보수 판본/)).toBeVisible();
   const archivePagePromise = page.context().waitForEvent("page");
-  await versionDialog.locator('section[aria-label="v1.1.0"]').getByRole("link", { name: "이 버전 열기" }).click();
+  await versionDialog.locator('section[aria-label="v1.2.0"]').getByRole("link", { name: "이 버전 열기" }).click();
   const archivePage = await archivePagePromise;
   await archivePage.waitForLoadState("domcontentloaded");
   await expect(archivePage.getByRole("heading", { name: "IsoAmplar Plot Analysis T" })).toBeVisible();
-  expect(new URL(archivePage.url()).pathname).toContain("/versions/v1.1.0/");
+  expect(new URL(archivePage.url()).pathname).toContain("/versions/v1.2.0/");
   await archivePage.close();
   await versionDialog.getByRole("button", { name: "버전 이력 닫기" }).click();
 });
@@ -407,6 +407,58 @@ test("uploads an xlsx workbook and keeps reagent-first collapsed selection", asy
       return box?.y ?? 999;
     })
     .toBeLessThan(36);
+});
+
+test("excludes and restores exact curves while preserving full Analysis XLSX data", async ({ page }, testInfo) => {
+  const sourcePath = testInfo.outputPath("exclusion-source.xlsx");
+  const selectedPath = testInfo.outputPath("exclusion-selected.xlsx");
+  const analysisPath = testInfo.outputPath("exclusion-analysis.xlsx");
+  writeWorkbookFixture(sourcePath, "Synthetic specimen");
+
+  await page.goto("./");
+  await page.getByTestId("original-data-input").setInputFiles(sourcePath);
+  const a1Toggle = page.getByRole("button", { name: /▸ A1/u });
+  const a1Group = a1Toggle.locator("xpath=ancestor::section[1]");
+  await a1Group.getByRole("button", { name: "그룹을 분석에서 제외" }).click();
+  const excludeDialog = page.getByRole("dialog", { name: "분석에서 제외" });
+  await expect(excludeDialog).toContainText("exclusion-source.xlsx");
+  await expect(excludeDialog).toContainText("Sheet1");
+  await expect(excludeDialog).toContainText("A열");
+  await excludeDialog.getByRole("button", { name: "1개 제외" }).click();
+
+  await expect(page.getByText("표시 1")).toBeVisible();
+  await expect(page.getByRole("button", { name: "제외 항목 1" })).toBeEnabled();
+  await page.getByRole("button", { name: "표시 선택" }).click();
+  await expect(page.getByText("선택 1")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Custom legend" }).getByTitle(/A2/u)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Custom legend" }).getByTitle(/A1/u)).toHaveCount(0);
+
+  const exportSummary = page.locator(".settings-accordion > details > summary", { hasText: "Export" });
+  if ((await exportSummary.locator("..").getAttribute("open")) === null) await exportSummary.click();
+  const selectedDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "선택 데이터 XLSX 저장" }).click();
+  const selectedDownload = await selectedDownloadPromise;
+  await selectedDownload.saveAs(selectedPath);
+  const selectedWorkbook = XLSX.read(readFileSync(selectedPath), { type: "buffer", raw: true });
+  const curveInfoRows = XLSX.utils.sheet_to_json<unknown[]>(selectedWorkbook.Sheets.CurveInfo, { header: 1, raw: true });
+  expect(curveInfoRows.slice(1).map((row) => row[6])).toEqual(["A2"]);
+
+  const analysisDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "분석 저장" }).click();
+  const analysisDownload = await analysisDownloadPromise;
+  await analysisDownload.saveAs(analysisPath);
+  const analysisRead = await readAnalysisWorkbookBuffer(readFileSync(analysisPath));
+  expect(analysisRead.kind).toBe("analysis");
+  if (analysisRead.kind !== "analysis") return;
+  expect(analysisRead.analysis.dataset.curves).toHaveLength(2);
+  expect(analysisRead.analysis.selection.excludedCurveIds.size).toBe(1);
+
+  await page.getByRole("button", { name: "제외 항목 1" }).click();
+  const restoreDialog = page.getByRole("dialog", { name: "제외 항목 관리" });
+  await restoreDialog.getByRole("button", { name: "복구", exact: true }).click();
+  await expect(page.getByText("표시 2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "제외 항목 0" })).toBeDisabled();
+  await expect(page.getByText("선택 1")).toBeVisible();
 });
 
 test("keeps dense Style and sticky plot inspectable at desktop viewports", async ({ page }, testInfo) => {
@@ -750,7 +802,7 @@ test("preserves formatted Excel identity and exposes actionable warning provenan
   const exportedWorkbook = XLSX.read(readFileSync(downloadPath as string), { type: "buffer", raw: true });
   expect(exportedWorkbook.SheetNames).toContain("HeaderProvenance");
   expect(exportedWorkbook.SheetNames).toContain("Warnings");
-  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(6);
+  expect(exportedWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(7);
   const warningRows = XLSX.utils.sheet_to_json<unknown[]>(exportedWorkbook.Sheets.Warnings, { header: 1, blankrows: false });
   expect(warningRows[0]).toEqual(expect.arrayContaining(["Handling", "Source ID", "Display value", "Formula cache"]));
 });
@@ -766,9 +818,7 @@ test("roundtrips dataset selection scale style and labels through Analysis XLSX"
   await page.goto("./");
   await page.getByTestId("original-data-input").setInputFiles(workbookPath);
   await page.getByRole("searchbox").fill("A2");
-  const selectionActions = page.locator(".selection-actions button");
-  await expect(selectionActions).toHaveCount(4);
-  await selectionActions.nth(0).click();
+  await page.getByRole("button", { name: "표시 선택" }).click();
   await expect(page.locator(".selection-meta span").nth(1)).toHaveText(/1$/u);
 
   const yAxis = page.getByRole("region", { name: "Y axis" });
@@ -893,7 +943,7 @@ test("switches named Selection Sets and exports role-safe Selected Data XLSX", a
   const analysisDownload = await savePromise;
   await analysisDownload.saveAs(analysisPath);
   const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
-  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(6);
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(7);
   expect(analysisWorkbook.SheetNames).toContain("SelectionSets");
 
   await page.getByTestId("analysis-restore-input").setInputFiles(analysisPath);
@@ -1080,7 +1130,7 @@ test("keeps Threshold calculation, preview/export visibility, and workbook evide
   expect(analysisDownload.suggestedFilename()).toBe("synthetic-threshold-source_analysis4.xlsx");
   await analysisDownload.saveAs(analysisPath);
   const analysisWorkbook = XLSX.read(readFileSync(analysisPath), { type: "buffer", raw: true });
-  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(6);
+  expect(analysisWorkbook.Sheets._IsoAmplarAnalysis.B2?.v).toBe(7);
   const reagentThresholdRows = XLSX.utils.sheet_to_json<unknown[]>(analysisWorkbook.Sheets.ReagentThresholds, {
     header: 1,
     blankrows: false

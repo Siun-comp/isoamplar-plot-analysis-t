@@ -42,6 +42,97 @@ describe("app store style preset and legend order", () => {
     expect(state.dirty).toBe(true);
   });
 
+  it("excludes exact curve IDs, preserves selection-set membership, and restores without selecting", () => {
+    const dataset = createOneSpecimenEightReagentDataset();
+    const [firstCurve, secondCurve, thirdCurve] = dataset.curves;
+    useAppStore.getState().loadDataset(dataset);
+    useAppStore.getState().setCurvesSelected([firstCurve.curveId, secondCurve.curveId], true);
+    const created = useAppStore.getState().createSelectionSet("Comparison");
+    expect(created.ok).toBe(true);
+
+    expect(useAppStore.getState().excludeCurves([firstCurve.curveId])).toEqual({ ok: true, changedCount: 1 });
+    expect(useAppStore.getState().selection?.excludedCurveIds).toEqual(new Set([firstCurve.curveId]));
+    expect(useAppStore.getState().selection?.selectedCurveIds).toEqual(new Set([secondCurve.curveId]));
+    expect(useAppStore.getState().selectionSets[0].curveIds).toContain(firstCurve.curveId);
+    const chartOption = buildPcrChartOption({
+      dataset,
+      selectedCurveIds: useAppStore.getState().selection?.selectedCurveIds ?? new Set(),
+      orderedCurveIds: useAppStore.getState().selection?.orderedCurveIds,
+      scale: useAppStore.getState().chartScale,
+      styleRules: useAppStore.getState().styleRules,
+      curveOverrides: useAppStore.getState().curveOverrides
+    }).option as Record<string, any>;
+    expect(chartOption.series.map((series: { id: string }) => series.id)).toEqual([secondCurve.curveId]);
+
+    useAppStore.getState().applySelectionSet(created.ok ? created.selectionSetId! : "");
+    expect(useAppStore.getState().selection?.selectedCurveIds).toEqual(new Set([secondCurve.curveId]));
+
+    useAppStore.getState().setCurvesSelected([thirdCurve.curveId], true);
+    expect(useAppStore.getState().updateActiveSelectionSet()).toEqual({ ok: true });
+    expect(useAppStore.getState().selectionSets[0].curveIds).toEqual([
+      firstCurve.curveId,
+      secondCurve.curveId,
+      thirdCurve.curveId
+    ]);
+
+    expect(useAppStore.getState().restoreExcludedCurves([firstCurve.curveId])).toEqual({ ok: true, changedCount: 1 });
+    expect(useAppStore.getState().selection?.selectedCurveIds).toEqual(new Set([secondCurve.curveId, thirdCurve.curveId]));
+    useAppStore.getState().applySelectionSet(created.ok ? created.selectionSetId! : "");
+    expect(useAppStore.getState().selection?.selectedCurveIds).toEqual(
+      new Set([firstCurve.curveId, secondCurve.curveId, thirdCurve.curveId])
+    );
+
+    expect(useAppStore.getState().excludeCurves(["unknown", firstCurve.curveId, firstCurve.curveId])).toEqual({
+      ok: true,
+      changedCount: 1
+    });
+  });
+
+  it("does not propagate an exclusion to appended same-label curves", () => {
+    const base = createOneSpecimenEightReagentDataset();
+    useAppStore.getState().loadDataset(base);
+    const excludedCurveId = base.curves[0].curveId;
+    useAppStore.getState().excludeCurves([excludedCurveId]);
+    const target = useAppStore.getState();
+    const pasted = parsePastedTable(`${base.curves[0].specimenLabel}\n${base.curves[0].reagentLabel}\n0.2\n1.2`, {
+      mode: "fullTable",
+      sourceName: "Repeated labels",
+      sourceInstanceId: "paste-same-label"
+    });
+    expect(pasted.ok).toBe(true);
+    if (!pasted.ok) return;
+
+    useAppStore.getState().appendPastedDataset(
+      pasted.dataset,
+      target.activeAnalysisId,
+      target.runtimeInstanceId,
+      target.revision
+    );
+
+    const state = useAppStore.getState();
+    expect(state.selection?.excludedCurveIds).toEqual(new Set([excludedCurveId]));
+    expect(state.dataset?.curves.filter((curve) =>
+      curve.specimenLabel === base.curves[0].specimenLabel && curve.reagentLabel === base.curves[0].reagentLabel
+    )).toHaveLength(2);
+  });
+
+  it("does not propagate an exclusion when the same Excel workbook is appended again", async () => {
+    await useAppStore.getState().importFile(createWorkbookFile("duplicate.xlsx", "Specimen 1", "A1", 0.1));
+    const originalCurveId = useAppStore.getState().dataset!.curves[0].curveId;
+    useAppStore.getState().excludeCurves([originalCurveId]);
+
+    await useAppStore.getState().appendFile(createWorkbookFile("duplicate.xlsx", "Specimen 1", "A1", 0.1));
+
+    const state = useAppStore.getState();
+    expect(state.dataset?.curves).toHaveLength(2);
+    expect(state.dataset?.curves.map((curve) => [curve.specimenLabel, curve.reagentLabel])).toEqual([
+      ["Specimen 1", "A1"],
+      ["Specimen 1", "A1"]
+    ]);
+    expect(new Set(state.dataset?.curves.map((curve) => curve.curveId)).size).toBe(2);
+    expect(state.selection?.excludedCurveIds).toEqual(new Set([originalCurveId]));
+  });
+
   it("rejects a paste preview when its target analysis changed or was recreated", () => {
     const pasted = parsePastedTable("S1\nA1\n0.1", { mode: "fullTable", sourceName: "Paste" });
     expect(pasted.ok).toBe(true);

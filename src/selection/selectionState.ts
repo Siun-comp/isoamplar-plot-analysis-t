@@ -5,6 +5,7 @@ export function createInitialSelectionState(dataset: PcrDataset): SelectionState
   return {
     groupingMode: "reagent",
     selectedCurveIds: new Set<string>(),
+    excludedCurveIds: new Set<string>(),
     collapsedGroupIds: createAllMajorGroupIds(dataset),
     orderedCurveIds: [...dataset.orderedCurveIds]
   };
@@ -18,6 +19,7 @@ export function setGroupingMode(state: SelectionState, groupingMode: GroupingMod
 }
 
 export function toggleCurveSelection(state: SelectionState, curveId: string): SelectionState {
+  if (state.excludedCurveIds.has(curveId)) return state;
   const selectedCurveIds = new Set(state.selectedCurveIds);
 
   if (selectedCurveIds.has(curveId)) {
@@ -36,6 +38,7 @@ export function setCurveSelection(state: SelectionState, curveIds: Iterable<stri
   const selectedCurveIds = new Set(state.selectedCurveIds);
 
   for (const curveId of curveIds) {
+    if (state.excludedCurveIds.has(curveId)) continue;
     if (selected) {
       selectedCurveIds.add(curveId);
     } else {
@@ -70,4 +73,3 @@ export function setAllGroupsCollapsed(dataset: PcrDataset, state: SelectionState
     collapsedGroupIds: collapsed ? createAllMajorGroupIds(dataset) : new Set<string>()
   };
 }
-

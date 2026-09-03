@@ -24,6 +24,7 @@ function createTestAnalysisState(): AnalysisState {
   const secondCurveId = dataset.curves[1].curveId;
   const selection = createInitialSelectionState(dataset);
   selection.selectedCurveIds.add(firstCurveId);
+  selection.excludedCurveIds.add(secondCurveId);
   selection.collapsedGroupIds.add(createGroupId("reagent", dataset.reagents[0].id));
   selection.orderedCurveIds = [secondCurveId, firstCurveId, ...selection.orderedCurveIds.slice(2)];
 
@@ -121,12 +122,14 @@ describe("analysis state serialization", () => {
 
     expect(serialized.schemaVersion).toBe(ANALYSIS_STATE_SCHEMA_VERSION);
     expect(serialized.selection.selectedCurveIds).toEqual([...state.selection.selectedCurveIds]);
+    expect(serialized.selection.excludedCurveIds).toEqual([...state.selection.excludedCurveIds]);
     expect(restored.analysisName).toBe(state.analysisName);
     expect(restored.dataset.curves).toHaveLength(state.dataset.curves.length);
     expect(restored.dataset.schemaVersion).toBe(2);
     expect(restored.dataset.curves[0].source.specimenHeader).toEqual(state.dataset.curves[0].source.specimenHeader);
     expect(restored.selection.selectedCurveIds).toBeInstanceOf(Set);
     expect([...restored.selection.selectedCurveIds]).toEqual([...state.selection.selectedCurveIds]);
+    expect([...restored.selection.excludedCurveIds]).toEqual([...state.selection.excludedCurveIds]);
     expect([...restored.selection.collapsedGroupIds]).toEqual([...state.selection.collapsedGroupIds]);
     expect(restored.selection.orderedCurveIds).toEqual(state.selection.orderedCurveIds);
     expect(restored.selectionSets).toEqual(state.selectionSets);
@@ -160,6 +163,7 @@ describe("analysis state serialization", () => {
     const sourceInstanceId = serialized.dataset.curves[0].source.sourceInstanceId;
 
     const restored = deserializeAnalysisState(serialized);
+    expect(restored.selection.excludedCurveIds).toEqual(new Set());
 
     if (schemaVersion >= 4) {
       expect(restored.selectionSets).toEqual(serialized.selectionSets);
@@ -180,6 +184,16 @@ describe("analysis state serialization", () => {
     if (schemaVersion >= 3) {
       expect(restored.dataset.curves[0].source.sourceInstanceId).toBe(sourceInstanceId);
     }
+  });
+
+  it.each([5, 6])("migrates schema %i with no excluded curves", (schemaVersion) => {
+    const serialized = JSON.parse(JSON.stringify(serializeAnalysisState(createTestAnalysisState())));
+    serialized.schemaVersion = schemaVersion;
+    delete serialized.selection.excludedCurveIds;
+
+    const restored = deserializeAnalysisState(serialized);
+
+    expect(restored.selection.excludedCurveIds).toEqual(new Set());
   });
 
   it("rejects schema 4 and 5 restore data with missing selection set fields", () => {
@@ -596,6 +610,16 @@ describe("analysis state serialization", () => {
         selection: { ...serialized.selection, selectedCurveIds: ["unknown-curve"] }
       })
     ).toThrow("unknown curveId");
+
+    expect(() =>
+      deserializeAnalysisState({
+        ...serialized,
+        selection: {
+          ...serialized.selection,
+          excludedCurveIds: [serialized.selection.selectedCurveIds[0]]
+        }
+      })
+    ).toThrow("both selected and excluded");
 
     expect(() =>
       deserializeAnalysisState({

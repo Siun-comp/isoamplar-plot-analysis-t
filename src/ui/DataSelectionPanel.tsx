@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { SelectionFilter } from "../data/types";
 import { useAppStore } from "../app/appStore";
@@ -9,6 +9,7 @@ import { getFilteredCurveIds, getMatchedCurveIds } from "../selection/searchCurv
 import { IndeterminateCheckbox } from "./IndeterminateCheckbox";
 import { SegmentedControl } from "./SegmentedControl";
 import { SelectionSetPanel } from "./SelectionSetPanel";
+import { DataExclusionDialog } from "./DataExclusionDialog";
 import { useWarningNavigation } from "./WarningNavigationContext";
 
 const groupingOptions: Array<{ value: GroupingMode; label: string }> = [
@@ -36,6 +37,11 @@ export function DataSelectionPanel() {
   const toggleCurve = useAppStore((state) => state.toggleCurve);
   const toggleGroup = useAppStore((state) => state.toggleGroup);
   const setAllGroupsCollapsed = useAppStore((state) => state.setAllGroupsCollapsed);
+  const excludeCurves = useAppStore((state) => state.excludeCurves);
+  const restoreExcludedCurves = useAppStore((state) => state.restoreExcludedCurves);
+  const [exclusionRequest, setExclusionRequest] = useState<
+    { mode: "exclude"; curveIds: string[]; label: string } | { mode: "restore" } | null
+  >(null);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const treeScrollRef = useRef<HTMLDivElement>(null);
   const { target: warningTarget, clearWarningReveal } = useWarningNavigation();
@@ -43,16 +49,29 @@ export function DataSelectionPanel() {
   const revealedCurveIds = useMemo(
     () =>
       warningRevealActive
-        ? new Set(warningTarget?.curveIds.filter((curveId) => dataset?.curves.some((curve) => curve.curveId === curveId)) ?? [])
+        ? new Set(warningTarget?.curveIds.filter(
+            (curveId) => dataset?.curves.some((curve) => curve.curveId === curveId) && !selection?.excludedCurveIds.has(curveId)
+          ) ?? [])
         : new Set<string>(),
-    [dataset, warningRevealActive, warningTarget]
+    [dataset, selection, warningRevealActive, warningTarget]
   );
+
+  const activeCurveIds = useMemo(() => {
+    if (!dataset || !selection) return new Set<string>();
+    return new Set(dataset.orderedCurveIds.filter((curveId) => !selection.excludedCurveIds.has(curveId)));
+  }, [dataset, selection]);
 
   const filteredCurveIds = useMemo(() => {
     if (!dataset || !selection) return new Set<string>();
     if (warningRevealActive) return revealedCurveIds;
-    return getFilteredCurveIds(dataset, getMatchedCurveIds(dataset, deferredSearchQuery), selection.selectedCurveIds, selectionFilter);
-  }, [dataset, deferredSearchQuery, revealedCurveIds, selection, selectionFilter, warningRevealActive]);
+    const filtered = getFilteredCurveIds(
+      dataset,
+      getMatchedCurveIds(dataset, deferredSearchQuery),
+      selection.selectedCurveIds,
+      selectionFilter
+    );
+    return new Set([...filtered].filter((curveId) => activeCurveIds.has(curveId)));
+  }, [activeCurveIds, dataset, deferredSearchQuery, revealedCurveIds, selection, selectionFilter, warningRevealActive]);
 
   const tree = useMemo(() => {
     if (!dataset || !selection) return [];
@@ -96,6 +115,10 @@ export function DataSelectionPanel() {
   }
 
   const selectedCount = selection.selectedCurveIds.size;
+  const requestExclusion = (curveIds: string[], label: string) => {
+    const activeIds = curveIds.filter((curveId) => activeCurveIds.has(curveId));
+    if (activeIds.length > 0) setExclusionRequest({ mode: "exclude", curveIds: activeIds, label });
+  };
 
   return (
     <div className="selection-workspace">
@@ -152,6 +175,14 @@ export function DataSelectionPanel() {
         <button type="button" onClick={() => setAllGroupsCollapsed(false)}>
           모두 펼치기
         </button>
+        <button
+          type="button"
+          className="excluded-manager-button"
+          disabled={selection.excludedCurveIds.size === 0}
+          onClick={() => setExclusionRequest({ mode: "restore" })}
+        >
+          제외 항목 {selection.excludedCurveIds.size}
+        </button>
       </div>
 
       <div ref={treeScrollRef} className="selection-tree" role="tree" aria-label="PCR curve selection tree">
@@ -175,10 +206,17 @@ export function DataSelectionPanel() {
                     {group.collapsed ? "▸" : "▾"} {group.label}
                   </button>
                   <span className="count-badge">{group.selectedCount}/{group.totalCount}</span>
+                  <button
+                    type="button"
+                    className="tree-exclude-button"
+                    title={`${group.label} 그룹을 분석에서 제외`}
+                    aria-label="그룹을 분석에서 제외"
+                    onClick={() => requestExclusion(group.curveIds, `${group.label} 그룹`)}
+                  >−</button>
                 </div>
                 {!group.collapsed &&
                   group.subgroups.map((subgroup) =>
-                    renderSubgroupRows({ subgroup, setCurvesSelected, toggleCurve, revealedCurveIds })
+                    renderSubgroupRows({ subgroup, setCurvesSelected, toggleCurve, revealedCurveIds, requestExclusion })
                   )}
               </section>
             ))}
@@ -211,10 +249,17 @@ export function DataSelectionPanel() {
                       {group.collapsed ? "▸" : "▾"} {group.label}
                     </button>
                     <span className="count-badge">{group.selectedCount}/{group.totalCount}</span>
+                    <button
+                      type="button"
+                      className="tree-exclude-button"
+                      title={`${group.label} 그룹을 분석에서 제외`}
+                      aria-label="그룹을 분석에서 제외"
+                      onClick={() => requestExclusion(group.curveIds, `${group.label} 그룹`)}
+                    >−</button>
                   </div>
                   {!group.collapsed &&
                     group.subgroups.map((subgroup) =>
-                      renderSubgroupRows({ subgroup, setCurvesSelected, toggleCurve, revealedCurveIds })
+                      renderSubgroupRows({ subgroup, setCurvesSelected, toggleCurve, revealedCurveIds, requestExclusion })
                     )}
                 </section>
               );
@@ -222,6 +267,28 @@ export function DataSelectionPanel() {
           </div>
         )}
       </div>
+      {exclusionRequest && (
+        <DataExclusionDialog
+          key={exclusionRequest.mode === "exclude" ? exclusionRequest.curveIds.join("|") : "restore"}
+          dataset={dataset}
+          mode={exclusionRequest.mode}
+          candidateCurveIds={
+            exclusionRequest.mode === "exclude"
+              ? exclusionRequest.curveIds
+              : [...selection.excludedCurveIds]
+          }
+          targetLabel={exclusionRequest.mode === "exclude" ? exclusionRequest.label : undefined}
+          onExclude={(curveIds) => {
+            excludeCurves(curveIds);
+            setExclusionRequest(null);
+          }}
+          onRestore={(curveIds) => {
+            restoreExcludedCurves(curveIds);
+            if ((useAppStore.getState().selection?.excludedCurveIds.size ?? 0) === 0) setExclusionRequest(null);
+          }}
+          onClose={() => setExclusionRequest(null)}
+        />
+      )}
     </div>
   );
 }
@@ -232,31 +299,42 @@ function renderSubgroupRows({
   subgroup,
   setCurvesSelected,
   toggleCurve,
-  revealedCurveIds
+  revealedCurveIds,
+  requestExclusion
 }: {
   subgroup: TreeSubgroup;
   setCurvesSelected: (curveIds: Iterable<string>, selected: boolean) => void;
   toggleCurve: (curveId: string) => void;
   revealedCurveIds: Set<string>;
+  requestExclusion: (curveIds: string[], label: string) => void;
 }) {
   if (subgroup.curves.length === 1) {
     const curve = subgroup.curves[0];
     return (
-      <label
+      <div
         className={`tree-row single-curve-row ${revealedCurveIds.has(curve.curveId) ? "is-warning-focus" : ""}`}
         data-curve-id={curve.curveId}
         data-warning-focus={revealedCurveIds.has(curve.curveId)}
         key={subgroup.groupId}
       >
-        <input
-          type="checkbox"
-          aria-label={`${curve.label} 선택 · ${curve.sourceLabel}`}
-          checked={curve.selected}
-          onChange={() => toggleCurve(curve.curveId)}
-        />
-        <span>{createSingleCurveRowLabel(subgroup.label, curve.label)}</span>
+        <label className="tree-curve-label">
+          <input
+            type="checkbox"
+            aria-label={`${curve.label} 선택 · ${curve.sourceLabel}`}
+            checked={curve.selected}
+            onChange={() => toggleCurve(curve.curveId)}
+          />
+          <span>{createSingleCurveRowLabel(subgroup.label, curve.label)}</span>
+        </label>
         {curve.warningCount > 0 && <span className="warning-dot" aria-label="warning">!</span>}
-      </label>
+        <button
+          type="button"
+          className="tree-exclude-button"
+          title="이 곡선을 분석에서 제외"
+          aria-label="곡선을 분석에서 제외"
+          onClick={() => requestExclusion([curve.curveId], curve.label)}
+        >−</button>
+      </div>
     );
   }
 
@@ -270,23 +348,39 @@ function renderSubgroupRows({
         />
         <span>{subgroup.label}</span>
         <span className="count-badge">{subgroup.selectedCount}/{subgroup.totalCount}</span>
+        <button
+          type="button"
+          className="tree-exclude-button"
+          title={`${subgroup.label} 그룹을 분석에서 제외`}
+          aria-label="그룹을 분석에서 제외"
+          onClick={() => requestExclusion(subgroup.curveIds, `${subgroup.label} 그룹`)}
+        >−</button>
       </div>
       {subgroup.curves.map((curve) => (
-        <label
+        <div
           className={`tree-row curve-row ${revealedCurveIds.has(curve.curveId) ? "is-warning-focus" : ""}`}
           data-curve-id={curve.curveId}
           data-warning-focus={revealedCurveIds.has(curve.curveId)}
           key={curve.curveId}
         >
-          <input
-            type="checkbox"
-            aria-label={`${curve.label} 선택 · ${curve.sourceLabel}`}
-            checked={curve.selected}
-            onChange={() => toggleCurve(curve.curveId)}
-          />
-          <span>{curve.label}</span>
+          <label className="tree-curve-label">
+            <input
+              type="checkbox"
+              aria-label={`${curve.label} 선택 · ${curve.sourceLabel}`}
+              checked={curve.selected}
+              onChange={() => toggleCurve(curve.curveId)}
+            />
+            <span>{curve.label}</span>
+          </label>
           {curve.warningCount > 0 && <span className="warning-dot" aria-label="warning">!</span>}
-        </label>
+          <button
+            type="button"
+            className="tree-exclude-button"
+            title="이 곡선을 분석에서 제외"
+            aria-label="곡선을 분석에서 제외"
+            onClick={() => requestExclusion([curve.curveId], curve.label)}
+          >−</button>
+        </div>
       ))}
     </div>
   );

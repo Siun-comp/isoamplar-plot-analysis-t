@@ -155,6 +155,8 @@ Active release gate
 - [x] Pages-base production build와 fresh Chromium 14/14
 - [x] complete `dist` pre/post Playwright byte-identical: `925692d6a95657e840b62d413de2e9fbdc50251e32b8897e43ec534f2981cf96`
 - [x] 1280x720 단일/복수 원본 제외 및 복구 dialog 시각 검수, browser warning/error 0
+- [x] commit `da8232d`, tag `v1.3.0`, Pages run `33773618844` 성공
+- [x] 공개 latest v1.3.0과 v1.2/v1.1/v1.0 실행 smoke, browser warning/error 0
 
 ## 롤백 절차
 1. 마지막 정상 SHA와 실패 candidate SHA를 기록한다.

@@ -13,7 +13,7 @@ Active
 
 - Active branch: `codex/audit-remediation`; release promotion targets only the `threshold` remote repository `isoamplar-plot-analysis-t`.
 - `IsoAmplar Plot Analysis T` is the sole maintained product. The original non-T deployment is an unmaintained historical rollback artifact and receives no further feature patches.
-- Current deployed stable release is semantic version `1.2.0`; v1.3.0 is the locally verified release candidate. v1.3.0 adds reversible exact-curve analysis exclusion while preserving raw fluorescence, provenance, Selection Sets, and full Analysis XLSX continuity. The verified v1.2.0 runtime is archived under `public/versions/v1.2.0/` with SHA-256 evidence.
+- Current deployed stable release is semantic version `1.3.0`. It adds reversible exact-curve analysis exclusion while preserving raw fluorescence, provenance, Selection Sets, and full Analysis XLSX continuity. The verified v1.2.0 runtime is archived under `public/versions/v1.2.0/` with SHA-256 evidence.
 - By D062, the existing v1.1 Korean user guide remains a historical artifact and is no longer regenerated for each release. Current behavior is documented through requirements, I/O, acceptance, changelog, release history, and this state file.
 - v1.1.0 adds blank/literal-`-` reagent-column exclusion without losing physical specimen inheritance anchors, extension-free default analysis names, date-neutral Analysis XLSX save names, editable FAM/HEX Y presets, common non-clinical Positive/ND Threshold status projections, Selected Data XLSX schema 3, and an in-app version/history dialog with archived-runtime links.
 - v1.2.0 Analysis XLSX uses schema 6 and preserves the full dataset, settings, Selection Sets, and both Common/per-reagent Threshold configurations. Schema 5 restores into Common mode, and older supported schemas still migrate before semantic validation.
@@ -24,6 +24,7 @@ Active
 - The v1.1.0 local gate has Vitest 45 files / 381 tests, audit 1/1, production dependency vulnerabilities 0, Pages-base production build success, fresh Chromium 13/13, and a regenerated/visually reviewed 20-page synthetic-only Korean user guide. The exact `dist` tree remained byte-identical before/after Playwright at `d6be0ef1eef8ecc8c1a86d9061aa19536da326eb4dd0e79ff02d02e4267b310c`.
 - Release commit `60b94148ff95824cfe2cde44ca11f6eab782676c` is tagged `v1.1.0` and deployed by successful Pages run `30802527069`. Public smoke confirmed the latest v1.1.0 UI and executable archived v1.0.0 runtime with no browser console warning/error.
 - v1.2.0 promotion head `693609364fb83f5df75da1f8c6109de85ce316b8` is tagged `v1.2.0` and deployed by successful Pages run `33558251077`. Public smoke confirmed latest v1.2.0 plus executable v1.1.0/v1.0.0 archives with no browser console warning/error. Pre-deploy runs `33557883231` and `33558044276` failed before deployment while the immutable archive Git attributes were hardened; neither failed run published a runtime.
+- v1.3.0 release commit `da8232dcdd89c05fd0334862968e2d816f82e913` is tagged `v1.3.0` and deployed by successful Pages run `33773618844`. Public smoke confirmed latest v1.3.0/schema 7 plus executable v1.2.0/v1.1.0/v1.0.0 archives with zero browser warning/error.
 - Pre-release rollback anchors remain the immutable `v1.0.0` runtime and historical Git tags. No user workbook, real specimen label, or real fluorescence data is committed.
 - Immutable `public/versions/**` runtime files are Git binary assets so release bytes and SHA-256 manifests are not altered by line-ending normalization or patch-format checks.
 - Pre-remediation checkpoint: commit `319daa901221b4d5811eafb44f82319ddcedf296`, tag `checkpoint/audit-remediation-baseline-20260711`.
@@ -74,18 +75,18 @@ Active
 - Threshold is part of the sole maintained T edition. The implementation preserves raw fluorescence, separates first observed at-or-above evidence from Cycle-axis linear crossing estimates, never bridges `null`, and excludes Ct/Cq/Tt/Tp and clinical interpretation. `Positive`/`ND` are explicitly user-set Threshold crossing-status labels, not clinical classifications.
 
 ## Current Goal
-Release v1.3.0 with reversible, duplicate-safe analysis exclusion while preserving raw fluorescence and Analysis XLSX continuity.
+Operate v1.3.0 in normal use and collect only evidence-based maintenance needs.
 
 ## Current Milestone
-M18 v1.3.0 exact curve exclusion/restore passed local release verification and is ready for promotion.
+M18 v1.3.0 exact curve exclusion/restore is deployed and publicly verified.
 
 ## Last Completed Step
-Completed full unit/audit/dependency/build/Chromium/dist-integrity and desktop visual verification for schema 7 `curveId` exclusion/restore. Archived the deployed v1.2.0 runtime before source changes.
+Committed/tagged v1.3.0, passed GitHub Pages run `33773618844`, and public-smoked latest plus v1.2/v1.1/v1.0 runtimes with no browser warning/error.
 
 ## Exact Next 3 Tasks
-1. Integrate final independent domain/data and QA/release audit findings.
-2. Commit, tag, and push only the maintained `threshold` repository, then wait for Pages success.
-3. Public-smoke latest v1.3.0 and immutable v1.2/v1.1/v1.0 runtimes, then record deployment evidence.
+1. Use v1.3.0 with representative workbooks and record reproducible issues only if encountered.
+2. Preserve v1.3.0 Analysis XLSX files for continuation and regression evidence.
+3. Before the next version, archive v1.3.0 and repeat the established local/CI/public release gates.
 
 ## Latest Changed Files
 - v1.3.0 runtime/state: `src/data/types.ts`, `src/selection/selectionState.ts`, `src/app/appStore.ts`, `src/analysis/analysisState.ts`, `src/analysis/analysisWorkbook.ts`

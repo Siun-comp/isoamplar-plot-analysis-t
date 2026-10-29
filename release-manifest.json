@@ -1,0 +1,661 @@
+{
+  "schema": 1,
+  "treeHash": "62edbca4840900f52c6ae8e67206b66d95acdcbd449c51c229325339794063f2",
+  "files": [
+    {
+      "path": "THIRD_PARTY_NOTICES.txt",
+      "bytes": 38252,
+      "sha256": "dafca8e61e2eb1e0e1d4445eb1b5f368d59524cc8e81121888cab7feb3e3bc29"
+    },
+    {
+      "path": "apple-touch-icon.png",
+      "bytes": 13450,
+      "sha256": "11e780f6782b2138879ce5516798042f613de354d4b6c06e0f7cd619452298d0"
+    },
+    {
+      "path": "assets/Axis-DtDXW_5t.js",
+      "bytes": 241485,
+      "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
+    },
+    {
+      "path": "assets/ChartView-NjGXJvUI.js",
+      "bytes": 8685,
+      "sha256": "9cb255d77345437af9364ff22ffd522fd073c837a07e6ab4cdf3a071e0a9ea34"
+    },
+    {
+      "path": "assets/charts-C1yWzhbc.js",
+      "bytes": 238782,
+      "sha256": "f49e6e3f29e87d8f075f5493366ca13b8d5b31804ecd88b2dfb5ca946247de6f"
+    },
+    {
+      "path": "assets/components-De8aQx5T.js",
+      "bytes": 190524,
+      "sha256": "ddf619f1b3d4c799883bf34f2add841026c41e4ce48fe1cf6383acd1e3ee6ff6"
+    },
+    {
+      "path": "assets/core-CHeHsHOm.js",
+      "bytes": 4981,
+      "sha256": "9840e75c980ee90e7e83f9f347ba911ece1f21864a2aaaa36bbd04aa764021ad"
+    },
+    {
+      "path": "assets/createSeriesData-oB_Zu_UR.js",
+      "bytes": 3208,
+      "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
+    },
+    {
+      "path": "assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+      "bytes": 66459,
+      "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
+    },
+    {
+      "path": "assets/graphic-BBQJ00JB.js",
+      "bytes": 150439,
+      "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
+    },
+    {
+      "path": "assets/index-CT9-Sacs.js",
+      "bytes": 626764,
+      "sha256": "758dcbc69545846cf593648735e24f5893fa6c24c4414242cb906310f56cbee9"
+    },
+    {
+      "path": "assets/index-DjZjbG44.css",
+      "bytes": 59979,
+      "sha256": "7f556949c50cd5fedc3121776c19c5e012b6cfec14373233b9a58169d5a431fe"
+    },
+    {
+      "path": "assets/install-BXu0TYwC.js",
+      "bytes": 71793,
+      "sha256": "c8a1b3b31cbe90080414bea08462efb309f7c591854a6be05403c15717e8bc08"
+    },
+    {
+      "path": "assets/install-X42mEo9c.js",
+      "bytes": 23055,
+      "sha256": "a37267b7df0f5b01b6034f80fe85362133f35178b710ace429b24fcb04119517"
+    },
+    {
+      "path": "assets/install-idcfyR9g.js",
+      "bytes": 79220,
+      "sha256": "493f0343bad6b0234f6e27f4f58bf9169730ded1ea16b6e52fefda4793285fc5"
+    },
+    {
+      "path": "assets/installCanvasRenderer-u3c4MenG.js",
+      "bytes": 13917,
+      "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
+    },
+    {
+      "path": "assets/logMWorker-DBwqUIv3.js",
+      "bytes": 9155,
+      "sha256": "649c92d5f9ed9ce84cb6e394f85aba2b151f541e52c337eaf7ba99266504ae02"
+    },
+    {
+      "path": "assets/parseGeoJson-BRELWpDE.js",
+      "bytes": 4313,
+      "sha256": "5baffe9a49975540fede98039bad91c4b48aac82e5bb9efa9235844ffcfd207d"
+    },
+    {
+      "path": "assets/renderers-CzT9A_km.js",
+      "bytes": 20096,
+      "sha256": "9197d5a13916e6886b9a64256f2bfcd634d0cbed00cf0cd25122842c019a4499"
+    },
+    {
+      "path": "assets/xlsx-CKwrMZHi.js",
+      "bytes": 499549,
+      "sha256": "f895dd67a19c78f7cfa4069482c2f9bd4c754167dc8f9b15f11988e5358ee1ba"
+    },
+    {
+      "path": "favicon-16.png",
+      "bytes": 583,
+      "sha256": "74bfc46633fe2f0e705b3c1df41ed1e527d864347912c4abe2526ced148cdad9"
+    },
+    {
+      "path": "favicon-32.png",
+      "bytes": 1352,
+      "sha256": "9cac8c9669f9c1ae50bfa049a551e78dc9181d1a5c730c0271cbb89fc40cc8ea"
+    },
+    {
+      "path": "favicon.svg",
+      "bytes": 1751,
+      "sha256": "75ce31bdb49e86ac60988df15ef1f82145c4cd44d5944b64bb25992784a5d584"
+    },
+    {
+      "path": "icon-192.png",
+      "bytes": 14593,
+      "sha256": "c5da7efd580b2b2f93318f14b509b4efbed17eb5e406538312fcc2aa6d5d33cc"
+    },
+    {
+      "path": "icon-512.png",
+      "bytes": 55845,
+      "sha256": "4a1fc51140b21b8c9378bef6d095d44a3df498e28b44d13b23bd0b64ac436ea6"
+    },
+    {
+      "path": "index.html",
+      "bytes": 876,
+      "sha256": "2b71c03704c6e97171daae5b3e49afe81efcbb386928260c7e17f029239f11fe"
+    },
+    {
+      "path": "manifest.webmanifest",
+      "bytes": 535,
+      "sha256": "8f70eebe9e7e83374a42878f9124e52c8ddc9e122a0df9ec401ac6b4ffa012a0"
+    },
+    {
+      "path": "versions/v1.0.0/apple-touch-icon.png",
+      "bytes": 13450,
+      "sha256": "11e780f6782b2138879ce5516798042f613de354d4b6c06e0f7cd619452298d0"
+    },
+    {
+      "path": "versions/v1.0.0/assets/Axis-DtDXW_5t.js",
+      "bytes": 241485,
+      "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
+    },
+    {
+      "path": "versions/v1.0.0/assets/ChartView-C7sdUe-l.js",
+      "bytes": 8685,
+      "sha256": "a87d6da1963d825aa0e01072d881fe38e172a98fb79cd19b0ca8efb8c7bd11d2"
+    },
+    {
+      "path": "versions/v1.0.0/assets/charts-C1yWzhbc.js",
+      "bytes": 238782,
+      "sha256": "f49e6e3f29e87d8f075f5493366ca13b8d5b31804ecd88b2dfb5ca946247de6f"
+    },
+    {
+      "path": "versions/v1.0.0/assets/components-De8aQx5T.js",
+      "bytes": 190524,
+      "sha256": "ddf619f1b3d4c799883bf34f2add841026c41e4ce48fe1cf6383acd1e3ee6ff6"
+    },
+    {
+      "path": "versions/v1.0.0/assets/core-CHeHsHOm.js",
+      "bytes": 4981,
+      "sha256": "9840e75c980ee90e7e83f9f347ba911ece1f21864a2aaaa36bbd04aa764021ad"
+    },
+    {
+      "path": "versions/v1.0.0/assets/createSeriesData-oB_Zu_UR.js",
+      "bytes": 3208,
+      "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
+    },
+    {
+      "path": "versions/v1.0.0/assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+      "bytes": 66459,
+      "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
+    },
+    {
+      "path": "versions/v1.0.0/assets/graphic-BBQJ00JB.js",
+      "bytes": 150439,
+      "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
+    },
+    {
+      "path": "versions/v1.0.0/assets/index-511XEwVU.js",
+      "bytes": 475945,
+      "sha256": "dce823dc7377ddd9d7f61daa218db52cc8c67d6e209f1e5ac2c1cbc9ac0bfaa4"
+    },
+    {
+      "path": "versions/v1.0.0/assets/index-CFkqW9WI.css",
+      "bytes": 38911,
+      "sha256": "bf446a74990687d5b422732e500acd0f13e250cb97b9f54d97c450a852adda33"
+    },
+    {
+      "path": "versions/v1.0.0/assets/install-BXu0TYwC.js",
+      "bytes": 71793,
+      "sha256": "c8a1b3b31cbe90080414bea08462efb309f7c591854a6be05403c15717e8bc08"
+    },
+    {
+      "path": "versions/v1.0.0/assets/install-X42mEo9c.js",
+      "bytes": 23055,
+      "sha256": "a37267b7df0f5b01b6034f80fe85362133f35178b710ace429b24fcb04119517"
+    },
+    {
+      "path": "versions/v1.0.0/assets/install-idcfyR9g.js",
+      "bytes": 79220,
+      "sha256": "493f0343bad6b0234f6e27f4f58bf9169730ded1ea16b6e52fefda4793285fc5"
+    },
+    {
+      "path": "versions/v1.0.0/assets/installCanvasRenderer-u3c4MenG.js",
+      "bytes": 13917,
+      "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
+    },
+    {
+      "path": "versions/v1.0.0/assets/parseGeoJson-BRELWpDE.js",
+      "bytes": 4313,
+      "sha256": "5baffe9a49975540fede98039bad91c4b48aac82e5bb9efa9235844ffcfd207d"
+    },
+    {
+      "path": "versions/v1.0.0/assets/renderers-CzT9A_km.js",
+      "bytes": 20096,
+      "sha256": "9197d5a13916e6886b9a64256f2bfcd634d0cbed00cf0cd25122842c019a4499"
+    },
+    {
+      "path": "versions/v1.0.0/assets/xlsx-CKwrMZHi.js",
+      "bytes": 499549,
+      "sha256": "f895dd67a19c78f7cfa4069482c2f9bd4c754167dc8f9b15f11988e5358ee1ba"
+    },
+    {
+      "path": "versions/v1.0.0/favicon-16.png",
+      "bytes": 583,
+      "sha256": "74bfc46633fe2f0e705b3c1df41ed1e527d864347912c4abe2526ced148cdad9"
+    },
+    {
+      "path": "versions/v1.0.0/favicon-32.png",
+      "bytes": 1352,
+      "sha256": "9cac8c9669f9c1ae50bfa049a551e78dc9181d1a5c730c0271cbb89fc40cc8ea"
+    },
+    {
+      "path": "versions/v1.0.0/favicon.svg",
+      "bytes": 1751,
+      "sha256": "75ce31bdb49e86ac60988df15ef1f82145c4cd44d5944b64bb25992784a5d584"
+    },
+    {
+      "path": "versions/v1.0.0/icon-192.png",
+      "bytes": 14593,
+      "sha256": "c5da7efd580b2b2f93318f14b509b4efbed17eb5e406538312fcc2aa6d5d33cc"
+    },
+    {
+      "path": "versions/v1.0.0/icon-512.png",
+      "bytes": 55845,
+      "sha256": "4a1fc51140b21b8c9378bef6d095d44a3df498e28b44d13b23bd0b64ac436ea6"
+    },
+    {
+      "path": "versions/v1.0.0/index.html",
+      "bytes": 908,
+      "sha256": "95b9db2931dd21869009f87ad06b49167b985a958211d8649003ebe7f2cc048b"
+    },
+    {
+      "path": "versions/v1.0.0/manifest.webmanifest",
+      "bytes": 535,
+      "sha256": "8f70eebe9e7e83374a42878f9124e52c8ddc9e122a0df9ec401ac6b4ffa012a0"
+    },
+    {
+      "path": "versions/v1.0.0/release-manifest.json",
+      "bytes": 4159,
+      "sha256": "7ccadd5e2ebadaba07436217b355579263e32aa92fb99d7e13a891fc8b8318c9"
+    },
+    {
+      "path": "versions/v1.1.0/apple-touch-icon.png",
+      "bytes": 13450,
+      "sha256": "11e780f6782b2138879ce5516798042f613de354d4b6c06e0f7cd619452298d0"
+    },
+    {
+      "path": "versions/v1.1.0/assets/Axis-DtDXW_5t.js",
+      "bytes": 241485,
+      "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
+    },
+    {
+      "path": "versions/v1.1.0/assets/ChartView-DwwhcfJz.js",
+      "bytes": 8685,
+      "sha256": "855707777070d415ffcf07da24be4e22e66a82057092d40a2aedf27580c74c83"
+    },
+    {
+      "path": "versions/v1.1.0/assets/charts-C1yWzhbc.js",
+      "bytes": 238782,
+      "sha256": "f49e6e3f29e87d8f075f5493366ca13b8d5b31804ecd88b2dfb5ca946247de6f"
+    },
+    {
+      "path": "versions/v1.1.0/assets/components-De8aQx5T.js",
+      "bytes": 190524,
+      "sha256": "ddf619f1b3d4c799883bf34f2add841026c41e4ce48fe1cf6383acd1e3ee6ff6"
+    },
+    {
+      "path": "versions/v1.1.0/assets/core-CHeHsHOm.js",
+      "bytes": 4981,
+      "sha256": "9840e75c980ee90e7e83f9f347ba911ece1f21864a2aaaa36bbd04aa764021ad"
+    },
+    {
+      "path": "versions/v1.1.0/assets/createSeriesData-oB_Zu_UR.js",
+      "bytes": 3208,
+      "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
+    },
+    {
+      "path": "versions/v1.1.0/assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+      "bytes": 66459,
+      "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
+    },
+    {
+      "path": "versions/v1.1.0/assets/graphic-BBQJ00JB.js",
+      "bytes": 150439,
+      "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
+    },
+    {
+      "path": "versions/v1.1.0/assets/index-BoKlEpqT.css",
+      "bytes": 40956,
+      "sha256": "ac5e1f00584479c7b1dd89a2d44b4d0771871d3342ed6e8836c2c9a1ae79d4fb"
+    },
+    {
+      "path": "versions/v1.1.0/assets/index-DRzVmKuL.js",
+      "bytes": 483902,
+      "sha256": "9a2ea8cb7454a565a679a757d582684dfb47c405e369090ed7d261cba991f986"
+    },
+    {
+      "path": "versions/v1.1.0/assets/install-BXu0TYwC.js",
+      "bytes": 71793,
+      "sha256": "c8a1b3b31cbe90080414bea08462efb309f7c591854a6be05403c15717e8bc08"
+    },
+    {
+      "path": "versions/v1.1.0/assets/install-X42mEo9c.js",
+      "bytes": 23055,
+      "sha256": "a37267b7df0f5b01b6034f80fe85362133f35178b710ace429b24fcb04119517"
+    },
+    {
+      "path": "versions/v1.1.0/assets/install-idcfyR9g.js",
+      "bytes": 79220,
+      "sha256": "493f0343bad6b0234f6e27f4f58bf9169730ded1ea16b6e52fefda4793285fc5"
+    },
+    {
+      "path": "versions/v1.1.0/assets/installCanvasRenderer-u3c4MenG.js",
+      "bytes": 13917,
+      "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
+    },
+    {
+      "path": "versions/v1.1.0/assets/parseGeoJson-BRELWpDE.js",
+      "bytes": 4313,
+      "sha256": "5baffe9a49975540fede98039bad91c4b48aac82e5bb9efa9235844ffcfd207d"
+    },
+    {
+      "path": "versions/v1.1.0/assets/renderers-CzT9A_km.js",
+      "bytes": 20096,
+      "sha256": "9197d5a13916e6886b9a64256f2bfcd634d0cbed00cf0cd25122842c019a4499"
+    },
+    {
+      "path": "versions/v1.1.0/assets/xlsx-CKwrMZHi.js",
+      "bytes": 499549,
+      "sha256": "f895dd67a19c78f7cfa4069482c2f9bd4c754167dc8f9b15f11988e5358ee1ba"
+    },
+    {
+      "path": "versions/v1.1.0/favicon-16.png",
+      "bytes": 583,
+      "sha256": "74bfc46633fe2f0e705b3c1df41ed1e527d864347912c4abe2526ced148cdad9"
+    },
+    {
+      "path": "versions/v1.1.0/favicon-32.png",
+      "bytes": 1352,
+      "sha256": "9cac8c9669f9c1ae50bfa049a551e78dc9181d1a5c730c0271cbb89fc40cc8ea"
+    },
+    {
+      "path": "versions/v1.1.0/favicon.svg",
+      "bytes": 1775,
+      "sha256": "282b9b1825dcf1e08758bdcebdba711ef623874fe496c7d5e9ff5702e890de3d"
+    },
+    {
+      "path": "versions/v1.1.0/icon-192.png",
+      "bytes": 14593,
+      "sha256": "c5da7efd580b2b2f93318f14b509b4efbed17eb5e406538312fcc2aa6d5d33cc"
+    },
+    {
+      "path": "versions/v1.1.0/icon-512.png",
+      "bytes": 55845,
+      "sha256": "4a1fc51140b21b8c9378bef6d095d44a3df498e28b44d13b23bd0b64ac436ea6"
+    },
+    {
+      "path": "versions/v1.1.0/index.html",
+      "bytes": 926,
+      "sha256": "2ab3217ed84a345dcc0cc6fdefb7d5fe548309bc3db7a7a1844299e4d66dd6fe"
+    },
+    {
+      "path": "versions/v1.1.0/manifest.webmanifest",
+      "bytes": 559,
+      "sha256": "6aad1aab269f19b5a3888d35673bebd356ab8d7a63413bd6d6462dc29363bcdd"
+    },
+    {
+      "path": "versions/v1.1.0/release-manifest.json",
+      "bytes": 4159,
+      "sha256": "6e18757d1334616a69c7685864f09ce4d8dcc7adf8aef3d5efa55149e81e510a"
+    },
+    {
+      "path": "versions/v1.2.0/apple-touch-icon.png",
+      "bytes": 13450,
+      "sha256": "11e780f6782b2138879ce5516798042f613de354d4b6c06e0f7cd619452298d0"
+    },
+    {
+      "path": "versions/v1.2.0/assets/Axis-DtDXW_5t.js",
+      "bytes": 241485,
+      "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
+    },
+    {
+      "path": "versions/v1.2.0/assets/ChartView-BstPbB5D.js",
+      "bytes": 8685,
+      "sha256": "4b8325ea6877efe620d1aec651f76adc8c98e5746709ff03c29b7f5f45d00f53"
+    },
+    {
+      "path": "versions/v1.2.0/assets/charts-C1yWzhbc.js",
+      "bytes": 238782,
+      "sha256": "f49e6e3f29e87d8f075f5493366ca13b8d5b31804ecd88b2dfb5ca946247de6f"
+    },
+    {
+      "path": "versions/v1.2.0/assets/components-De8aQx5T.js",
+      "bytes": 190524,
+      "sha256": "ddf619f1b3d4c799883bf34f2add841026c41e4ce48fe1cf6383acd1e3ee6ff6"
+    },
+    {
+      "path": "versions/v1.2.0/assets/core-CHeHsHOm.js",
+      "bytes": 4981,
+      "sha256": "9840e75c980ee90e7e83f9f347ba911ece1f21864a2aaaa36bbd04aa764021ad"
+    },
+    {
+      "path": "versions/v1.2.0/assets/createSeriesData-oB_Zu_UR.js",
+      "bytes": 3208,
+      "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
+    },
+    {
+      "path": "versions/v1.2.0/assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+      "bytes": 66459,
+      "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
+    },
+    {
+      "path": "versions/v1.2.0/assets/graphic-BBQJ00JB.js",
+      "bytes": 150439,
+      "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
+    },
+    {
+      "path": "versions/v1.2.0/assets/index-C3GbJ-k9.css",
+      "bytes": 43460,
+      "sha256": "d37549e4807ae0240a240b0293ce3575219cf443e5298b75b73402d17bfbf08d"
+    },
+    {
+      "path": "versions/v1.2.0/assets/index-fBIaWyxD.js",
+      "bytes": 496508,
+      "sha256": "0f286894d2f94bafe4226e684fd2e80329be201f917724da67b4f754e43ccefb"
+    },
+    {
+      "path": "versions/v1.2.0/assets/install-BXu0TYwC.js",
+      "bytes": 71793,
+      "sha256": "c8a1b3b31cbe90080414bea08462efb309f7c591854a6be05403c15717e8bc08"
+    },
+    {
+      "path": "versions/v1.2.0/assets/install-X42mEo9c.js",
+      "bytes": 23055,
+      "sha256": "a37267b7df0f5b01b6034f80fe85362133f35178b710ace429b24fcb04119517"
+    },
+    {
+      "path": "versions/v1.2.0/assets/install-idcfyR9g.js",
+      "bytes": 79220,
+      "sha256": "493f0343bad6b0234f6e27f4f58bf9169730ded1ea16b6e52fefda4793285fc5"
+    },
+    {
+      "path": "versions/v1.2.0/assets/installCanvasRenderer-u3c4MenG.js",
+      "bytes": 13917,
+      "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
+    },
+    {
+      "path": "versions/v1.2.0/assets/parseGeoJson-BRELWpDE.js",
+      "bytes": 4313,
+      "sha256": "5baffe9a49975540fede98039bad91c4b48aac82e5bb9efa9235844ffcfd207d"
+    },
+    {
+      "path": "versions/v1.2.0/assets/renderers-CzT9A_km.js",
+      "bytes": 20096,
+      "sha256": "9197d5a13916e6886b9a64256f2bfcd634d0cbed00cf0cd25122842c019a4499"
+    },
+    {
+      "path": "versions/v1.2.0/assets/xlsx-CKwrMZHi.js",
+      "bytes": 499549,
+      "sha256": "f895dd67a19c78f7cfa4069482c2f9bd4c754167dc8f9b15f11988e5358ee1ba"
+    },
+    {
+      "path": "versions/v1.2.0/favicon-16.png",
+      "bytes": 583,
+      "sha256": "74bfc46633fe2f0e705b3c1df41ed1e527d864347912c4abe2526ced148cdad9"
+    },
+    {
+      "path": "versions/v1.2.0/favicon-32.png",
+      "bytes": 1352,
+      "sha256": "9cac8c9669f9c1ae50bfa049a551e78dc9181d1a5c730c0271cbb89fc40cc8ea"
+    },
+    {
+      "path": "versions/v1.2.0/favicon.svg",
+      "bytes": 1751,
+      "sha256": "75ce31bdb49e86ac60988df15ef1f82145c4cd44d5944b64bb25992784a5d584"
+    },
+    {
+      "path": "versions/v1.2.0/icon-192.png",
+      "bytes": 14593,
+      "sha256": "c5da7efd580b2b2f93318f14b509b4efbed17eb5e406538312fcc2aa6d5d33cc"
+    },
+    {
+      "path": "versions/v1.2.0/icon-512.png",
+      "bytes": 55845,
+      "sha256": "4a1fc51140b21b8c9378bef6d095d44a3df498e28b44d13b23bd0b64ac436ea6"
+    },
+    {
+      "path": "versions/v1.2.0/index.html",
+      "bytes": 908,
+      "sha256": "05af6b05b528c476f45cbde87e6051cd7074419ddea4598cc3f22cc1a81c40a9"
+    },
+    {
+      "path": "versions/v1.2.0/manifest.webmanifest",
+      "bytes": 535,
+      "sha256": "8f70eebe9e7e83374a42878f9124e52c8ddc9e122a0df9ec401ac6b4ffa012a0"
+    },
+    {
+      "path": "versions/v1.2.0/release-manifest.json",
+      "bytes": 4159,
+      "sha256": "0f5acc898273bcea5c8366ffc077d3cb4f856972daae8af71e31969c4fe01947"
+    },
+    {
+      "path": "versions/v1.3.0/apple-touch-icon.png",
+      "bytes": 13450,
+      "sha256": "11e780f6782b2138879ce5516798042f613de354d4b6c06e0f7cd619452298d0"
+    },
+    {
+      "path": "versions/v1.3.0/assets/Axis-DtDXW_5t.js",
+      "bytes": 241485,
+      "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
+    },
+    {
+      "path": "versions/v1.3.0/assets/ChartView-M4ap6k28.js",
+      "bytes": 8685,
+      "sha256": "773ce5aa6b48b3b1e55fcb5eeb632101cd4612b6488d196a5ddd785a4dfac3e2"
+    },
+    {
+      "path": "versions/v1.3.0/assets/charts-C1yWzhbc.js",
+      "bytes": 238782,
+      "sha256": "f49e6e3f29e87d8f075f5493366ca13b8d5b31804ecd88b2dfb5ca946247de6f"
+    },
+    {
+      "path": "versions/v1.3.0/assets/components-De8aQx5T.js",
+      "bytes": 190524,
+      "sha256": "ddf619f1b3d4c799883bf34f2add841026c41e4ce48fe1cf6383acd1e3ee6ff6"
+    },
+    {
+      "path": "versions/v1.3.0/assets/core-CHeHsHOm.js",
+      "bytes": 4981,
+      "sha256": "9840e75c980ee90e7e83f9f347ba911ece1f21864a2aaaa36bbd04aa764021ad"
+    },
+    {
+      "path": "versions/v1.3.0/assets/createSeriesData-oB_Zu_UR.js",
+      "bytes": 3208,
+      "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
+    },
+    {
+      "path": "versions/v1.3.0/assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+      "bytes": 66459,
+      "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
+    },
+    {
+      "path": "versions/v1.3.0/assets/graphic-BBQJ00JB.js",
+      "bytes": 150439,
+      "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
+    },
+    {
+      "path": "versions/v1.3.0/assets/index-BKNOuP55.css",
+      "bytes": 45602,
+      "sha256": "311138f024cc98a1f0f280bdbdc390d54b75ae258e10b109f60b886a4ecc20e4"
+    },
+    {
+      "path": "versions/v1.3.0/assets/index-D-cOOFFK.js",
+      "bytes": 505729,
+      "sha256": "78f6786387dc1c21a7524c72b8b55bc12340e8826309d598a1ba38f92b983bc9"
+    },
+    {
+      "path": "versions/v1.3.0/assets/install-BXu0TYwC.js",
+      "bytes": 71793,
+      "sha256": "c8a1b3b31cbe90080414bea08462efb309f7c591854a6be05403c15717e8bc08"
+    },
+    {
+      "path": "versions/v1.3.0/assets/install-X42mEo9c.js",
+      "bytes": 23055,
+      "sha256": "a37267b7df0f5b01b6034f80fe85362133f35178b710ace429b24fcb04119517"
+    },
+    {
+      "path": "versions/v1.3.0/assets/install-idcfyR9g.js",
+      "bytes": 79220,
+      "sha256": "493f0343bad6b0234f6e27f4f58bf9169730ded1ea16b6e52fefda4793285fc5"
+    },
+    {
+      "path": "versions/v1.3.0/assets/installCanvasRenderer-u3c4MenG.js",
+      "bytes": 13917,
+      "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
+    },
+    {
+      "path": "versions/v1.3.0/assets/parseGeoJson-BRELWpDE.js",
+      "bytes": 4313,
+      "sha256": "5baffe9a49975540fede98039bad91c4b48aac82e5bb9efa9235844ffcfd207d"
+    },
+    {
+      "path": "versions/v1.3.0/assets/renderers-CzT9A_km.js",
+      "bytes": 20096,
+      "sha256": "9197d5a13916e6886b9a64256f2bfcd634d0cbed00cf0cd25122842c019a4499"
+    },
+    {
+      "path": "versions/v1.3.0/assets/xlsx-CKwrMZHi.js",
+      "bytes": 499549,
+      "sha256": "f895dd67a19c78f7cfa4069482c2f9bd4c754167dc8f9b15f11988e5358ee1ba"
+    },
+    {
+      "path": "versions/v1.3.0/favicon-16.png",
+      "bytes": 583,
+      "sha256": "74bfc46633fe2f0e705b3c1df41ed1e527d864347912c4abe2526ced148cdad9"
+    },
+    {
+      "path": "versions/v1.3.0/favicon-32.png",
+      "bytes": 1352,
+      "sha256": "9cac8c9669f9c1ae50bfa049a551e78dc9181d1a5c730c0271cbb89fc40cc8ea"
+    },
+    {
+      "path": "versions/v1.3.0/favicon.svg",
+      "bytes": 1775,
+      "sha256": "282b9b1825dcf1e08758bdcebdba711ef623874fe496c7d5e9ff5702e890de3d"
+    },
+    {
+      "path": "versions/v1.3.0/icon-192.png",
+      "bytes": 14593,
+      "sha256": "c5da7efd580b2b2f93318f14b509b4efbed17eb5e406538312fcc2aa6d5d33cc"
+    },
+    {
+      "path": "versions/v1.3.0/icon-512.png",
+      "bytes": 55845,
+      "sha256": "4a1fc51140b21b8c9378bef6d095d44a3df498e28b44d13b23bd0b64ac436ea6"
+    },
+    {
+      "path": "versions/v1.3.0/index.html",
+      "bytes": 926,
+      "sha256": "0072c19b6fab217f2a886df6eb137eebe49092048d44a4d3a78ab93939364690"
+    },
+    {
+      "path": "versions/v1.3.0/manifest.webmanifest",
+      "bytes": 559,
+      "sha256": "6aad1aab269f19b5a3888d35673bebd356ab8d7a63413bd6d6462dc29363bcdd"
+    },
+    {
+      "path": "versions/v1.3.0/release-manifest.json",
+      "bytes": 4159,
+      "sha256": "e35df7a034d7a6aa3e4b3d549bbf99bc20562ea88834d3725681026c1cf318cc"
+    }
+  ]
+}

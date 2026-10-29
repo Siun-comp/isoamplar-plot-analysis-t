@@ -1,2 +1,8 @@
-*.pdf binary
-public/versions/** binary
+# Preserve payload and manifest bytes on every checkout, including Windows.
+site/** -text -diff -merge
+release-manifest.json -text -diff -merge
+release-policy.json -text -diff -merge
+README.md text eol=lf
+verify-artifacts.mjs text eol=lf
+.github/workflows/pages.yml text eol=lf
+.gitattributes text eol=lf

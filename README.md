@@ -1,72 +1,65 @@
 # IsoAmplar Plot Analysis T
 
-Desktop browser tool for reviewing and exporting IsoAmplar/LAMP amplification fluorescence plots. It is a static React application deployed on GitHub Pages; imported data is processed in the browser.
+This repository contains prebuilt static site files and executable historical versions.
+User-provided analysis data is processed in the browser.
 
-This tool is for research and kit-development visualization. Its Threshold table uses the working labels `Positive` and `ND` for user-defined crossing status only; these labels are not clinical positive/negative interpretation. The app does not calculate Ct/Cq.
+`site/` is the complete deployment payload. `release-manifest.json` records every
+payload file's byte length and SHA-256. It is outside the payload to avoid self-hashing.
+D is SHA-256 of the UTF-8 concatenation of `sha256`, two spaces, relative POSIX path,
+and LF for each file, sorted by ordinal ASCII path order. No newline conversion is
+permitted. The immutable historical release manifests are themselves payload files.
 
-## Current Capabilities
+Verify locally with Node 22 or later, without installing packages:
 
-- Open `.xls` / `.xlsx` files and use the first worksheet only.
-- Enter a specimen once for consecutive reagent columns; later blank specimen cells inherit the nearest explicit specimen to their left within that source.
-- Ignore columns whose reagent header is truly blank or exactly `-`; an explicit specimen on an ignored column still anchors later specimen inheritance.
-- Append another Excel workbook without changing existing selection or settings.
-- Quick Paste Import for tab-separated or single-column comparison data, with read-only preview and warnings.
-- Reagent-first or specimen-first selection, full-dataset search, and stable `curveId` identity.
-- Reversible curve/specimen/reagent exclusion with duplicate-label source confirmation and exact restore; imported fluorescence remains intact.
-- ECharts plot preview with Auto, Fixed, FAM/HEX Y presets, user-editable preset bounds, Box zoom, Previous scale, and raw point readout.
-- Common or exact per-reagent user-set raw fluorescence Thresholds per analysis, with independent preview/export visibility and auditable per-curve observed and Cycle-axis linear crossing evidence. An unconfigured reagent is excluded from Threshold analysis rather than reported as ND.
-- Specimen/reagent group styles, per-curve overrides, HEX colors, line types, markers, and an optional eight-color quick palette that preserves the full color editor.
-- User-controlled legend order, Analysis labels, Auto compact labels, and separate plot/legend outputs.
-- PNG/JPEG download, PNG clipboard copy with fallback, rich Excel legend clipboard, Selected Data XLSX schema 4 with exact per-reagent Threshold result/event evidence, and secondary conditional plotted-data CSV.
-- Named Selection Sets for switching recurring curve combinations without changing scale, style, labels, or order.
-- Multiple analysis tabs and Analysis XLSX schema 7 save/restore containing the complete imported dataset, exclusion state, settings, Selection Sets, and Common/per-reagent Threshold configuration.
-
-The app does not smooth, normalize, baseline-correct, log-transform, or average fluorescence data. Its optional user-set raw Threshold feature reports a versioned geometric crossing estimate together with observed raw evidence; it does not recommend a Threshold, bridge null gaps, calculate Ct/Cq/Tt/Tp, or make a clinical interpretation. `Positive` means a calculable upward crossing and `ND` means no crossing reached under the user-set Threshold.
-
-## Input Contract
-
-Excel columns represent curves:
-
-1. Row 1: specimen or experimental condition
-2. Row 2: reagent or assay/channel
-3. Row 3 onward: fluorescence values in cycle order
-
-The first included curve column must resolve to a specimen label. A truly blank later specimen cell means "same specimen as the nearest explicit label to the left". This shorthand applies only inside the current workbook or full-table paste. A truly blank reagent header or the exact trimmed text `-` excludes that column from analysis; reagent labels never inherit. An explicit specimen label above an excluded reagent column remains a valid inheritance anchor for later included columns.
-
-Quick Paste accepts Excel-style tab-separated ranges and delimiter-free single columns. CSV files, comma-separated tables, in-app source editing, custom X/cycle columns, and worksheet selection are not supported.
-
-## Privacy
-
-The production app has no backend requirement. Release browser tests allow only known static app `GET/HEAD` requests plus local `blob:` / `data:` output and fail on same-origin writes, cross-origin requests, or WebSockets. Exported files remain under the user's control.
-
-## Development
-
-```bash
-npm ci
-npm run dev
+```sh
+node verify-artifacts.mjs --root .
+node verify-artifacts.mjs --root . --git-ref <exact-public-commit-P>
 ```
 
-Local development: `http://127.0.0.1:5173/`
+Only `site/` is uploaded to Pages. The workflow does not install dependencies,
+build source, or upload test reports. A release requires main and the repository's
+`ISOAMPLAR_APPROVED_RELEASE_SHA` to equal the exact public commit P, not a source SHA.
 
-## Verification
+Deployment is sequential. The `vars` condition is only a coarse job-start gate,
+not a fresh revocation check. The repository Variables API needs Variables read,
+which is not an available workflow-token permission. No PAT or secret is added.
+[API permissions](https://docs.github.com/en/rest/actions/variables#get-a-repository-variable),
+[workflow permissions](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions).
 
-```bash
-npm run check:diff
-npm run test
-npm run test:audit
-npm audit --omit=dev --audit-level=high
-npm run build
-npm run test:e2e
-```
+The authoritative live approval is the public `release-control` branch. Its tree
+contains exactly one ordinary non-executable file, `approval.json`, and no workflow.
+An approval is canonical LF JSON with `schema: 1`, `status: "approved"`,
+`publicCommit: "<P>"`, and `treeHash: "<D>"`. Revocation has `status: "revoked"`
+and both identity fields null. This record is never part of `main` or `site/`.
 
-Playwright starts a fresh production preview on port `4174` and never reuses an existing server. CI builds once for `/isoamplar-plot-analysis-t/`, records the complete `dist` SHA-256 manifest, runs fresh Chromium, and rejects any pre/post-test byte difference.
+Immediately before deploy the verifier reads public main and release-control,
+follows pinned commit/tree/blob IDs, verifies the blob bytes and exact P+D record,
+then rereads both refs. There is no authentication or stale-context fallback.
+Missing/revoked/moved/malformed control, mismatched P/D, or API errors including
+rate limits block deployment. Public Git objects support unauthenticated reads.
+[Git reference API](https://docs.github.com/en/rest/git/refs#get-a-reference),
+[Git blob API](https://docs.github.com/en/rest/git/blobs#get-a-blob).
 
-## Deployment
+Only designated release maintainers may update the control branch. To approve:
+freeze all deployment paths, clear the variable, cancel and confirm termination of
+old/queued runs, retain rollback bytes, and publish a revoked control record first.
+After review and explicit publication approval, publish verified P with D while
+the variable is unset. Append an approved P+D control commit, set the variable to
+P, and dispatch that exact P. Recheck both refs and keep main/control changes frozen
+until the run terminates. Control updates are append-only, with the expected old
+control head checked; do not force-push, reset, delete, or reuse old approval commits.
 
-Pushes to `main` and manual workflow dispatch run the verified GitHub Pages workflow. The build job is read-only; only the deploy job receives Pages/OIDC write permissions.
+To revoke, append a revoked control commit first, clear the variable, cancel all
+queued/running deployments and confirm termination. Clearing only the variable is
+insufficient for runs whose context was evaluated earlier. An already submitted
+deployment may still finish; inspect production before claiming revocation or
+rollback success. Rollback uses preserved bytes D in a new public commit P and
+repeats the full freeze/approval sequence. Updating a workflow cannot fix old runs.
+The final API check is not an atomic server-side lock; these operational freezes
+are mandatory. API checks do not certify maintainer identity or stop a repository
+writer from changing the workflow; access governance remains a separate boundary.
 
-Public app: https://siun-comp.github.io/isoamplar-plot-analysis-t/
-
-This `T` edition is now the sole maintained product. The original non-T deployment is retained only as a historical rollback artifact and does not receive feature patches. The current app exposes its version and user-facing history; immutable prior T releases can be opened from the version dialog for result reproduction.
-
-Developer: Jang Si Un
+Historical v1.x files and their existing manifests are preserved byte for byte;
+their existing metadata does not imply that new development source is published.
+Bundled third-party license notices must be retained. Compiled JavaScript is public
+and inspectable; lack of source maps does not provide access control.

@@ -56,7 +56,9 @@ jobs:
           node-version: 22
       - name: Recheck exact candidate
         run: node verify-artifacts.mjs --root . --git-ref "$GITHUB_SHA"
-      - name: Read fresh public main and release-control P+D approval without credentials
+      - name: Read fresh public main and release-control P+D approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node verify-artifacts.mjs --approval --root .
       - uses: actions/deploy-pages@v4
         id: deployment

@@ -22,7 +22,7 @@ build source, or upload test reports. A release requires main and the repository
 
 Deployment is sequential. The `vars` condition is only a coarse job-start gate,
 not a fresh revocation check. The repository Variables API needs Variables read,
-which is not an available workflow-token permission. No PAT or secret is added.
+which is not an available workflow-token permission. No PAT or configured secret is added.
 [API permissions](https://docs.github.com/en/rest/actions/variables#get-a-repository-variable),
 [workflow permissions](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions).
 
@@ -34,7 +34,9 @@ and both identity fields null. This record is never part of `main` or `site/`.
 
 Immediately before deploy the verifier reads public main and release-control,
 follows pinned commit/tree/blob IDs, verifies the blob bytes and exact P+D record,
-then rereads both refs. There is no authentication or stale-context fallback.
+then rereads both refs. Local checks can use public unauthenticated reads. CI uses
+only its ephemeral built-in read-only workflow token for these Git-object reads,
+avoiding the lower anonymous API quota. There is no stale-context fallback.
 Missing/revoked/moved/malformed control, mismatched P/D, or API errors including
 rate limits block deployment. Public Git objects support unauthenticated reads.
 [Git reference API](https://docs.github.com/en/rest/git/refs#get-a-reference),

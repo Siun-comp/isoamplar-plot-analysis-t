@@ -312,14 +312,16 @@ export function approvalRecordBytes({ status = 'approved', publicCommit = null, 
 }
 export const gitBlobHash = bytes => createHash('sha1')
   .update(Buffer.from(`blob ${bytes.length}\0`, 'utf8')).update(bytes).digest('hex');
-export async function checkCurrentApproval({ repo, sha, treeHash, api = 'https://api.github.com', fetcher = fetch }) {
+export async function checkCurrentApproval({ repo, sha, treeHash, token, api = 'https://api.github.com', fetcher = fetch }) {
   requireRule(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo ?? '') && COMMIT.test(sha ?? '')
-    && SHA.test(treeHash ?? '') && api === 'https://api.github.com', 'APPROVAL_INPUT');
+    && SHA.test(treeHash ?? '') && api === 'https://api.github.com'
+    && (token === undefined || typeof token === 'string' && /^[A-Za-z0-9_.-]+$/.test(token) && token.length < 1024), 'APPROVAL_INPUT');
   async function get(path) {
     try {
       const response = await fetcher(`${api}/repos/${repo}/${path}?release_gate=${Date.now()}`, {
         headers: { Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control': 'no-cache' },
+          'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control': 'no-cache',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000),
       });
       requireRule(response.status === 200, 'APPROVAL_API');
@@ -369,7 +371,7 @@ async function cli() {
     requireRule(process.env.GITHUB_REF === 'refs/heads/main', 'MAIN_ONLY');
     const { manifest } = await verifyPublicRoot(args[2]);
     await checkCurrentApproval({ repo: process.env.GITHUB_REPOSITORY, sha: process.env.GITHUB_SHA,
-      treeHash: manifest.treeHash });
+      treeHash: manifest.treeHash, token: process.env.GITHUB_TOKEN || undefined });
     process.stdout.write('PASS current main and public P+D approval.\n');
     return;
   }

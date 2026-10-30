@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "treeHash": "fc71b607f24acb8c17d7dd17a0bea9062afc73fd9f9678da66d0443eb5e4fd01",
+  "treeHash": "45d6a60b047fdcf6848d0ceccfb2f9f5b2464feb24bdfd7f3edc275dd652a623",
   "files": [
     {
       "path": "THIRD_PARTY_NOTICES.txt",
-      "bytes": 38252,
-      "sha256": "dafca8e61e2eb1e0e1d4445eb1b5f368d59524cc8e81121888cab7feb3e3bc29"
+      "bytes": 39503,
+      "sha256": "d6d249d4863f2e2b538996422f4acc822994660bef55cf6b37abfcf4e02e6b34"
     },
     {
       "path": "apple-touch-icon.png",
@@ -18,9 +18,9 @@
       "sha256": "a8ea73a6ac4d95b5f826fdb8d6515edebcb4640a81301dbbe23fff15944da29e"
     },
     {
-      "path": "assets/ChartView-Bb1_euwR.js",
+      "path": "assets/ChartView-BE5fyc0v.js",
       "bytes": 8685,
-      "sha256": "be6807e0e6ce2d0f42af96d3d3736b6b3436b3a67c6cd54730e6a1f6cba6d1f1"
+      "sha256": "a9c285eb661362a3cf62b3b5170671c6ffdbbe86681bc5204137eed9f102704c"
     },
     {
       "path": "assets/charts-C1yWzhbc.js",
@@ -43,6 +43,11 @@
       "sha256": "f615c9dcac1f2fea7d185d5bf0eca981b2ae0e8aed4c86138ef85a3d89382c73"
     },
     {
+      "path": "assets/csvWorker-DVmCqWIa.js",
+      "bytes": 32029,
+      "sha256": "44351731e6c81c27ed43a52c274070e0d5fd2127b27e605a2574bc7f6bb66978"
+    },
+    {
       "path": "assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
       "bytes": 66459,
       "sha256": "2cc67d087d8a7ae5d1aad91dc0c658a570a9b20f5085c3ca8719fda09582b679"
@@ -53,14 +58,14 @@
       "sha256": "57f7a5c7f35df0671452d2d474b508140cdd6afb99446473701a0ea2db572704"
     },
     {
-      "path": "assets/index-CkhXsG-c.js",
-      "bytes": 626789,
-      "sha256": "48e94846c2685c51259443fa528107d0016aa0dcfa99dea3ccc9956936c016e2"
+      "path": "assets/index-BVkFLmo2.js",
+      "bytes": 649947,
+      "sha256": "716f66a88e6fcaa90a0f76b834e7774c98daf752fdda7628a1dc2e27759c86b6"
     },
     {
-      "path": "assets/index-DjZjbG44.css",
+      "path": "assets/index-D6XJ_ePk.css",
       "bytes": 59979,
-      "sha256": "7f556949c50cd5fedc3121776c19c5e012b6cfec14373233b9a58169d5a431fe"
+      "sha256": "dfadff10a74b4839d4c4160f3be059726e2279990fa0cdc9e941713907e96260"
     },
     {
       "path": "assets/install-BXu0TYwC.js",
@@ -81,11 +86,6 @@
       "path": "assets/installCanvasRenderer-u3c4MenG.js",
       "bytes": 13917,
       "sha256": "3e90aef9124d3c874a8188c96008f4a507ad457881692ebe1eac3f911c3819ae"
-    },
-    {
-      "path": "assets/logMWorker-DBwqUIv3.js",
-      "bytes": 9155,
-      "sha256": "649c92d5f9ed9ce84cb6e394f85aba2b151f541e52c337eaf7ba99266504ae02"
     },
     {
       "path": "assets/parseGeoJson-BRELWpDE.js",
@@ -130,7 +130,7 @@
     {
       "path": "index.html",
       "bytes": 876,
-      "sha256": "9bc6b9f142b78a850d46bcfe5fb9bb7f98495803badec515d53f59f8545b5beb"
+      "sha256": "0aab76667f735da7fddd09c112744a92d25bd072f09fde63b110253551be3417"
     },
     {
       "path": "manifest.webmanifest",

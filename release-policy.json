@@ -4,7 +4,7 @@
     "THIRD_PARTY_NOTICES.txt",
     "apple-touch-icon.png",
     "assets/Axis-DtDXW_5t.js",
-    "assets/ChartView-BE5fyc0v.js",
+    "assets/ChartView-CZZG10q2.js",
     "assets/charts-C1yWzhbc.js",
     "assets/components-De8aQx5T.js",
     "assets/core-CHeHsHOm.js",
@@ -12,8 +12,8 @@
     "assets/csvWorker-DVmCqWIa.js",
     "assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
     "assets/graphic-BBQJ00JB.js",
-    "assets/index-BVkFLmo2.js",
-    "assets/index-D6XJ_ePk.css",
+    "assets/index-DZIagWPR.css",
+    "assets/index-ZFwWB4Ri.js",
     "assets/install-BXu0TYwC.js",
     "assets/install-X42mEo9c.js",
     "assets/install-idcfyR9g.js",
@@ -131,7 +131,35 @@
     "versions/v1.3.0/icon-512.png",
     "versions/v1.3.0/index.html",
     "versions/v1.3.0/manifest.webmanifest",
-    "versions/v1.3.0/release-manifest.json"
+    "versions/v1.3.0/release-manifest.json",
+    "versions/v2.1.0/THIRD_PARTY_NOTICES.txt",
+    "versions/v2.1.0/apple-touch-icon.png",
+    "versions/v2.1.0/assets/Axis-DtDXW_5t.js",
+    "versions/v2.1.0/assets/ChartView-BE5fyc0v.js",
+    "versions/v2.1.0/assets/charts-C1yWzhbc.js",
+    "versions/v2.1.0/assets/components-De8aQx5T.js",
+    "versions/v2.1.0/assets/core-CHeHsHOm.js",
+    "versions/v2.1.0/assets/createSeriesData-oB_Zu_UR.js",
+    "versions/v2.1.0/assets/csvWorker-DVmCqWIa.js",
+    "versions/v2.1.0/assets/customGraphicKeyframeAnimation-CcPWVpZH.js",
+    "versions/v2.1.0/assets/graphic-BBQJ00JB.js",
+    "versions/v2.1.0/assets/index-BVkFLmo2.js",
+    "versions/v2.1.0/assets/index-D6XJ_ePk.css",
+    "versions/v2.1.0/assets/install-BXu0TYwC.js",
+    "versions/v2.1.0/assets/install-X42mEo9c.js",
+    "versions/v2.1.0/assets/install-idcfyR9g.js",
+    "versions/v2.1.0/assets/installCanvasRenderer-u3c4MenG.js",
+    "versions/v2.1.0/assets/parseGeoJson-BRELWpDE.js",
+    "versions/v2.1.0/assets/renderers-CzT9A_km.js",
+    "versions/v2.1.0/assets/xlsx-CKwrMZHi.js",
+    "versions/v2.1.0/favicon-16.png",
+    "versions/v2.1.0/favicon-32.png",
+    "versions/v2.1.0/favicon.svg",
+    "versions/v2.1.0/icon-192.png",
+    "versions/v2.1.0/icon-512.png",
+    "versions/v2.1.0/index.html",
+    "versions/v2.1.0/manifest.webmanifest",
+    "versions/v2.1.0/release-manifest.json"
   ],
   "publicFiles": [
     ".gitattributes",
@@ -142,12 +170,14 @@
     "verify-artifacts.mjs"
   ],
   "notices": [
-    "THIRD_PARTY_NOTICES.txt"
+    "THIRD_PARTY_NOTICES.txt",
+    "versions/v2.1.0/THIRD_PARTY_NOTICES.txt"
   ],
   "archiveManifestHashes": {
     "v1.0.0": "7ccadd5e2ebadaba07436217b355579263e32aa92fb99d7e13a891fc8b8318c9",
     "v1.1.0": "6e18757d1334616a69c7685864f09ce4d8dcc7adf8aef3d5efa55149e81e510a",
     "v1.2.0": "0f5acc898273bcea5c8366ffc077d3cb4f856972daae8af71e31969c4fe01947",
-    "v1.3.0": "e35df7a034d7a6aa3e4b3d549bbf99bc20562ea88834d3725681026c1cf318cc"
+    "v1.3.0": "e35df7a034d7a6aa3e4b3d549bbf99bc20562ea88834d3725681026c1cf318cc",
+    "v2.1.0": "226e0ad038368528b90a411a2ed7adfbfc844043bdadf2dd191b574106931c65"
   }
 }

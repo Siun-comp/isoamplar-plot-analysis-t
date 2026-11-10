@@ -5,7 +5,10 @@ import { lstat, open, readdir, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const ARCHIVES = ['v1.0.0', 'v1.1.0', 'v1.2.0', 'v1.3.0', 'v2.1.0', 'v2.2.0'];
+export const ARCHIVES = ['v1.0.0', 'v1.1.0', 'v1.2.0', 'v1.3.0', 'v2.1.0', 'v2.2.0', 'v2.4.0'];
+export const V24_ARCHIVE_MANIFEST_SHA256 = 'b9a9225dac3c285791898601cdaecce152eb3b615497bfe9ab9a766349df2254';
+export const V24_ARCHIVE_PUBLIC_COMMIT = '97a23ed1f8d9e1068c59406bdf73434cb056ce62';
+export const V24_ARCHIVE_ORIGINAL_TREE = '7eca7cc246bd67d0312ce5873be0d3317260dc814755c3627a27d05605eb0d5d';
 export const V22_ARCHIVE_MANIFEST_SHA256 = '100421d6e8f486da039cd813ca5b10f8323338cee088bb142168772bc0900765';
 export const V21_ARCHIVE_MANIFEST_SHA256 = '226e0ad038368528b90a411a2ed7adfbfc844043bdadf2dd191b574106931c65';
 export const V21_ARCHIVE_PUBLIC_COMMIT = '41691b5c576cbb15b1c2bcc4a0c728d4956167e1';
@@ -167,6 +170,7 @@ export function validatePolicy(policy) {
   requireRule(Object.values(policy.archiveManifestHashes).every(hash => SHA.test(hash)), 'ARCHIVE_POLICY');
   requireRule(policy.archiveManifestHashes['v2.1.0'] === V21_ARCHIVE_MANIFEST_SHA256, 'V21_ARCHIVE_PIN');
   requireRule(policy.archiveManifestHashes['v2.2.0'] === V22_ARCHIVE_MANIFEST_SHA256, 'V22_ARCHIVE_PIN');
+  requireRule(policy.archiveManifestHashes['v2.4.0'] === V24_ARCHIVE_MANIFEST_SHA256, 'V24_ARCHIVE_PIN');
   for (const path of policy.notices) {
     requireRule(/^(?:versions\/v[0-9]+\.[0-9]+\.[0-9]+\/)?(?:THIRD_PARTY_NOTICES\.txt|LICENSE\.txt|assets\/[A-Za-z0-9_-]+\.js\.LICENSE\.txt)$/.test(path), 'NOTICE_PATH');
     requireRule(policy.files.includes(path), 'NOTICE_PATH');
@@ -222,6 +226,7 @@ export function validatePayload(files, rawPolicy) {
     const archive = parseJson(files.get(manifestPath));
     if (version === 'v2.1.0') { validateV21Archive(files); continue; }
     if (version === 'v2.2.0') { validateV22Archive(files); continue; }
+    if (version === 'v2.4.0') { validateV24Archive(files); continue; }
     exactKeys(archive, ['version', 'sourceCommit', 'basePath', 'files'], 'ARCHIVE_MANIFEST');
     requireRule(archive.version === version.slice(1) && COMMIT.test(archive.sourceCommit)
       && archive.basePath === `/isoamplar-plot-analysis-t/versions/${version}/`, 'ARCHIVE_MANIFEST');
@@ -247,6 +252,9 @@ export function validateV21Archive(files) {
 export function validateV22Archive(files) {
   return validatePrebuiltArchive(files, '2.2.0', V22_ARCHIVE_MANIFEST_SHA256, 'f3f121a97c3de5c7f347517c12777ea408e0d2ee',
     '10114582acaf605cf197c3e8b43e9bb4dd5167de45e05a8c751569afcf366687', 'V22');
+}
+export function validateV24Archive(files) {
+  return validatePrebuiltArchive(files, '2.4.0', V24_ARCHIVE_MANIFEST_SHA256, V24_ARCHIVE_PUBLIC_COMMIT, V24_ARCHIVE_ORIGINAL_TREE, 'V24');
 }
 function validatePrebuiltArchive(files, version, pin, publicCommit, originalTreeHash, rule) {
   const prefix = `versions/v${version}/`;

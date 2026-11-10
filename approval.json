@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "approved",
-  "publicCommit": "97a23ed1f8d9e1068c59406bdf73434cb056ce62",
-  "treeHash": "7eca7cc246bd67d0312ce5873be0d3317260dc814755c3627a27d05605eb0d5d"
+  "status": "revoked",
+  "publicCommit": null,
+  "treeHash": null
 }
